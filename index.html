@@ -80,7 +80,6 @@
                 </div>
             </section>
             
-            <!-- TÜM BÖLGE - Filtreli ve Rol Ortalamalı -->
             <section id="tum-bolge" class="page">
                 <div class="kds-card">
                     <h6>🌍 Tüm Kurumlar Sıralaması</h6>
@@ -95,9 +94,7 @@
                     </div>
                     <div class="table-responsive mt-2">
                         <table class="table table-hover" id="table-bolge">
-                            <thead class="table-light">
-                                <tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr>
-                            </thead>
+                            <thead class="table-light"><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr></thead>
                             <tbody><tr><td colspan="5">Yükleniyor...</td></tr></tbody>
                         </table>
                     </div>
@@ -117,9 +114,8 @@
         "sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of"
     );
     let charts = {};
-    let itirazPerformansMap = {}; // İtiraz edilen performans ID'leri için
+    let itirazPerformansMap = {};
 
-    // İtiraz durumlarını yükle
     async function itirazDurumlariniYukle() {
         const { data } = await _supabase.from('itirazlar').select('performans_id');
         itirazPerformansMap = {};
@@ -128,9 +124,7 @@
 
     function degerlendir(gd, trOrt, yon, puan, gp, performansId = null) {
         let itirazBadge = '';
-        if (performansId && itirazPerformansMap[performansId]) {
-            itirazBadge = '<span class="badge-itiraz-var">📝 İtiraz var</span>';
-        }
+        if (performansId && itirazPerformansMap[performansId]) itirazBadge = '<span class="badge-itiraz-var">📝 İtiraz var</span>';
         if (gd === null || gd === undefined || trOrt === null || trOrt === undefined) return { class: 'badge-muaf', text: '🔘 Muaf' + itirazBadge };
         const ilOrtBasari = yon === 'Pozitif' ? gd >= trOrt : gd <= trOrt;
         const puanOrani = (puan / gp) * 100;
@@ -163,24 +157,16 @@
         const { data: donemler } = await _supabase.from('toplam_puanlar').select('donem').order('donem', { ascending: false }).limit(1);
         const sonDonem = donemler?.[0]?.donem || 2;
         let tip = document.getElementById('bolgeFiltreTip')?.value || '';
-        
         let query = _supabase.from('toplam_puanlar').select('*').eq('donem', sonDonem);
         if (tip === 'Hastane') query = query.eq('kurum_tipi', 'Hastane');
         if (tip === 'ADSM') query = query.eq('kurum_tipi', 'ADSM');
-        
         const { data, error } = await query.order('toplam_puan', { ascending: false });
         const tbody = document.querySelector('#table-bolge tbody');
         if (error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Hata: ${error.message}</td></tr>`; return; }
         if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-warning">Veri bulunamadı</td></tr>`; return; }
         tbody.innerHTML = data.map(d => {
             const durum = parseFloat(d.toplam_puan) >= parseFloat(d.rol_ortalamasi);
-            return `<tr>
-                <td><b>${d.kurum_adi}</b></td>
-                <td>${d.kurum_tipi}</td>
-                <td class="fw-bold text-primary">${d.toplam_puan}</td>
-                <td>${d.rol_ortalamasi}</td>
-                <td>${durum ? '<span class="badge-basarili">✅ İyi</span>' : '<span class="badge-kritik">❌ Kötü</span>'}</td>
-            </tr>`;
+            return `<tr><td><b>${d.kurum_adi}</b></td><td>${d.kurum_tipi}</td><td class="fw-bold text-primary">${d.toplam_puan}</td><td>${d.rol_ortalamasi}</td><td>${durum ? '<span class="badge-basarili">✅ İyi</span>' : '<span class="badge-kritik">❌ Kötü</span>'}</td></tr>`;
         }).join('');
     };
 
@@ -200,25 +186,14 @@
         if (!kurum) { alert('Kurum seçin'); return; }
         const donemAdi = donem == 1 ? 'Ocak' : 'Şubat';
         await itirazDurumlariniYukle();
-        
         const { data: perf } = await _supabase.from('performans').select('*').eq('kurum_adi', kurum).eq('donem', donem);
         const { data: toplam } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
-        
         let html = `<div class="kurum-baslik">📊 ${kurum} - ${donemAdi} ${document.getElementById('f-yil').value} Dönemi Analizi</div>`;
         if (toplam) html += `<div class="alert alert-info py-2">🏆 Toplam Puan: <strong>${toplam.toplam_puan}</strong> | Rol Ort: ${toplam.rol_ortalamasi}</div>`;
         html += `<div class="table-responsive"><table class="table table-sm"><thead class="table-light"><tr><th>Gösterge</th><th>Yön</th><th>GD</th><th>TR Ort</th><th>Puan/GP</th><th>Değerlendirme</th><th>İtiraz</th></tr></thead><tbody>`;
-        
         for (const r of perf||[]) {
             const durum = degerlendir(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp, r.id);
-            html += `<tr>
-                <td>${r.gosterge_adi}</td>
-                <td>${yonOku(r.gosterge_yonu)}</td>
-                <td>${r.gd??'-'}</td>
-                <td>${r.tr_ort??'-'}</td>
-                <td>${r.puan??'null'}/${r.gp}</td>
-                <td><span class="${durum.class}">${durum.text}</span></td>
-                <td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td>
-            </tr>`;
+            html += `<tr><td>${r.gosterge_adi}</td><td>${yonOku(r.gosterge_yonu)}</td><td>${r.gd??'-'}</td><td>${r.tr_ort??'-'}</td><td>${r.puan??'null'}/${r.gp}</td><td><span class="${durum.class}">${durum.text}</span></td><td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td></tr>`;
         }
         html += `</tbody></table></div>`;
         document.getElementById('kurumAnalizIcerik').innerHTML = html;
@@ -247,12 +222,10 @@
         const { data: itirazlar } = await _supabase.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
         const div = document.getElementById('itirazListe');
         if (!itirazlar?.length) { div.innerHTML = '<div class="alert alert-info">Henüz itiraz yok.</div>'; return; }
-        
         const performansIds = itirazlar.map(i => i.performans_id);
         const { data: performanslar } = await _supabase.from('performans').select('*').in('id', performansIds);
         const perfMap = {};
         performanslar?.forEach(p => { perfMap[p.id] = p; });
-        
         div.innerHTML = itirazlar.map(it => {
             const p = perfMap[it.performans_id];
             const donemAdi = p?.donem == 1 ? 'Ocak' : (p?.donem == 2 ? 'Şubat' : `${p?.donem}. Dönem`);
