@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>KDS - Kurumsal Değerlendirme Sistemi</title>
+    <title>🏥 KHHB-2 GÖREN ANALİZ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -76,7 +76,7 @@
                     <div class="col-md-6"><div class="kds-card"><h6>🏆 En İyi 5 ADSM/ADSH</h6><div id="top-adsm" class="mt-2">Yükleniyor...</div></div></div>
                 </div>
             </section>
-            <section id="tum-bolge" class="page"><div class="kds-card"><h6>🌍 Tüm Kurumlar Sıralaması (Son Dönem)</h6><div class="table-responsive mt-3"><table class="table table-hover" id="table-bolge"><thead class="table-light"><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Durum</th></tr></thead><tbody><td><td colspan="4">Yükleniyor...</td></tr></tbody></table></div></div></section>
+            <section id="tum-bolge" class="page"><div class="kds-card"><h6>🌍 Tüm Kurumlar Sıralaması (Son Dönem)</h6><div class="table-responsive mt-3"><table class="table table-hover" id="table-bolge"><thead class="table-light"><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Durum</th></tr></thead><tbody><tr><td colspan="4">Yükleniyor...</td></tr></tbody></table></div></div></section>
             <section id="kurum-bazli" class="page"><div id="kurumAnalizIcerik" class="kds-card">Kurum seçip sorgulayın.</div></section>
             <section id="raporlar" class="page"><div class="row g-4"><div class="col-12"><div class="kds-card"><h6>📈 Gösterge Bazlı Trend Analizi</h6><div class="row mt-3"><div class="col-md-4"><label class="form-label">Gösterge Seçin</label><select id="raporGosterge" class="form-select"></select></div><div class="col-md-2"><label> </label><button class="btn-sm-custom w-100" onclick="window.gostergeAnalizYukle()">Grafik Oluştur</button></div></div><div class="chart-container"><canvas id="gostergeChart"></canvas></div></div></div><div class="col-md-6 mt-4"><div class="kds-card"><h6>📉 Dönemsel Trend (Hastane/ADSM)</h6><div class="chart-container"><canvas id="trendChart"></canvas></div></div></div><div class="col-md-6 mt-4"><div class="kds-card"><h6>🥧 Başarı Dağılımı</h6><div class="chart-container"><canvas id="pieChart"></canvas></div></div></div></div></section>
             <section id="itirazlar" class="page"><div class="kds-card"><h6>⚠️ İtiraz Yönetimi</h6><div id="itirazListe" class="mt-3">Yükleniyor...</div></div></section>
@@ -115,23 +115,13 @@
         document.getElementById('top-adsm').innerHTML = topA.map((k,i)=>`<div class="rank-card"><span class="rank-number">${i+1}</span> <strong>${k.kurum_adi}</strong> <span class="float-end text-primary fw-bold">${k.toplam_puan} puan</span></div>`).join('');
     }
 
-    // ============ DÜZELTİLMİŞ TÜM BÖLGE FONKSİYONU ============
     async function bolgeListesi() {
-        // Önce son dönemi bul (varsa en yüksek donem değerini al)
         const { data: donemler } = await _supabase.from('toplam_puanlar').select('donem').order('donem', { ascending: false }).limit(1);
         const sonDonem = donemler?.[0]?.donem || 2;
-        
         const { data, error } = await _supabase.from('toplam_puanlar').select('*').eq('donem', sonDonem).order('toplam_puan', { ascending: false });
-        
         const tbody = document.querySelector('#table-bolge tbody');
-        if (error) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Hata: ${error.message}</td></tr>`;
-            return;
-        }
-        if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-warning">${sonDonem}. dönem için veri bulunamadı. Lütfen toplam_puanlar tablosuna veri ekleyin.</td></tr>`;
-            return;
-        }
+        if (error) { tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Hata: ${error.message}</td></tr>`; return; }
+        if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="text-center text-warning">${sonDonem}. dönem için veri bulunamadı.</td></tr>`; return; }
         tbody.innerHTML = data.map(d => `<tr>
             <td><b>${d.kurum_adi}</b></td>
             <td>${d.kurum_tipi}</td>
@@ -171,7 +161,7 @@
                 <td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td>
             </tr>`;
         }
-        html += `</tbody><tr></div>`;
+        html += `</tbody></table></div>`;
         document.getElementById('kurumAnalizIcerik').innerHTML = html;
     };
 
@@ -195,10 +185,42 @@
     };
 
     window.itirazlariGoster = async function() {
-        const { data } = await _supabase.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
+        const { data: itirazlar } = await _supabase.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
         const div = document.getElementById('itirazListe');
-        if (!data?.length) { div.innerHTML = '<div class="alert alert-info">Henüz itiraz yok.</div>'; return; }
-        div.innerHTML = data.map(it => `<div class="card mb-2 p-3"><div class="d-flex justify-content-between align-items-start"><div><strong>📝 ${it.itiraz_metni.substring(0,100)}</strong><br><small class="text-muted">Durum: ${it.durum}</small></div><div><select id="durum_${it.id}" class="form-select form-select-sm w-auto d-inline-block me-2"><option ${it.durum==='beklemede'?'selected':''}>beklemede</option><option ${it.durum==='onaylandi'?'selected':''}>onaylandi</option><option ${it.durum==='reddedildi'?'selected':''}>reddedildi</option></select><button class="btn btn-sm btn-primary me-1" onclick="window.itirazDurumGuncelle('${it.id}')">Güncelle</button><button class="btn btn-sm btn-danger" onclick="window.itirazSil('${it.id}')">Sil</button></div></div></div>`).join('');
+        if (!itirazlar?.length) { div.innerHTML = '<div class="alert alert-info">Henüz itiraz yok.</div>'; return; }
+        
+        const performansIds = itirazlar.map(i => i.performans_id);
+        const { data: performanslar } = await _supabase.from('performans').select('*').in('id', performansIds);
+        const perfMap = {};
+        performanslar?.forEach(p => { perfMap[p.id] = p; });
+        
+        div.innerHTML = itirazlar.map(it => {
+            const p = perfMap[it.performans_id];
+            const donemAdi = p?.donem == 1 ? 'Ocak' : (p?.donem == 2 ? 'Şubat' : `${p?.donem}. Dönem`);
+            return `<div class="card mb-3 p-3 border-start border-4 border-warning">
+                <div class="d-flex justify-content-between align-items-start flex-wrap">
+                    <div style="flex:1">
+                        <div class="fw-bold text-primary">🏥 ${p?.kurum_adi || 'Bilinmiyor'}</div>
+                        <div class="text-secondary mb-1">📊 ${p?.gosterge_adi || 'Gösterge bilinmiyor'} - ${donemAdi} ${p?.yil || ''}</div>
+                        <div class="row mt-2">
+                            <div class="col-auto"><span class="badge bg-light text-dark">📈 GD: ${p?.gd ?? '-'}</span></div>
+                            <div class="col-auto"><span class="badge bg-light text-dark">🎯 TR Ort: ${p?.tr_ort ?? '-'}</span></div>
+                            <div class="col-auto"><span class="badge bg-light text-dark">⭐ Puan: ${p?.puan ?? '-'}/${p?.gp ?? '-'}</span></div>
+                        </div>
+                        <div class="mt-2 p-2 bg-light rounded"><strong>📝 İtiraz:</strong> ${it.itiraz_metni}</div>
+                    </div>
+                    <div class="ms-3 mt-2">
+                        <select id="durum_${it.id}" class="form-select form-select-sm mb-2" style="min-width:120px">
+                            <option ${it.durum === 'beklemede' ? 'selected' : ''}>⏳ beklemede</option>
+                            <option ${it.durum === 'onaylandi' ? 'selected' : ''}>✅ onaylandi</option>
+                            <option ${it.durum === 'reddedildi' ? 'selected' : ''}>❌ reddedildi</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary w-100 mb-1" onclick="window.itirazDurumGuncelle('${it.id}')">Güncelle</button>
+                        <button class="btn btn-sm btn-danger w-100" onclick="window.itirazSil('${it.id}')">Sil</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
     };
 
     window.gostergeAnalizYukle = async function() {
