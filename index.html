@@ -26,7 +26,6 @@
 </head>
 <body>
 
-<!-- ANA UYGULAMA (Girişsiz) -->
 <div class="app-wrapper">
     <aside class="sidebar">
         <div class="p-4 text-center border-bottom border-secondary"><h5 class="fw-bold mb-0">KDS ANALİZ</h5></div>
@@ -42,15 +41,15 @@
     <main class="main-content">
         <header class="top-header">
             <h5 id="page-title" class="mb-0 fw-bold">Genel Bakış</h5>
-            <div class="badge bg-success px-3">Bağlı</div>
+            <div class="badge bg-success px-3" id="durum-badge">Bağlı</div>
         </header>
 
         <div id="filter-bar" class="filter-bar">
             <select id="f-yil" class="form-select form-select-sm" style="width:90px;"><option value="2026">2026</option></select>
             <select id="f-donem" class="form-select form-select-sm" style="width:110px;"><option value="2">2. Dönem</option><option value="1">1. Dönem</option></select>
-            <select id="f-tur" class="form-select form-select-sm" style="width:130px;" onchange="updateKurumFilter(this.value)"><option value="">Tür Seçin</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select>
+            <select id="f-tip" class="form-select form-select-sm" style="width:130px;" onchange="updateKurumlar()"><option value="">Tür Seçin</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select>
             <select id="f-kurum" class="form-select form-select-sm" style="width:280px;"><option value="">Önce Tür Seçin</option></select>
-            <button class="btn btn-sm btn-primary px-4" onclick="loadKurumAnaliz()">Sorgula</button>
+            <button class="btn btn-sm btn-primary px-4" onclick="kurumAnaliz()">Sorgula</button>
         </div>
 
         <div class="page-padding">
@@ -58,35 +57,37 @@
                 <div class="row g-4 mb-4">
                     <div class="col-md-4"><div class="kds-card"><h6>Toplam Kurum</h6><div class="stat-val" id="s-toplam">0</div></div></div>
                     <div class="col-md-4"><div class="kds-card" style="border-top-color:#0d6efd"><h6>Hastane Ortalaması</h6><div class="stat-val text-primary" id="s-h-ort">0.0</div></div></div>
-                    <div class="col-md-4"><div class="kds-card" style="border-top-color:#6610f2"><h6>ADSM Ortalaması</h6><div class="stat-val text-purple" id="s-a-ort" style="color:#6610f2">0.0</div></div></div>
+                    <div class="col-md-4"><div class="kds-card" style="border-top-color:#6610f2"><h6>ADSM Ortalaması</h6><div class="stat-val" id="s-a-ort" style="color:#6610f2">0.0</div></div></div>
                 </div>
             </section>
 
             <section id="tum-bolge" class="page">
                 <div class="kds-card">
                     <div class="d-flex justify-content-between mb-3"><h6>Bölgesel Başarı Sıralaması (Son Dönem)</h6></div>
-                    <table class="table table-hover" id="table-region">
-                        <thead class="table-light"><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="table-bolge">
+                            <thead class="table-light"><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead>
+                            <tbody><tr><td colspan="5" class="text-center">Yükleniyor...</td></tr></tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
             <section id="kurum-bazli" class="page">
-                <div id="analiz-result" class="kds-card">Kurum seçip sorgulayın.</div>
+                <div id="kurumAnalizIcerik" class="kds-card">Kurum seçip sorgulayın.</div>
             </section>
 
             <section id="raporlar" class="page">
                 <div class="row g-4">
-                    <div class="col-md-7"><div class="kds-card"><h6>Dönemsel Puan Değişimi (Trend)</h6><canvas id="chartTrend"></canvas></div></div>
-                    <div class="col-md-5"><div class="kds-card"><h6>Başarı Dağılımı</h6><canvas id="chartPie"></canvas></div></div>
+                    <div class="col-md-7"><div class="kds-card"><h6>Dönemsel Puan Değişimi (Trend)</h6><canvas id="trendChart"></canvas></div></div>
+                    <div class="col-md-5"><div class="kds-card"><h6>Başarı Dağılımı</h6><canvas id="pieChart"></canvas></div></div>
                 </div>
             </section>
 
             <section id="itirazlar" class="page">
                 <div class="kds-card">
                     <h6>Son İtirazlar</h6>
-                    <div id="itirazListesi" class="mt-3">Yükleniyor...</div>
+                    <div id="itirazListe" class="mt-3">Yükleniyor...</div>
                 </div>
             </section>
         </div>
@@ -100,81 +101,109 @@
     let charts = {};
 
     // ============ MENÜ ============
-    async function go(id, el) {
+    async function go(sayfa, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+        document.getElementById(sayfa).classList.add('active');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
         document.getElementById('page-title').innerHTML = el.innerHTML.replace(/<i.*?<\/i>/, '').trim();
-        document.getElementById('filter-bar').style.display = (id === 'kurum-bazli') ? 'flex' : 'none';
+        const filterBar = document.getElementById('filter-bar');
+        filterBar.style.display = (sayfa === 'kurum-bazli') ? 'flex' : 'none';
 
-        if(id === 'genel-bakis') await loadDashboard();
-        if(id === 'tum-bolge') await loadRegion();
-        if(id === 'raporlar') await loadReports();
-        if(id === 'itirazlar') await loadItirazlar();
+        if (sayfa === 'genel-bakis') await dashboard();
+        if (sayfa === 'tum-bolge') await bolgeListesi();
+        if (sayfa === 'raporlar') await raporlar();
+        if (sayfa === 'itirazlar') await itirazlar();
     }
 
-    async function loadDashboard() {
+    // ============ DASHBOARD ============
+    async function dashboard() {
         const { data } = await supabase.from('toplam_puanlar').select('*').eq('donem', 2);
-        if(data) {
+        if (data && data.length) {
             document.getElementById('s-toplam').innerText = data.length;
-            const h = data.filter(x => x.kurum_tipi === 'Hastane');
-            const a = data.filter(x => x.kurum_tipi === 'ADSM');
-            document.getElementById('s-h-ort').innerText = (h.reduce((s,v)=>s+v.toplam_puan,0)/(h.length||1)).toFixed(1);
-            document.getElementById('s-a-ort').innerText = (a.reduce((s,v)=>s+v.toplam_puan,0)/(a.length||1)).toFixed(1);
+            const hastane = data.filter(x => x.kurum_tipi === 'Hastane');
+            const adsm = data.filter(x => x.kurum_tipi === 'ADSM');
+            const hOrt = hastane.length ? (hastane.reduce((s,v)=>s+v.toplam_puan,0)/hastane.length).toFixed(1) : '0';
+            const aOrt = adsm.length ? (adsm.reduce((s,v)=>s+v.toplam_puan,0)/adsm.length).toFixed(1) : '0';
+            document.getElementById('s-h-ort').innerText = hOrt;
+            document.getElementById('s-a-ort').innerText = aOrt;
+        } else {
+            document.getElementById('s-toplam').innerText = '0';
+            document.getElementById('s-h-ort').innerText = '0.0';
+            document.getElementById('s-a-ort').innerText = '0.0';
         }
     }
 
-    async function loadRegion() {
+    // ============ TÜM BÖLGE ============
+    async function bolgeListesi() {
         const { data } = await supabase.from('toplam_puanlar').select('*').eq('donem', 2).order('toplam_puan', {ascending: false});
-        document.querySelector('#table-region tbody').innerHTML = (data||[]).map(d => `
-            <tr><td><b>${d.kurum_adi}</b></td><td><small>${d.kurum_tipi}</small></td>
-            <td class="fw-bold text-primary">${d.toplam_puan}</td><td>${d.rol_ortalamasi}</td>
-            <td>${d.toplam_puan >= d.rol_ortalamasi ? '✅ Başarılı' : '⚠️ Gelişmeli'}</td>
-        </tr>`).join('');
+        const tbody = document.querySelector('#table-bolge tbody');
+        if (data && data.length) {
+            tbody.innerHTML = data.map(d => `
+                <tr>
+                    <td><b>${d.kurum_adi}</b></td>
+                    <td><small>${d.kurum_tipi}</small></td>
+                    <td class="fw-bold text-primary">${d.toplam_puan}</td>
+                    <td>${d.rol_ortalamasi}</td>
+                    <td>${d.toplam_puan >= d.rol_ortalamasi ? '✅ Başarılı' : '⚠️ Gelişmeli'}</td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Veri bulunamadı</td></tr>';
+        }
     }
 
-    async function updateKurumFilter(tip) {
+    // ============ KURUM FİLTRE ============
+    async function updateKurumlar() {
+        const tip = document.getElementById('f-tip').value;
         let q = supabase.from('toplam_puanlar').select('kurum_adi');
-        if(tip === 'ADSM') q = q.ilike('kurum_tipi', 'ADSM');
-        else if(tip) q = q.eq('kurum_tipi', tip);
+        if (tip === 'ADSM') q = q.eq('kurum_tipi', 'ADSM');
+        else if (tip) q = q.eq('kurum_tipi', tip);
         const { data } = await q;
         const tekil = [...new Set((data||[]).map(d => d.kurum_adi))].sort();
-        document.getElementById('f-kurum').innerHTML = '<option value="">Seçiniz...</option>' + tekil.map(k => `<option value="${k}">${k}</option>`).join('');
+        const select = document.getElementById('f-kurum');
+        select.innerHTML = '<option value="">Seçiniz...</option>' + tekil.map(k => `<option value="${k}">${k}</option>`).join('');
     }
 
-    async function loadKurumAnaliz() {
+    // ============ KURUM ANALİZ ============
+    async function kurumAnaliz() {
         const kurum = document.getElementById('f-kurum').value;
         const donem = document.getElementById('f-donem').value;
-        if(!kurum) { alert('Lütfen bir kurum seçin'); return; }
-        const { data } = await supabase.from('performans').select('*').eq('kurum_adi', kurum).eq('donem', donem);
-        const toplam = await supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).single();
-        let html = `<h5 class="mb-3">${kurum} - ${donem}. Dönem Analizi</h5>`;
-        if(toplam.data) html += `<div class="alert alert-info">📊 Toplam Puan: ${toplam.data.toplam_puan} | Rol Ort: ${toplam.data.rol_ortalamasi}</div>`;
-        html += `<table class="table table-sm"><thead class="table-light"><tr><th>Gösterge</th><th>GD</th><th>TR Ort</th><th>Puan</th><th>GP</th><th>Durum</th></tr></thead><tbody>`;
-        for(const r of (data||[])) {
+        if (!kurum) { alert('Lütfen bir kurum seçin'); return; }
+        
+        const { data: perf } = await supabase.from('performans').select('*').eq('kurum_adi', kurum).eq('donem', donem);
+        const { data: toplam } = await supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
+        
+        let html = `<h5 class="mb-3">📊 ${kurum} - ${donem}. Dönem Analizi</h5>`;
+        if (toplam) html += `<div class="alert alert-info">🏆 Toplam Puan: <strong>${toplam.toplam_puan}</strong> | Rol Ort: ${toplam.rol_ortalamasi}</div>`;
+        if (!perf || !perf.length) { html += '<div class="alert alert-warning">Gösterge verisi bulunamadı.</div>'; document.getElementById('kurumAnalizIcerik').innerHTML = html; return; }
+        
+        html += `<div class="table-responsive"><table class="table table-sm"><thead class="table-light"><tr><th>Gösterge</th><th>GD</th><th>TR Ort</th><th>Puan</th><th>GP</th><th>Durum</th></tr></thead><tbody>`;
+        for (const r of perf) {
             const iyi = r.gosterge_yonu === 'Pozitif' ? r.gd >= r.tr_ort : r.gd <= r.tr_ort;
-            html += `<tr><td>${r.gosterge_adi}</td><td>${r.gd}</td><td>${r.tr_ort}</td><td>${r.puan}</td><td>${r.gp}</td><td class="${iyi?'text-success':'text-danger'}">${iyi?'✅ İyi':'⚠️ Kritik'}</td></tr>`;
+            html += `<tr><td>${r.gosterge_adi}</td><td>${r.gd}</td><td>${r.tr_ort}</td><td>${r.puan}</td><td>${r.gp}</td><td class="${iyi?'text-success fw-bold':'text-danger fw-bold'}">${iyi?'✅ Başarılı':'⚠️ Kritik'}</td></tr>`;
         }
-        html += `</tbody></table>`;
-        document.getElementById('analiz-result').innerHTML = html;
+        html += `</tbody></table></div>`;
+        document.getElementById('kurumAnalizIcerik').innerHTML = html;
     }
 
-    async function loadReports() {
-        const { data: hastane1 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
-        const { data: hastane2 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
-        const { data: adsm1 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
-        const { data: adsm2 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
+    // ============ RAPORLAR (Dinamik) ============
+    async function raporlar() {
+        const { data: h1 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
+        const { data: h2 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
+        const { data: a1 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
+        const { data: a2 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
         
-        const hOrt1 = (hastane1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(hastane1?.length||1);
-        const hOrt2 = (hastane2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(hastane2?.length||1);
-        const aOrt1 = (adsm1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(adsm1?.length||1);
-        const aOrt2 = (adsm2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(adsm2?.length||1);
+        const hOrt1 = h1?.length ? (h1.reduce((s,v)=>s+v.toplam_puan,0)/h1.length).toFixed(1) : 0;
+        const hOrt2 = h2?.length ? (h2.reduce((s,v)=>s+v.toplam_puan,0)/h2.length).toFixed(1) : 0;
+        const aOrt1 = a1?.length ? (a1.reduce((s,v)=>s+v.toplam_puan,0)/a1.length).toFixed(1) : 0;
+        const aOrt2 = a2?.length ? (a2.reduce((s,v)=>s+v.toplam_puan,0)/a2.length).toFixed(1) : 0;
 
-        if(charts.trend) charts.trend.destroy();
-        if(charts.pie) charts.pie.destroy();
+        if (charts.trend) charts.trend.destroy();
+        if (charts.pie) charts.pie.destroy();
 
-        charts.trend = new Chart(document.getElementById('chartTrend'), {
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        charts.trend = new Chart(trendCtx, {
             type: 'line',
             data: {
                 labels: ['1. Dönem (Ocak)', '2. Dönem (Şubat)'],
@@ -182,32 +211,34 @@
                     { label: 'Hastane Ort.', data: [hOrt1, hOrt2], borderColor: '#0d6efd', tension: 0.3, fill: false },
                     { label: 'ADSM Ort.', data: [aOrt1, aOrt2], borderColor: '#6610f2', tension: 0.3, fill: false }
                 ]
-            },
-            options: { responsive: true }
+            }
         });
 
         const { data: tum } = await supabase.from('toplam_puanlar').select('*').eq('donem',2);
-        const basarili = (tum||[]).filter(t => t.toplam_puan >= t.rol_ortalamasi).length;
-        const basarisiz = (tum||[]).length - basarili;
-        charts.pie = new Chart(document.getElementById('chartPie'), {
+        const basarili = tum?.filter(t => t.toplam_puan >= t.rol_ortalamasi).length || 0;
+        const basarisiz = (tum?.length || 0) - basarili;
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        charts.pie = new Chart(pieCtx, {
             type: 'doughnut',
             data: { labels: ['Hedef Üstü', 'Hedef Altı'], datasets: [{ data: [basarili, basarisiz], backgroundColor: ['#20c997', '#dc3545'] }] }
         });
     }
 
-    async function loadItirazlar() {
+    // ============ İTİRAZLAR ============
+    async function itirazlar() {
         const { data } = await supabase.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
-        if(!data?.length) { document.getElementById('itirazListesi').innerHTML = '<div class="alert alert-info">Henüz itiraz yok.</div>'; return; }
+        const div = document.getElementById('itirazListe');
+        if (!data || !data.length) { div.innerHTML = '<div class="alert alert-info">Henüz itiraz yok.</div>'; return; }
         let html = '<ul class="list-group">';
-        for(const it of data) {
-            html += `<li class="list-group-item"><strong>${it.itiraz_metni.substring(0,80)}...</strong> <span class="badge bg-secondary">${it.durum}</span></li>`;
+        for (const it of data) {
+            html += `<li class="list-group-item"><strong>📝 ${it.itiraz_metni.substring(0,100)}</strong> <span class="badge bg-secondary float-end">${it.durum}</span></li>`;
         }
         html += '</ul>';
-        document.getElementById('itirazListesi').innerHTML = html;
+        div.innerHTML = html;
     }
 
     // Sayfa yüklenince
-    loadDashboard();
+    dashboard();
 </script>
 </body>
 </html>
