@@ -38,11 +38,11 @@
     <aside class="sidebar">
         <div class="p-4 text-center border-bottom border-secondary"><h5 class="fw-bold mb-0">KDS ANALİZ</h5></div>
         <nav class="mt-2">
-            <div class="nav-item" onclick="go('genel-bakis', this)"><i class="bi bi-speedometer2"></i> Genel Bakış</div>
-            <div class="nav-item" onclick="go('tum-bolge', this)"><i class="bi bi-grid-3x3-gap"></i> Tüm Bölge</div>
-            <div class="nav-item" onclick="go('kurum-bazli', this)"><i class="bi bi-hospital"></i> Kurum Bazlı</div>
-            <div class="nav-item" onclick="go('raporlar', this)"><i class="bi bi-file-earmark-bar-graph"></i> Raporlar</div>
-            <div class="nav-item" onclick="go('itirazlar', this)"><i class="bi bi-chat-dots"></i> İtirazlar</div>
+            <div class="nav-item" onclick="window.aktifSayfa('genel-bakis')"><i class="bi bi-speedometer2"></i> Genel Bakış</div>
+            <div class="nav-item" onclick="window.aktifSayfa('tum-bolge')"><i class="bi bi-grid-3x3-gap"></i> Tüm Bölge</div>
+            <div class="nav-item" onclick="window.aktifSayfa('kurum-bazli')"><i class="bi bi-hospital"></i> Kurum Bazlı</div>
+            <div class="nav-item" onclick="window.aktifSayfa('raporlar')"><i class="bi bi-file-earmark-bar-graph"></i> Raporlar</div>
+            <div class="nav-item" onclick="window.aktifSayfa('itirazlar')"><i class="bi bi-chat-dots"></i> İtirazlar</div>
         </nav>
     </aside>
 
@@ -55,13 +55,12 @@
         <div id="filter-bar" class="filter-bar">
             <div class="filter-group"><label>Yıl</label><select id="f-yil"><option value="2026">2026</option></select></div>
             <div class="filter-group"><label>Dönem</label><select id="f-donem"><option value="2">2. Dönem</option><option value="1">1. Dönem</option></select></div>
-            <div class="filter-group"><label>Kurum Türü</label><select id="f-tip" onchange="updateKurumlar()"><option value="">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select></div>
+            <div class="filter-group"><label>Kurum Türü</label><select id="f-tip" onchange="window.kurumFiltreGuncelle()"><option value="">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select></div>
             <div class="filter-group"><label>Kurum Adı</label><select id="f-kurum"><option value="">Seçiniz</option></select></div>
-            <button class="btn btn-sm btn-primary" onclick="kurumAnaliz()">Sorgula</button>
+            <button class="btn btn-sm btn-primary" onclick="window.kurumAnaliz()">Sorgula</button>
         </div>
 
         <div class="page-padding">
-            <!-- GENEL BAKIŞ -->
             <section id="genel-bakis" class="page active">
                 <div class="row g-4 mb-4">
                     <div class="col-md-4"><div class="kds-card"><h6>Toplam Kurum</h6><div class="stat-val" id="s-toplam">0</div></div></div>
@@ -70,29 +69,23 @@
                 </div>
             </section>
 
-            <!-- TÜM BÖLGE -->
             <section id="tum-bolge" class="page">
                 <div class="kds-card"><div class="d-flex justify-content-between mb-3"><h6>Bölgesel Başarı Sıralaması (Son Dönem)</h6></div>
                 <div class="table-responsive"><table class="table table-hover" id="table-bolge"><thead class="table-light"><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead><tbody><tr><td colspan="5" class="text-center">Yükleniyor...</td></tr></tbody></table></div></div>
             </section>
 
-            <!-- KURUM BAZLI -->
             <section id="kurum-bazli" class="page">
                 <div id="kurumAnalizIcerik" class="kds-card">Kurum seçip sorgulayın.</div>
             </section>
 
-            <!-- RAPORLAR -->
             <section id="raporlar" class="page">
                 <div class="row g-4">
                     <div class="col-md-12 mb-4">
                         <div class="kds-card">
                             <h6>📊 Gösterge Bazlı Performans Analizi</h6>
                             <div class="row mt-3">
-                                <div class="col-md-4">
-                                    <label>Gösterge Seçin</label>
-                                    <select id="raporGosterge" class="form-select form-select-sm" onchange="loadGostergeAnaliz()"></select>
-                                </div>
-                                <div class="col-md-2"><label>&nbsp;</label><button class="btn btn-primary btn-sm w-100" onclick="loadGostergeAnaliz()">Göster</button></div>
+                                <div class="col-md-4"><label>Gösterge Seçin</label><select id="raporGosterge" class="form-select form-select-sm"></select></div>
+                                <div class="col-md-2"><label>&nbsp;</label><button class="btn btn-primary btn-sm w-100" onclick="window.gostergeAnalizYukle()">Göster</button></div>
                             </div>
                             <canvas id="gostergeChart" height="250" class="mt-4"></canvas>
                         </div>
@@ -102,7 +95,6 @@
                 </div>
             </section>
 
-            <!-- İTİRAZLAR -->
             <section id="itirazlar" class="page">
                 <div class="kds-card"><h6>⚠️ Son İtirazlar</h6><div id="itirazListe" class="mt-3">Yükleniyor...</div></div>
             </section>
@@ -111,46 +103,26 @@
 </div>
 
 <script>
-    const supabaseUrl = "https://alisjxtoivkeyeyyuikr.supabase.co";
-    const supabaseKey = "sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of";
-    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+    // SADECE BİR KERE SUPABASE TANIMI
+    const _supabase = supabase.createClient(
+        "https://alisjxtoivkeyeyyuikr.supabase.co",
+        "sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of"
+    );
     let charts = {};
 
-    // ============ YARDIMCI FONKSİYONLAR ============
-    function performansDeğerlendirme(gd, trOrt, gostergeYonu, puan, gp) {
-        const ilOrtBasari = gostergeYonu === 'Pozitif' ? gd >= trOrt : gd <= trOrt;
+    // ============ PERFORMANS DEĞERLENDİRME ============
+    function degerlendir(gd, trOrt, yon, puan, gp) {
+        const ilOrtBasari = yon === 'Pozitif' ? gd >= trOrt : gd <= trOrt;
         const puanOrani = (puan / gp) * 100;
-        
-        if (ilOrtBasari && puanOrani >= 75) return { class: 'badge-basarili', text: '✅ Mükemmel', seviye: 4 };
-        if (ilOrtBasari && puanOrani >= 50) return { class: 'badge-basarili', text: '✅ Başarılı', seviye: 3 };
-        if (!ilOrtBasari && puanOrani >= 50) return { class: 'badge-orta', text: '⚠️ Gelişmeli', seviye: 2 };
-        return { class: 'badge-kritik', text: '❌ Kritik', seviye: 1 };
-    }
-
-    async function itirazEkle(performansId, kurum, gosterge, yil, donem) {
-        const metin = prompt(`${kurum}\n${gosterge}\n${yil}/${donem}\nİtiraz nedeni:`);
-        if (!metin) return;
-        const { error } = await supabaseClient.from('itirazlar').insert({ performans_id: performansId, itiraz_metni: metin, durum: 'beklemede' });
-        alert(error ? "Hata: " + error.message : "✅ İtiraz kaydedildi");
-        if (!error) kurumAnaliz();
-    }
-
-    // ============ MENÜ ============
-    async function go(sayfa, el) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(sayfa).classList.add('active');
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        if (el) el.classList.add('active');
-        document.getElementById('filter-bar').style.display = (sayfa === 'kurum-bazli') ? 'flex' : 'none';
-        if (sayfa === 'genel-bakis') await dashboard();
-        if (sayfa === 'tum-bolge') await bolgeListesi();
-        if (sayfa === 'raporlar') { await loadRaporlar(); await loadGostergeAnaliz(); }
-        if (sayfa === 'itirazlar') await itirazlar();
+        if (ilOrtBasari && puanOrani >= 75) return { class: 'badge-basarili', text: '✅ Mükemmel' };
+        if (ilOrtBasari && puanOrani >= 50) return { class: 'badge-basarili', text: '✅ Başarılı' };
+        if (!ilOrtBasari && puanOrani >= 50) return { class: 'badge-orta', text: '⚠️ Gelişmeli' };
+        return { class: 'badge-kritik', text: '❌ Kritik' };
     }
 
     // ============ DASHBOARD ============
     async function dashboard() {
-        const { data } = await supabaseClient.from('toplam_puanlar').select('*').eq('donem', 2);
+        const { data } = await _supabase.from('toplam_puanlar').select('*').eq('donem', 2);
         if (data && data.length) {
             document.getElementById('s-toplam').innerText = data.length;
             const hastane = data.filter(x => x.kurum_tipi === 'Hastane');
@@ -162,54 +134,69 @@
 
     // ============ TÜM BÖLGE ============
     async function bolgeListesi() {
-        const { data } = await supabaseClient.from('toplam_puanlar').select('*').eq('donem', 2).order('toplam_puan', {ascending: false});
+        const { data } = await _supabase.from('toplam_puanlar').select('*').eq('donem', 2).order('toplam_puan', {ascending: false});
         const tbody = document.querySelector('#table-bolge tbody');
-        tbody.innerHTML = data?.map(d => `<tr><td><b>${d.kurum_adi}</b></td><td><small>${d.kurum_tipi}</small></td><td class="fw-bold text-primary">${d.toplam_puan}</td><td>${d.rol_ortalamasi}</td><td>${d.toplam_puan >= d.rol_ortalamasi ? '<span class="badge-basarili">✅ Başarılı</span>' : '<span class="badge-kritik">⚠️ Gelişmeli</span>'}</td></tr>`).join('') || '<tr><td colspan="5" class="text-center">Veri yok</td></tr>';
+        if (data && data.length) {
+            tbody.innerHTML = data.map(d => `<tr>
+                <td><b>${d.kurum_adi}</b></td><td><small>${d.kurum_tipi}</small></td>
+                <td class="fw-bold text-primary">${d.toplam_puan}</td><td>${d.rol_ortalamasi}</td>
+                <td>${d.toplam_puan >= d.rol_ortalamasi ? '<span class="badge-basarili">✅ Başarılı</span>' : '<span class="badge-kritik">⚠️ Gelişmeli</span>'}</td>
+            </tr>`).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">Veri yok</td></tr>';
+        }
     }
 
     // ============ KURUM FİLTRE ============
-    async function updateKurumlar() {
+    window.kurumFiltreGuncelle = async function() {
         const tip = document.getElementById('f-tip').value;
-        let q = supabaseClient.from('toplam_puanlar').select('kurum_adi');
+        let q = _supabase.from('toplam_puanlar').select('kurum_adi');
         if (tip === 'ADSM') q = q.eq('kurum_tipi', 'ADSM');
         else if (tip) q = q.eq('kurum_tipi', tip);
         const { data } = await q;
         const tekil = [...new Set((data||[]).map(d => d.kurum_adi))].sort();
         document.getElementById('f-kurum').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k => `<option value="${k}">${k}</option>`).join('');
-    }
+    };
 
     // ============ KURUM ANALİZ ============
-    async function kurumAnaliz() {
+    window.kurumAnaliz = async function() {
         const kurum = document.getElementById('f-kurum').value;
         const donem = document.getElementById('f-donem').value;
         if (!kurum) { alert('Kurum seçin'); return; }
-        const { data: perf } = await supabaseClient.from('performans').select('*').eq('kurum_adi', kurum).eq('donem', donem);
-        const { data: toplam } = await supabaseClient.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
+        const { data: perf } = await _supabase.from('performans').select('*').eq('kurum_adi', kurum).eq('donem', donem);
+        const { data: toplam } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
         
         let html = `<h5 class="mb-3">📊 ${kurum} - ${donem}. Dönem Analizi</h5>`;
         if (toplam) html += `<div class="alert alert-info">🏆 Toplam Puan: <strong>${toplam.toplam_puan}</strong> | Rol Ort: ${toplam.rol_ortalamasi}</div>`;
         html += `<div class="table-responsive"><table class="table table-sm"><thead class="table-light"><tr><th>Gösterge</th><th>GD</th><th>TR Ort</th><th>Puan/GP</th><th>Değerlendirme</th><th>İtiraz</th></tr></thead><tbody>`;
         
         for (const r of perf||[]) {
-            const deger = performansDeğerlendirme(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp);
+            const durum = degerlendir(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp);
             html += `<tr>
-                <td>${r.gosterge_adi}</td>
-                <td>${r.gd}</td><td>${r.tr_ort}</td>
-                <td>${r.puan}/${r.gp}</td>
-                <td><span class="${deger.class}">${deger.text}</span></td>
-                <td><button class="itiraz-btn" onclick="itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td>
+                <td>${r.gosterge_adi}</td><td>${r.gd}</td><td>${r.tr_ort}</td><td>${r.puan}/${r.gp}</td>
+                <td><span class="${durum.class}">${durum.text}</span></td>
+                <td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td>
             </tr>`;
         }
         html += `</tbody></table></div>`;
         document.getElementById('kurumAnalizIcerik').innerHTML = html;
-    }
+    };
+
+    // ============ İTİRAZ EKLE ============
+    window.itirazEkle = async function(pid, kurum, gosterge, yil, donem) {
+        const metin = prompt(`${kurum}\n${gosterge}\n${yil}/${donem}\nİtiraz nedeni:`);
+        if (!metin) return;
+        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede' });
+        alert(error ? "Hata: " + error.message : "✅ İtiraz kaydedildi");
+        if (!error) window.kurumAnaliz();
+    };
 
     // ============ RAPORLAR ============
-    async function loadRaporlar() {
-        const { data: h1 } = await supabaseClient.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
-        const { data: h2 } = await supabaseClient.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
-        const { data: a1 } = await supabaseClient.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
-        const { data: a2 } = await supabaseClient.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
+    async function raporlar() {
+        const { data: h1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
+        const { data: h2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
+        const { data: a1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
+        const { data: a2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
         
         const hOrt = [(h1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h1?.length||1), (h2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h2?.length||1)];
         const aOrt = [(a1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a1?.length||1), (a2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a2?.length||1)];
@@ -217,37 +204,53 @@
         if (charts.trend) charts.trend.destroy();
         charts.trend = new Chart(document.getElementById('trendChart'), { type: 'line', data: { labels: ['1. Dönem', '2. Dönem'], datasets: [{ label: 'Hastane Ort.', data: hOrt, borderColor: '#0d6efd' }, { label: 'ADSM Ort.', data: aOrt, borderColor: '#6610f2' }] } });
         
-        const { data: tum } = await supabaseClient.from('toplam_puanlar').select('*').eq('donem',2);
+        const { data: tum } = await _supabase.from('toplam_puanlar').select('*').eq('donem',2);
         const basarili = (tum||[]).filter(t => t.toplam_puan >= t.rol_ortalamasi).length;
         if (charts.pie) charts.pie.destroy();
         charts.pie = new Chart(document.getElementById('pieChart'), { type: 'doughnut', data: { labels: ['Hedef Üstü', 'Hedef Altı'], datasets: [{ data: [basarili, (tum?.length||0)-basarili], backgroundColor: ['#20c997', '#dc3545'] }] } });
     }
 
-    // ============ GÖSTERGE BAZLI GRAFİK ============
-    async function loadGostergeAnaliz() {
-        const { data: gostergeler } = await supabaseClient.from('performans').select('gosterge_adi').order('gosterge_adi');
-        const gList = [...new Set((gostergeler||[]).map(g=>g.gosterge_adi))];
-        if (document.getElementById('raporGosterge').children.length === 0) {
-            gList.forEach(g => { let opt = document.createElement('option'); opt.value = g; opt.textContent = g; document.getElementById('raporGosterge').appendChild(opt); });
-        }
-        const secilen = document.getElementById('raporGosterge').value;
-        if (!secilen) return;
-        const { data } = await supabaseClient.from('performans').select('kurum_adi, gd, tr_ort, gosterge_yonu, puan, gp').eq('gosterge_adi', secilen).eq('donem', 2);
+    // ============ GÖSTERGE ANALİZ ============
+    window.gostergeAnalizYukle = async function() {
+        const gosterge = document.getElementById('raporGosterge').value;
+        if (!gosterge) return;
+        const { data } = await _supabase.from('performans').select('kurum_adi, gd, tr_ort').eq('gosterge_adi', gosterge).eq('donem', 2);
         if (charts.gosterge) charts.gosterge.destroy();
-        const ctx = document.getElementById('gostergeChart').getContext('2d');
-        charts.gosterge = new Chart(ctx, { type: 'bar', data: { labels: (data||[]).map(d=>d.kurum_adi.split(' ')[0]), datasets: [{ label: 'GD (Gerçekleşen Değer)', data: (data||[]).map(d=>d.gd), backgroundColor: '#3b82f6' }, { label: 'TR Ortalama', data: (data||[]).map(d=>d.tr_ort), backgroundColor: '#f59e0b' }] }, options: { responsive: true, plugins: { legend: { position: 'top' } } } });
+        charts.gosterge = new Chart(document.getElementById('gostergeChart'), { type: 'bar', data: { labels: (data||[]).map(d=>d.kurum_adi.split(' ')[0]), datasets: [{ label: 'GD', data: (data||[]).map(d=>d.gd), backgroundColor: '#3b82f6' }, { label: 'TR Ort', data: (data||[]).map(d=>d.tr_ort), backgroundColor: '#f59e0b' }] } });
+    };
+
+    // ============ GÖSTERGE LİSTESİ ============
+    async function gostergeListesi() {
+        const { data } = await _supabase.from('performans').select('gosterge_adi');
+        const gList = [...new Set((data||[]).map(g=>g.gosterge_adi))];
+        const select = document.getElementById('raporGosterge');
+        select.innerHTML = '<option value="">Gösterge Seçin</option>' + gList.map(g => `<option value="${g}">${g}</option>`).join('');
     }
 
+    // ============ İTİRAZLAR ============
     async function itirazlar() {
-        const { data } = await supabaseClient.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
+        const { data } = await _supabase.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
         const div = document.getElementById('itirazListe');
         if (!data?.length) { div.innerHTML = '<div class="alert alert-info">Henüz itiraz yok</div>'; return; }
-        let html = '<ul class="list-group">';
-        for (const it of data) html += `<li class="list-group-item"><strong>📝 ${it.itiraz_metni.substring(0,100)}</strong> <span class="badge bg-secondary float-end">${it.durum}</span></li>`;
-        html += '</ul>'; div.innerHTML = html;
+        div.innerHTML = '<ul class="list-group">' + data.map(it => `<li class="list-group-item"><strong>📝 ${it.itiraz_metni.substring(0,100)}</strong> <span class="badge bg-secondary float-end">${it.durum}</span></li>`).join('') + '</ul>';
     }
 
-    document.addEventListener('DOMContentLoaded', () => dashboard());
+    // ============ SAYFA YÖNLENDİRME ============
+    window.aktifSayfa = async function(sayfa) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(sayfa).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        event.target.closest('.nav-item').classList.add('active');
+        document.getElementById('filter-bar').style.display = (sayfa === 'kurum-bazli') ? 'flex' : 'none';
+        if (sayfa === 'genel-bakis') await dashboard();
+        if (sayfa === 'tum-bolge') await bolgeListesi();
+        if (sayfa === 'raporlar') { await raporlar(); await gostergeListesi(); }
+        if (sayfa === 'itirazlar') await itirazlar();
+    };
+
+    // Sayfa yüklenince
+    dashboard();
+    gostergeListesi();
 </script>
 </body>
 </html>
