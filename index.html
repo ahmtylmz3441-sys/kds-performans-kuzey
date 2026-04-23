@@ -95,9 +95,10 @@
 </div>
 
 <script>
-    const SUPABASE_URL = "https://alisjxtoivkeyeyyuikr.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of";
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // TEK BİR SUPABASE BAĞLANTISI - SADECE BURADA
+    const supabaseUrl = "https://alisjxtoivkeyeyyuikr.supabase.co";
+    const supabaseKey = "sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
     let charts = {};
 
     // ============ MENÜ ============
@@ -105,10 +106,10 @@
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(sayfa).classList.add('active');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        el.classList.add('active');
-        document.getElementById('page-title').innerHTML = el.innerHTML.replace(/<i.*?<\/i>/, '').trim();
+        if (el) el.classList.add('active');
+        document.getElementById('page-title').innerHTML = sayfa === 'genel-bakis' ? 'Genel Bakış' : (sayfa === 'tum-bolge' ? 'Tüm Bölge' : (sayfa === 'kurum-bazli' ? 'Kurum Bazlı' : (sayfa === 'raporlar' ? 'Raporlar' : 'İtirazlar')));
         const filterBar = document.getElementById('filter-bar');
-        filterBar.style.display = (sayfa === 'kurum-bazli') ? 'flex' : 'none';
+        if (filterBar) filterBar.style.display = (sayfa === 'kurum-bazli') ? 'flex' : 'none';
 
         if (sayfa === 'genel-bakis') await dashboard();
         if (sayfa === 'tum-bolge') await bolgeListesi();
@@ -118,7 +119,8 @@
 
     // ============ DASHBOARD ============
     async function dashboard() {
-        const { data } = await supabase.from('toplam_puanlar').select('*').eq('donem', 2);
+        const { data, error } = await supabaseClient.from('toplam_puanlar').select('*').eq('donem', 2);
+        if (error) { console.error("Hata:", error); document.getElementById('s-toplam').innerText = 'Hata'; return; }
         if (data && data.length) {
             document.getElementById('s-toplam').innerText = data.length;
             const hastane = data.filter(x => x.kurum_tipi === 'Hastane');
@@ -136,7 +138,7 @@
 
     // ============ TÜM BÖLGE ============
     async function bolgeListesi() {
-        const { data } = await supabase.from('toplam_puanlar').select('*').eq('donem', 2).order('toplam_puan', {ascending: false});
+        const { data } = await supabaseClient.from('toplam_puanlar').select('*').eq('donem', 2).order('toplam_puan', {ascending: false});
         const tbody = document.querySelector('#table-bolge tbody');
         if (data && data.length) {
             tbody.innerHTML = data.map(d => `
@@ -156,7 +158,7 @@
     // ============ KURUM FİLTRE ============
     async function updateKurumlar() {
         const tip = document.getElementById('f-tip').value;
-        let q = supabase.from('toplam_puanlar').select('kurum_adi');
+        let q = supabaseClient.from('toplam_puanlar').select('kurum_adi');
         if (tip === 'ADSM') q = q.eq('kurum_tipi', 'ADSM');
         else if (tip) q = q.eq('kurum_tipi', tip);
         const { data } = await q;
@@ -171,8 +173,8 @@
         const donem = document.getElementById('f-donem').value;
         if (!kurum) { alert('Lütfen bir kurum seçin'); return; }
         
-        const { data: perf } = await supabase.from('performans').select('*').eq('kurum_adi', kurum).eq('donem', donem);
-        const { data: toplam } = await supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
+        const { data: perf } = await supabaseClient.from('performans').select('*').eq('kurum_adi', kurum).eq('donem', donem);
+        const { data: toplam } = await supabaseClient.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
         
         let html = `<h5 class="mb-3">📊 ${kurum} - ${donem}. Dönem Analizi</h5>`;
         if (toplam) html += `<div class="alert alert-info">🏆 Toplam Puan: <strong>${toplam.toplam_puan}</strong> | Rol Ort: ${toplam.rol_ortalamasi}</div>`;
@@ -187,12 +189,12 @@
         document.getElementById('kurumAnalizIcerik').innerHTML = html;
     }
 
-    // ============ RAPORLAR (Dinamik) ============
+    // ============ RAPORLAR ============
     async function raporlar() {
-        const { data: h1 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
-        const { data: h2 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
-        const { data: a1 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
-        const { data: a2 } = await supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
+        const { data: h1 } = await supabaseClient.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
+        const { data: h2 } = await supabaseClient.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
+        const { data: a1 } = await supabaseClient.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
+        const { data: a2 } = await supabaseClient.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
         
         const hOrt1 = h1?.length ? (h1.reduce((s,v)=>s+v.toplam_puan,0)/h1.length).toFixed(1) : 0;
         const hOrt2 = h2?.length ? (h2.reduce((s,v)=>s+v.toplam_puan,0)/h2.length).toFixed(1) : 0;
@@ -214,7 +216,7 @@
             }
         });
 
-        const { data: tum } = await supabase.from('toplam_puanlar').select('*').eq('donem',2);
+        const { data: tum } = await supabaseClient.from('toplam_puanlar').select('*').eq('donem',2);
         const basarili = tum?.filter(t => t.toplam_puan >= t.rol_ortalamasi).length || 0;
         const basarisiz = (tum?.length || 0) - basarili;
         const pieCtx = document.getElementById('pieChart').getContext('2d');
@@ -226,7 +228,7 @@
 
     // ============ İTİRAZLAR ============
     async function itirazlar() {
-        const { data } = await supabase.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
+        const { data } = await supabaseClient.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
         const div = document.getElementById('itirazListe');
         if (!data || !data.length) { div.innerHTML = '<div class="alert alert-info">Henüz itiraz yok.</div>'; return; }
         let html = '<ul class="list-group">';
@@ -238,7 +240,9 @@
     }
 
     // Sayfa yüklenince
-    dashboard();
+    document.addEventListener('DOMContentLoaded', () => {
+        dashboard();
+    });
 </script>
 </body>
 </html>
