@@ -333,3 +333,13 @@
         if (sayfa === 'genel-bakis') await dashboard();
         if (sayfa === 'tum-bolge') await window.bolgeListesi();
         if (sayfa === 'raporlar') await raporlar();
+        if (sayfa === 'itirazlar') await window.itirazlariGoster();
+        if (sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
+    };
+
+    window.gitSayfa('genel-bakis');
+    window.kurumFiltreGuncelle();
+    itirazDurumlariniYukle();
+</script>
+</body>
+</html>
