@@ -273,20 +273,19 @@
 
     // ============ PDF URL OLUŞTURUCU ============
     function pdfUrlGetir(gostergeKodu, kurumTipi) {
-        if (!gostergeKodu) return null;
-        
-        // Hastane göstergeleri (SYPG-BH-1 ... SYPG-BH-39)
-        if (gostergeKodu.startsWith('SYPG-BH-')) {
-            const numara = gostergeKodu.split('-')[2];
-            return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzy/main/dokumanlar/gorengostergekartlari2026-v1-en-gunceli-160220226pdf-32-70-${numara}.pdf`;
-        }
-        // ADSM göstergeleri (SYPG-ADSH-1 ... SYPG-ADSH-14)
-        else if (gostergeKodu.startsWith('SYPG-ADSH-')) {
-            const numara = gostergeKodu.split('-')[2];
-            return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzy/main/dokumanlar/gorengostergekartlari2026-v1-en-gunceli-160220226pdf-72-85-${numara}.pdf`;
-        }
-        return null;
+    if (!gostergeKodu) return null;
+    
+    if (gostergeKodu.startsWith('SYPG-BH-')) {
+        const numara = gostergeKodu.split('-')[2];
+        // Raw yerine GitHub dosya sayfası
+        return `https://github.com/ahmtylmz3441-sys/kds-performans-kuzy/blob/main/dokumanlar/gorengostergekartlari2026-v1-en-gunceli-160220226pdf-32-70-${numara}.pdf`;
     }
+    else if (gostergeKodu.startsWith('SYPG-ADSH-')) {
+        const numara = gostergeKodu.split('-')[2];
+        return `https://github.com/ahmtylmz3441-sys/kds-performans-kuzy/blob/main/dokumanlar/gorengostergekartlari2026-v1-en-gunceli-160220226pdf-72-85-${numara}.pdf`;
+    }
+    return null;
+}
 
     // ============ MODAL (POPUP) FONKSİYONLARI ============
     function gostergeDetayGoster(id, ad, gd, trOrt, puan, gp, yon, gostergeKodu, kurumTipi) {
