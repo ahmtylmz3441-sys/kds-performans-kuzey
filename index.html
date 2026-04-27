@@ -309,17 +309,18 @@
             html += `<div class="gosterge-detay"><strong>📝 İtiraz Durumu:</strong> Henüz itiraz yok</div>`;
         }
         
-        // PDF gösterimi
-        const pdfUrl = pdfUrlGetir(gostergeKodu, kurumTipi);
-        if (pdfUrl) {
-            html += `<div class="gosterge-detay" style="margin-top:12px;">
-                        <strong>📄 Gösterge Dokümanı:</strong>
-                        <iframe src="${pdfUrl}" class="pdf-iframe"></iframe>
-                        <a href="${pdfUrl}" target="_blank" class="pdf-link">🔗 Yeni pencerede aç</a>
-                     </div>`;
-        } else {
-            html += `<div class="gosterge-detay"><strong>📄 Gösterge Dokümanı:</strong> Henüz yüklenmedi.</div>`;
-        }
+        // PDF gösterimi - Google Docs Viewer ile
+const pdfUrl = pdfUrlGetir(gostergeKodu, kurumTipi);
+if (pdfUrl) {
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+    html += `<div class="gosterge-detay" style="margin-top:12px;">
+                <strong>📄 Gösterge Dokümanı:</strong>
+                <iframe src="${viewerUrl}" class="pdf-iframe"></iframe>
+                <a href="${pdfUrl}" target="_blank" class="pdf-link">🔗 Doğrudan PDF'i aç</a>
+             </div>`;
+} else {
+    html += `<div class="gosterge-detay"><strong>📄 Gösterge Dokümanı:</strong> Henüz yüklenmedi.</div>`;
+}
         
         document.getElementById('modalIcerik').innerHTML = html;
         document.getElementById('gostergeModal').classList.add('active');
