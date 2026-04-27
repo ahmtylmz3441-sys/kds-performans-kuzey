@@ -17,7 +17,7 @@
         .main-content { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; }
         .top-header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
         
-        /* ============ DÜZELTİLEN FİLTRE BAR ============ */
+        /* ============ FİLTRE BAR ============ */
         .filter-bar { 
             background: #fff; 
             padding: 12px 25px; 
@@ -60,7 +60,7 @@
             white-space: nowrap; 
             flex-shrink: 0; 
         }
-        /* ============================================= */
+        /* ================================= */
         
         .page-padding { padding: 25px; }
         .page { display: none; }
@@ -81,6 +81,86 @@
         .kurum-baslik { font-size: 1.1rem; font-weight: 600; color: #0d2137; margin-bottom: 15px; }
         .yon-ok-pozitif { color: #10b981; font-weight: bold; font-size: 14px; }
         .yon-ok-negatif { color: #ef4444; font-weight: bold; font-size: 14px; }
+        
+        /* ============ MODAL (POPUP) STİLLERİ ============ */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-container {
+            background: white;
+            width: 600px;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 20px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+            padding: 24px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .modal-header h4 {
+            margin: 0;
+            font-weight: 700;
+            color: #0d2137;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #6c757d;
+            line-height: 1;
+        }
+        .modal-close:hover {
+            color: #dc2626;
+        }
+        .gosterge-detay {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin: 8px 0;
+        }
+        .gosterge-detay strong {
+            width: 140px;
+            display: inline-block;
+            font-weight: 600;
+            color: #4b5563;
+        }
+        .pdf-iframe {
+            width: 100%;
+            height: 400px;
+            border: none;
+            border-radius: 12px;
+            margin-top: 12px;
+        }
+        .pdf-link {
+            display: inline-block;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #0d6efd;
+            text-decoration: none;
+        }
+        .pdf-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -134,7 +214,7 @@
                     <div class="table-responsive mt-2">
                         <table class="table table-hover" id="table-bolge">
                             <thead class="table-light"><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr></thead>
-                            <tbody><tr><td colspan="5">Yükleniyor......</td></tr>
+                            <tbody><tr><td colspan="5">Yükleniyor......</tbody>
                         </table>
                     </div>
                 </div>
@@ -145,6 +225,19 @@
             <section id="itirazlar" class="page"><div class="kds-card"><h6>⚠️ İtiraz Yönetimi</h6><div id="itirazListe" class="mt-3">Yükleniyor...</div></div></section>
         </div>
     </main>
+</div>
+
+<!-- ============ MODAL (POPUP) ============ -->
+<div id="gostergeModal" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h4 id="modalBaslik">Gösterge Detayı</h4>
+            <button class="modal-close" onclick="kapatModal()">&times;</button>
+        </div>
+        <div id="modalIcerik">
+            <p>Yükleniyor...</p>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -178,6 +271,69 @@
         return '<span class="yon-ok-negatif">↓ Negatif</span>';
     }
 
+    // ============ PDF URL OLUŞTURUCU ============
+    function pdfUrlGetir(gostergeKodu, kurumTipi) {
+        if (!gostergeKodu) return null;
+        
+        // Hastane göstergeleri (SYPG-BH-1 ... SYPG-BH-39)
+        if (gostergeKodu.startsWith('SYPG-BH-')) {
+            const numara = gostergeKodu.split('-')[2];
+            return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzy/main/dokumanlar/gorengostergekartlari2026-v1-en-gunceli-160220226pdf-32-70-${numara}.pdf`;
+        }
+        // ADSM göstergeleri (SYPG-ADSH-1 ... SYPG-ADSH-14)
+        else if (gostergeKodu.startsWith('SYPG-ADSH-')) {
+            const numara = gostergeKodu.split('-')[2];
+            return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzy/main/dokumanlar/gorengostergekartlari2026-v1-en-gunceli-160220226pdf-72-85-${numara}.pdf`;
+        }
+        return null;
+    }
+
+    // ============ MODAL (POPUP) FONKSİYONLARI ============
+    function gostergeDetayGoster(id, ad, gd, trOrt, puan, gp, yon, gostergeKodu, kurumTipi) {
+        document.getElementById('modalBaslik').innerHTML = `📊 ${ad}`;
+        
+        const yonTuru = yon === 'Pozitif' ? '↑ Pozitif (Artmalı)' : '↓ Negatif (Azalmalı)';
+        const yonClass = yon === 'Pozitif' ? 'color: #10b981;' : 'color: #ef4444;';
+        
+        let html = `
+            <div class="gosterge-detay"><strong>🎯 Hedef Yönü:</strong> <span style="${yonClass}">${yonTuru}</span></div>
+            <div class="gosterge-detay"><strong>📈 GD (Gerçekleşen):</strong> ${gd ?? '-'}</div>
+            <div class="gosterge-detay"><strong>📊 TR Ortalama:</strong> ${trOrt ?? '-'}</div>
+            <div class="gosterge-detay"><strong>⭐ Puan:</strong> ${puan ?? 'null'}/${gp ?? '-'}</div>
+        `;
+        
+        // İtiraz durumunu kontrol et
+        if (itirazPerformansMap && itirazPerformansMap[id]) {
+            html += `<div class="gosterge-detay" style="background:#fef3c7;"><strong>📝 İtiraz Durumu:</strong> ⏳ İtiraz yapılmış ve beklemede</div>`;
+        } else {
+            html += `<div class="gosterge-detay"><strong>📝 İtiraz Durumu:</strong> Henüz itiraz yok</div>`;
+        }
+        
+        // PDF gösterimi
+        const pdfUrl = pdfUrlGetir(gostergeKodu, kurumTipi);
+        if (pdfUrl) {
+            html += `<div class="gosterge-detay" style="margin-top:12px;">
+                        <strong>📄 Gösterge Dokümanı:</strong>
+                        <iframe src="${pdfUrl}" class="pdf-iframe"></iframe>
+                        <a href="${pdfUrl}" target="_blank" class="pdf-link">🔗 Yeni pencerede aç</a>
+                     </div>`;
+        } else {
+            html += `<div class="gosterge-detay"><strong>📄 Gösterge Dokümanı:</strong> Henüz yüklenmedi.</div>`;
+        }
+        
+        document.getElementById('modalIcerik').innerHTML = html;
+        document.getElementById('gostergeModal').classList.add('active');
+    }
+
+    function kapatModal() {
+        document.getElementById('gostergeModal').classList.remove('active');
+    }
+
+    // Modal dışına tıklama ile kapatma
+    document.getElementById('gostergeModal').addEventListener('click', function(e) {
+        if (e.target === this) kapatModal();
+    });
+
     async function dashboard() {
         const { data } = await _supabase.from('toplam_puanlar').select('*').eq('donem', 2);
         if (!data?.length) return;
@@ -201,11 +357,17 @@
         if (tip === 'ADSM') query = query.eq('kurum_tipi', 'ADSM');
         const { data, error } = await query.order('toplam_puan', { ascending: false });
         const tbody = document.querySelector('#table-bolge tbody');
-        if (error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Hata: ${error.message}</td></tr>`; return; }
-        if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-warning">Veri bulunamadı</td></tr>`; return; }
+        if (error) { tbody.innerHTML = `</td><td colspan="5" class="text-center text-danger">Hata: ${error.message}</tr>`; return; }
+        if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-warning">Veri bulunamadı</tr>`; return; }
         tbody.innerHTML = data.map(d => {
             const durum = parseFloat(d.toplam_puan) >= parseFloat(d.rol_ortalamasi);
-            return `<tr><td><b>${d.kurum_adi}</b></td><td>${d.kurum_tipi}</td><td class="fw-bold text-primary">${d.toplam_puan}</td><td>${d.rol_ortalamasi}</td><td>${durum ? '<span class="badge-basarili">✅ İyi</span>' : '<span class="badge-kritik">❌ Kötü</span>'}</td></tr>`;
+            return `<tr>
+                <td><b>${d.kurum_adi}</b></td>
+                <td>${d.kurum_tipi}</td>
+                <td class="fw-bold text-primary">${d.toplam_puan}</td>
+                <td>${d.rol_ortalamasi}</td>
+                <td>${durum ? '<span class="badge-basarili">✅ İyi</span>' : '<span class="badge-kritik">❌ Kötü</span>'}</td>
+            </tr>`;
         }).join('');
     };
 
@@ -232,9 +394,18 @@
         html += `<div class="table-responsive"><table class="table table-sm"><thead class="table-light"><tr><th>Gösterge</th><th>Hedef Yönü</th><th>GD</th><th>TR Ort</th><th>Puan/GP</th><th>Değerlendirme</th><th>İtiraz</th></tr></thead><tbody>`;
         for (const r of perf||[]) {
             const durum = degerlendir(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp, r.id);
-            html += `<tr><td>${r.gosterge_adi}</td><td>${yonOku(r.gosterge_yonu)}</td><td>${r.gd??'-'}</td><td>${r.tr_ort??'-'}</td><td>${r.puan??'null'}/${r.gp}</td><td><span class="${durum.class}">${durum.text}</span></td><td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td></tr>`;
+            // Gösterge adını tıklanabilir yap
+            html += `<tr>
+                <td><a href="#" style="color:#0d6efd; text-decoration:none; font-weight:500;" onclick="gostergeDetayGoster('${r.id}','${r.gosterge_adi.replace(/'/g, "\\'")}', '${r.gd}', '${r.tr_ort}', '${r.puan}', '${r.gp}', '${r.gosterge_yonu}', '${r.gosterge_kodu}', '${r.kurum_tipi}'); return false;">${r.gosterge_adi}</a></td>
+                <td>${yonOku(r.gosterge_yonu)}</td>
+                <td>${r.gd??'-'}</td>
+                <td>${r.tr_ort??'-'}</td>
+                <td>${r.puan??'null'}/${r.gp}</td>
+                <td><span class="${durum.class}">${durum.text}</span></td>
+                <td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td>
+             </tr>`;
         }
-        html += `</tbody></table></div>`;
+        html += `</tbody><table></div>`;
         document.getElementById('kurumAnalizIcerik').innerHTML = html;
     };
 
