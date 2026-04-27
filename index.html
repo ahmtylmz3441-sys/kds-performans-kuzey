@@ -280,11 +280,11 @@
     
     if (gostergeKodu.startsWith('SYPG-BH-')) {
         const numara = gostergeKodu.split('-')[2];
-        return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/${commitHash}/dokumanlar/h${numara}.pdf`;
+        return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/pendikismdenetim/dokumanlar/h${numara}.pdf`;
     }
     else if (gostergeKodu.startsWith('SYPG-ADSH-')) {
         const numara = gostergeKodu.split('-')[2];
-        return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/${commitHash}/dokumanlar/a${numara}.pdf`;
+        return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/pendikismdenetim/dokumanlar/a${numara}.pdf`;
     }
     return null;
 }
