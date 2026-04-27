@@ -389,7 +389,12 @@ if (pdfUrl) {
         if (!kurum) { alert('Kurum seçin'); return; }
         const donemAdi = donem == 1 ? 'Ocak' : 'Şubat';
         await itirazDurumlariniYukle();
-        const { data: perf } = await _supabase.from('performans').select('*').eq('kurum_adi', kurum).eq('donem', donem);
+        const { data: perf } = await _supabase
+    .from('performans')
+    .select('*')
+    .eq('kurum_adi', kurum)
+    .eq('donem', donem)
+    .order('gosterge_kodu', { ascending: true });
         const { data: toplam } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
         let html = `<div class="kurum-baslik">📊 ${kurum} - ${donemAdi} ${document.getElementById('f-yil').value} Dönemi Analizi</div>`;
         if (toplam) html += `<div class="alert alert-info py-2">🏆 Toplam Puan: <strong>${toplam.toplam_puan}</strong> | Rol Ort: ${toplam.rol_ortalamasi}</div>`;
