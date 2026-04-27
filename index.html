@@ -137,17 +137,30 @@
     }
     function kapatModal() { document.getElementById('gostergeModal').classList.remove('active'); }
     window.gostergeDetayGoster = function(id, ad, gd, trOrt, puan, gp, yon, gostergeKodu, kurumTipi) {
-        document.getElementById('modalBaslik').innerHTML = `📊 ${ad}`;
-        const yonTuru = yon === 'Pozitif' ? '↑ Pozitif (Artmalı)' : '↓ Negatif (Azalmalı)';
-        const yonClass = yon === 'Pozitif' ? 'color: #10b981;' : 'color: #ef4444;';
-        let html = `<div class="gosterge-detay"><strong>🎯 Hedef Yönü:</strong> <span style="${yonClass}">${yonTuru}</span></div><div class="gosterge-detay"><strong>📈 GD:</strong> ${gd ?? '-'}</div><div class="gosterge-detay"><strong>📊 TR Ort:</strong> ${trOrt ?? '-'}</div><div class="gosterge-detay"><strong>⭐ Puan:</strong> ${puan ?? 'null'}/${gp ?? '-'}</div>`;
-        if (itirazPerformansMap && itirazPerformansMap[id]) html += `<div class="gosterge-detay" style="background:#fef3c7;"><strong>📝 İtiraz Durumu:</strong> ⏳ İtiraz var</div>`;
-        else html += `<div class="gosterge-detay"><strong>📝 İtiraz Durumu:</strong> Henüz itiraz yok</div>`;
-        const pdfUrl = pdfUrlGetir(gostergeKodu);
-        if (pdfUrl) html += `<div class="gosterge-detay"><strong>📄 Doküman:</strong><iframe src="${pdfUrl}" class="pdf-iframe"></iframe><a href="${pdfUrl}" target="_blank" class="pdf-link">🔗 PDF'i aç</a></div>`;
-        else html += `<div class="gosterge-detay"><strong>📄 Doküman:</strong> Henüz yüklenmedi</div>`;
-        document.getElementById('modalIcerik').innerHTML = html; document.getElementById('gostergeModal').classList.add('active');
-    };
+    document.getElementById('modalBaslik').innerHTML = `📊 ${ad}`;
+    const yonTuru = yon === 'Pozitif' ? '↑ Pozitif (Artmalı)' : '↓ Negatif (Azalmalı)';
+    const yonClass = yon === 'Pozitif' ? 'color: #10b981;' : 'color: #ef4444;';
+    let html = `
+        <div class="gosterge-detay"><strong>🎯 Hedef Yönü:</strong> <span style="${yonClass}">${yonTuru}</span></div>
+        <div class="gosterge-detay"><strong>📈 GD:</strong> ${gd ?? '-'}</div>
+        <div class="gosterge-detay"><strong>📊 TR Ort:</strong> ${trOrt ?? '-'}</div>
+        <div class="gosterge-detay"><strong>⭐ Puan:</strong> ${puan ?? 'null'}/${gp ?? '-'}</div>
+    `;
+    if (itirazPerformansMap && itirazPerformansMap[id]) {
+        html += `<div class="gosterge-detay" style="background:#fef3c7;"><strong>📝 İtiraz Durumu:</strong> ⏳ İtiraz var</div>`;
+    } else {
+        html += `<div class="gosterge-detay"><strong>📝 İtiraz Durumu:</strong> Henüz itiraz yok</div>`;
+    }
+    const pdfUrl = pdfUrlGetir(gostergeKodu);
+    if (pdfUrl) {
+        // SADECE LİNK - İFRAME YOK, DOĞRUDAN YENİ SEKMEDE AÇILIR
+        html += `<div class="gosterge-detay"><strong>📄 Doküman:</strong><br><a href="${pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary mt-2" style="display:inline-block; padding:6px 12px; border-radius:8px; text-decoration:none; background:#2563eb; color:white;">📎 PDF'i Yeni Pencerede Aç</a></div>`;
+    } else {
+        html += `<div class="gosterge-detay"><strong>📄 Doküman:</strong> Henüz yüklenmedi</div>`;
+    }
+    document.getElementById('modalIcerik').innerHTML = html;
+    document.getElementById('gostergeModal').classList.add('active');
+};
     document.getElementById('gostergeModal').addEventListener('click', function(e) { if (e.target === this) kapatModal(); });
 
     async function dashboard() {
