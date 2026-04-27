@@ -275,15 +275,13 @@
     function pdfUrlGetir(gostergeKodu, kurumTipi) {
     if (!gostergeKodu) return null;
     
-    // SYPG-BH-1 -> h1.pdf
     if (gostergeKodu.startsWith('SYPG-BH-')) {
         const numara = gostergeKodu.split('-')[2];
-        return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/main/dokumanlar/h${numara}.pdf`;
+        return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzye/pendikismdenetim/dokumanlar/h${numara}.pdf`;
     }
-    // SYPG-ADSH-1 -> a1.pdf
     else if (gostergeKodu.startsWith('SYPG-ADSH-')) {
         const numara = gostergeKodu.split('-')[2];
-        return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/main/dokumanlar/a${numara}.pdf`;
+        return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzye/pendikismdenetim/dokumanlar/a${numara}.pdf`;
     }
     return null;
 }
