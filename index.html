@@ -390,13 +390,18 @@ if (pdfUrl) {
     const donemAdi = donem == 1 ? 'Ocak' : 'Şubat';
     await itirazDurumlariniYukle();
     
-    // SIRALAMA EKLENDİ - gosterge_kodu'na göre
-    const { data: perf } = await _supabase
+    const { data: perfRaw } = await _supabase
         .from('performans')
         .select('*')
         .eq('kurum_adi', kurum)
-        .eq('donem', donem)
-        .order('gosterge_kodu', { ascending: true });  // ← BURASI ÖNEMLİ
+        .eq('donem', donem);
+    
+    // JavaScript ile gösterge koduna göre sayısal sıralama
+    const perf = perfRaw.sort((a, b) => {
+        const numA = parseInt(a.gosterge_kodu.split('-')[2]);
+        const numB = parseInt(b.gosterge_kodu.split('-')[2]);
+        return numA - numB;
+    });
     
     const { data: toplam } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
     
@@ -404,7 +409,7 @@ if (pdfUrl) {
     if (toplam) html += `<div class="alert alert-info py-2">🏆 Toplam Puan: <strong>${toplam.toplam_puan}</strong> | Rol Ort: ${toplam.rol_ortalamasi}</div>`;
     html += `<div class="table-responsive"><table class="table table-sm"><thead class="table-light"><tr><th>Gösterge</th><th>Hedef Yönü</th><th>GD</th><th>TR Ort</th><th>Puan/GP</th><th>Değerlendirme</th><th>İtiraz</th></tr></thead><tbody>`;
     
-    for (const r of perf||[]) {
+    for (const r of perf) {
         const durum = degerlendir(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp, r.id);
         html += `<tr>
             <td><a href="#" style="color:#0d6efd; text-decoration:none;" onclick="window.gostergeDetayGoster('${r.id}','${r.gosterge_adi.replace(/'/g, "\\'")}', '${r.gd}', '${r.tr_ort}', '${r.puan}', '${r.gp}', '${r.gosterge_yonu}', '${r.gosterge_kodu}', '${r.kurum_tipi}'); return false;">${r.gosterge_adi}</a></td>
@@ -416,7 +421,7 @@ if (pdfUrl) {
             <td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td>
         </tr>`;
     }
-    html += `</tbody><td></div>`;
+    html += `</tbody></table></div>`;
     document.getElementById('kurumAnalizIcerik').innerHTML = html;
 };
 
