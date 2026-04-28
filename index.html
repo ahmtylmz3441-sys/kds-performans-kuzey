@@ -532,24 +532,25 @@ if (pdfUrl) {
     const container = document.getElementById('raporlar');
     if (!container) return;
     
-    // Raporlar sayfasının HTML'ini oluştur - raporGosterge ID'si burada
     container.innerHTML = `
         <div class="row g-4">
             <div class="col-md-6">
                 <div class="kds-card">
-                    <h6>📉 Dönemsel Trend (Hastane/ADSM)</h6>
-                    <div class="chart-container"><canvas id="trendChart"></canvas></div>
+                    <h6>🥧 Başarı Dağılımı (Son Dönem)</h6>
+                    <div class="chart-container"><canvas id="pieChart"></canvas></div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="kds-card">
-                    <h6>🥧 Başarı Dağılımı</h6>
-                    <div class="chart-container"><canvas id="pieChart"></canvas></div>
+                    <h6>🏆 En Başarılı Kurumlar (İl Ortalaması Üstü)</h6>
+                    <div id="basariliKurumlar" class="overflow-auto" style="max-height: 250px">
+                        <div class="text-center py-4">Yükleniyor...</div>
+                    </div>
                 </div>
             </div>
             <div class="col-12">
                 <div class="kds-card">
-                    <h6>📈 Gösterge Bazlı Trend Analizi</h6>
+                    <h6>📈 Gösterge Bazlı Analiz</h6>
                     <div class="row mt-3">
                         <div class="col-md-4">
                             <label class="form-label">Gösterge Seçin</label>
@@ -565,10 +566,21 @@ if (pdfUrl) {
                     <div class="chart-container mt-3"><canvas id="gostergeChart"></canvas></div>
                 </div>
             </div>
+            <div class="col-12">
+                <div class="kds-card">
+                    <h6>📋 Tüm Kurumlar Sıralaması</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="kurumSiralamaTablo">
+                            <thead class="table-light"><tr><th>#</th><th>Kurum Adı</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead>
+                            <tbody><tr><td colspan="6" class="text-center">Yükleniyor...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
     
-    // Verileri çek (Trend ve Pasta grafik için)
+    // Verileri çek
     const [puanlarRes, gListRes] = await Promise.all([
         _supabase.from('toplam_puanlar').select('toplam_puan, kurum_tipi, donem, rol_ortalamasi, kurum_adi'),
         _supabase.from('performans').select('gosterge_adi')
@@ -577,29 +589,7 @@ if (pdfUrl) {
     const puanlar = puanlarRes.data || [];
     const gList = gListRes.data || [];
     
-    // Ortalamaları hesapla
-    const hesapla = (tip, donem) => {
-        const filtre = puanlar.filter(p => p.kurum_tipi === tip && p.donem === donem);
-        return filtre.length ? filtre.reduce((s, v) => s + v.toplam_puan, 0) / filtre.length : 0;
-    };
-    
-    const hOrt = [hesapla('Hastane', 1), hesapla('Hastane', 2)];
-    const aOrt = [hesapla('ADSM', 1), hesapla('ADSM', 2)];
-    
-    // Trend Grafiği
-    if (charts.trend) charts.trend.destroy();
-    charts.trend = new Chart(document.getElementById('trendChart'), { 
-        type: 'line', 
-        data: { 
-            labels: ['Ocak', 'Şubat'], 
-            datasets: [
-                { label: 'Hastane Ort.', data: hOrt, borderColor: '#0d6efd', tension: 0.3, fill: false }, 
-                { label: 'ADSM Ort.', data: aOrt, borderColor: '#6610f2', tension: 0.3, fill: false }
-            ] 
-        }
-    });
-    
-    // Başarı Dağılımı
+    // Başarı Dağılımı (Pasta grafik)
     const sonDonem = Math.max(...puanlar.map(p => p.donem), 2);
     const tumSon = puanlar.filter(p => p.donem === sonDonem);
     const basarili = tumSon.filter(t => t.toplam_puan >= t.rol_ortalamasi).length;
@@ -611,48 +601,77 @@ if (pdfUrl) {
             labels: ['Hedef Üstü', 'Hedef Altı'], 
             datasets: [{ data: [basarili, tumSon.length - basarili], backgroundColor: ['#20c997', '#dc3545'] }] 
         },
-        options: { cutout: '70%' }
+        options: { cutout: '65%', responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
+    
+    // En Başarılı Kurumlar (İl Ortalaması Üstü)
+    const basariliKurumlar = tumSon.filter(t => t.toplam_puan >= t.rol_ortalamasi).sort((a,b) => b.toplam_puan - a.toplam_puan);
+    const basariliHtml = basariliKurumlar.map(k => `
+        <div class="rank-card d-flex justify-content-between align-items-center">
+            <div><span class="rank-number">🏆</span> <strong>${k.kurum_adi}</strong> <span class="badge-basarili ms-2">${k.kurum_tipi}</span></div>
+            <div><span class="fw-bold text-primary">${k.toplam_puan}</span> / ${k.rol_ortalamasi}</div>
+        </div>
+    `).join('');
+    document.getElementById('basariliKurumlar').innerHTML = basariliKurumlar.length ? basariliHtml : '<div class="text-center py-4">Henüz veri yok</div>';
+    
+    // Tüm Kurumlar Sıralaması Tablosu
+    const tumKurumlar = tumSon.sort((a,b) => b.toplam_puan - a.toplam_puan);
+    const tabloHtml = tumKurumlar.map((k, i) => `
+        <tr>
+            <td>${i+1}</td>
+            <td><strong>${k.kurum_adi}</strong></td>
+            <td>${k.kurum_tipi}</td>
+            <td class="fw-bold ${k.toplam_puan >= k.rol_ortalamasi ? 'text-success' : 'text-danger'}">${k.toplam_puan}</td>
+            <td>${k.rol_ortalamasi}</td>
+            <td>${k.toplam_puan >= k.rol_ortalamasi ? '<span class="badge-basarili">✅ Başarılı</span>' : '<span class="badge-kritik">⚠️ Gelişmeli</span>'}</td>
+        </tr>
+    `).join('');
+    document.getElementById('kurumSiralamaTablo').innerHTML = `<thead class="table-light"><tr><th>#</th><th>Kurum Adı</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead><tbody>${tabloHtml}</tbody>`;
     
     // Gösterge listesini doldur
     const benzersizGostergeler = [...new Map(gList.map(item => [item.gosterge_adi, item])).values()];
     const select = document.getElementById('raporGosterge');
-    select.innerHTML = '<option value="">Gösterge Seçin</option>' + 
-                      benzersizGostergeler.map(g => `<option value="${g.gosterge_adi}">${g.gosterge_adi}</option>`).join('');
+    if (select) {
+        select.innerHTML = '<option value="">Gösterge Seçin</option>' + 
+                          benzersizGostergeler.map(g => `<option value="${g.gosterge_adi}">${g.gosterge_adi}</option>`).join('');
+    }
     
     // Grafik oluşturma butonu
-    document.getElementById('raporGrafikBtn').onclick = async function() {
-        const gosterge = document.getElementById('raporGosterge').value;
-        if (!gosterge) { alert('Lütfen bir gösterge seçin'); return; }
-        
-        const { data } = await _supabase
-            .from('performans')
-            .select('kurum_adi, gd, donem')
-            .eq('gosterge_adi', gosterge)
-            .in('donem', [1, 2]);
-        
-        if (!data || data.length === 0) { alert('Veri bulunamadı'); return; }
-        
-        const kurumlar = [...new Set(data.map(d => d.kurum_adi))].slice(0, 12);
-        const ocakData = {}, subatData = {};
-        data.forEach(r => {
-            if (r.donem === 1) ocakData[r.kurum_adi] = r.gd;
-            else subatData[r.kurum_adi] = r.gd;
-        });
-        
-        if (window.gostergeChartInstance) window.gostergeChartInstance.destroy();
-        window.gostergeChartInstance = new Chart(document.getElementById('gostergeChart'), {
-            type: 'bar',
-            data: {
-                labels: kurumlar.map(k => k.split(' ')[0]),
-                datasets: [
-                    { label: 'Ocak GD', data: kurumlar.map(k => ocakData[k]), backgroundColor: '#3b82f6', borderRadius: 6 },
-                    { label: 'Şubat GD', data: kurumlar.map(k => subatData[k]), backgroundColor: '#f59e0b', borderRadius: 6 }
-                ]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
-        });
-    };
+    const btn = document.getElementById('raporGrafikBtn');
+    if (btn) {
+        btn.onclick = async function() {
+            const gosterge = document.getElementById('raporGosterge').value;
+            if (!gosterge) { alert('Lütfen bir gösterge seçin'); return; }
+            
+            const { data } = await _supabase
+                .from('performans')
+                .select('kurum_adi, gd, donem')
+                .eq('gosterge_adi', gosterge)
+                .in('donem', [1, 2]);
+            
+            if (!data || data.length === 0) { alert('Veri bulunamadı'); return; }
+            
+            const kurumlar = [...new Set(data.map(d => d.kurum_adi))].slice(0, 12);
+            const ocakData = {}, subatData = {};
+            data.forEach(r => {
+                if (r.donem === 1) ocakData[r.kurum_adi] = r.gd;
+                else subatData[r.kurum_adi] = r.gd;
+            });
+            
+            if (window.gostergeChartInstance) window.gostergeChartInstance.destroy();
+            window.gostergeChartInstance = new Chart(document.getElementById('gostergeChart'), {
+                type: 'bar',
+                data: {
+                    labels: kurumlar.map(k => k.split(' ')[0]),
+                    datasets: [
+                        { label: 'Ocak GD', data: kurumlar.map(k => ocakData[k]), backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'Şubat GD', data: kurumlar.map(k => subatData[k]), backgroundColor: '#f59e0b', borderRadius: 6 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+            });
+        };
+    }
 }
     window.gitSayfa = async function(sayfa, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
