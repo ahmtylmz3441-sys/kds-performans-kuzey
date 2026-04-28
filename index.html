@@ -484,38 +484,23 @@ if (pdfUrl) {
     };
 
     async function raporlar() {
-    const c = document.getElementById('raporlar');
-    c.innerHTML = `
-        <div class="kds-card">
-            <h6>📊 Raporlar</h6>
-            <div class="row mt-3">
-                <div class="col-md-3"><label>Yıl</label><select id="rYil" class="form-select"></select></div>
-                <div class="col-md-3"><label>Dönem</label><select id="rDonem" class="form-select"></select></div>
-                <div class="col-md-3"><label>Kurum Türü</label><select id="rTip" class="form-select"><option value="">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM</option></select></div>
-                <div class="col-md-3"><button class="btn-sm-custom mt-4" onclick="raporGoster()">Göster</button></div>
-            </div>
-            <div id="raporSonuc" class="mt-4"></div>
-        </div>
-    `;
-    // Yıl ve dönem seçeneklerini doldur
-    const { data: yillar } = await _supabase.from('performans').select('yil');
-    const yilList = [...new Set(yillar.map(y=>y.yil))];
-    document.getElementById('rYil').innerHTML = yilList.map(y=>`<option>${y}</option>`).join('');
-    document.getElementById('rDonem').innerHTML = [1,2].map(d=>`<option value="${d}">${d===1?'Ocak':'Şubat'}</option>`).join('');
-}
-
-async function raporGoster() {
-    const yil = document.getElementById('rYil').value;
-    const donem = document.getElementById('rDonem').value;
-    const tip = document.getElementById('rTip').value;
-    let q = _supabase.from('toplam_puanlar').select('*').eq('yil',yil).eq('donem',donem);
-    if (tip) q = q.eq('kurum_tipi', tip);
-    const { data } = await q;
-    const html = `<table class="table"><thead><tr><th>#</th><th>Kurum</th><th>Puan</th><th>Rol Ort.</th></tr></thead><tbody>
-        ${data.map((d,i)=>`<tr><td>${i+1}</td><td>${d.kurum_adi}</td><td>${d.toplam_puan}</td><td>${d.rol_ortalamasi}</td></tr>`).join('')}
-    </tbody></tr>`;
-    document.getElementById('raporSonuc').innerHTML = html;
-}
+        const { data: h1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
+        const { data: h2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
+        const { data: a1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
+        const { data: a2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
+        const hOrt = [(h1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h1?.length||1), (h2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h2?.length||1)];
+        const aOrt = [(a1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a1?.length||1), (a2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a2?.length||1)];
+        if (charts.trend) charts.trend.destroy();
+        charts.trend = new Chart(document.getElementById('trendChart'), { type: 'line', data: { labels: ['Ocak', 'Şubat'], datasets: [{ label: 'Hastane Ort.', data: hOrt, borderColor: '#0d6efd' }, { label: 'ADSM Ort.', data: aOrt, borderColor: '#6610f2' }] }, options: { responsive: true, maintainAspectRatio: false } });
+        const { data: tum } = await _supabase.from('toplam_puanlar').select('*').eq('donem',2);
+        const basarili = (tum||[]).filter(t => t.toplam_puan >= t.rol_ortalamasi).length;
+        if (charts.pie) charts.pie.destroy();
+        charts.pie = new Chart(document.getElementById('pieChart'), { type: 'doughnut', data: { labels: ['Hedef Üstü', 'Hedef Altı'], datasets: [{ data: [basarili, (tum?.length||0)-basarili], backgroundColor: ['#20c997', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+        const { data: gList } = await _supabase.from('performans').select('gosterge_adi');
+        const gostergeler = [...new Set((gList||[]).map(g=>g.gosterge_adi))];
+        const select = document.getElementById('raporGosterge');
+        select.innerHTML = '<option value="">Gösterge Seçin</option>' + gostergeler.map(g => `<option value="${g}">${g}</option>`).join('');
+    }
 
     window.gitSayfa = async function(sayfa, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
