@@ -1,356 +1,387 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KHHB-2 GÖREN ANALİZ</title>
-  
-  <!-- 📦 CDN Bağımlılıkları (Kurulum gerektirmez) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
   <style>
-    :root {
-      --bg: #f8fafc; --card: #ffffff; --primary: #2563eb; --primary-hover: #1d4ed8;
-      --text: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
-      --success: #16a34a; --warning: #ca8a04; --danger: #dc2626;
-      --radius: 12px; --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-      --font: system-ui, -apple-system, sans-serif;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.5; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+    body { background: #f8fafc; color: #0f172a; }
     .hidden { display: none !important; }
-    .container { max-width: 1280px; margin: 0 auto; padding: 1rem; }
     
-    /* 🎫 Login Ekranı */
+    /* Login */
     #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .login-box { background: var(--card); padding: 2rem; border-radius: var(--radius); box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%; max-width: 380px; }
-    .login-box h2 { text-align: center; margin-bottom: 1.5rem; }
-    .form-group { margin-bottom: 1rem; }
-    .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 500; font-size: 0.9rem; }
-    .form-group input { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; }
-    .form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-    .btn { width: 100%; padding: 0.8rem; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
-    .btn:hover { background: var(--primary-hover); }
-    .btn:disabled { opacity: 0.7; cursor: not-allowed; }
-    .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.3rem; display: none; }
+    .login-box { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 420px; }
+    .login-box h2 { text-align: center; margin-bottom: 2rem; font-size: 1.75rem; }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #334155; }
+    .form-group input { width: 100%; padding: 0.875rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; transition: border-color 0.2s; }
+    .form-group input:focus { outline: none; border-color: #2563eb; }
+    .form-group input.error { border-color: #dc2626; }
+    .error-msg { color: #dc2626; font-size: 0.8rem; margin-top: 0.3rem; display: none; }
     .error-msg.show { display: block; }
+    .btn { width: 100%; padding: 0.875rem; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .demo-info { text-align: center; margin-top: 1rem; font-size: 0.85rem; color: #64748b; }
     
-    /* 🖥️ Dashboard Layout */
-    .dashboard-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
-    .logo { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
-    .nav-tabs { display: flex; gap: 0.5rem; background: #f1f5f9; padding: 0.3rem; border-radius: 8px; }
-    .nav-tab { padding: 0.5rem 1rem; border: none; background: transparent; border-radius: 6px; font-size: 0.85rem; cursor: pointer; color: var(--text-muted); }
-    .nav-tab.active { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 500; }
-    .user-info { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; }
-    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #ef4444; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    /* Dashboard */
+    .container { max-width: 1280px; margin: 0 auto; padding: 1.5rem; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #e2e8f0; }
+    .logo { font-size: 1.5rem; font-weight: 700; color: #2563eb; }
+    .user-info { display: flex; gap: 1rem; align-items: center; font-size: 0.95rem; }
+    .btn-logout { padding: 0.5rem 1rem; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; }
+    .btn-logout:hover { background: #b91c1c; }
     
-    /* 🔍 Filtreler */
-    .filter-bar { display: flex; flex-wrap: wrap; gap: 0.8rem; background: var(--card); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 1.5rem; align-items: flex-end; }
-    .filter-group { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; min-width: 140px; }
-    .filter-group label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
-    .filter-group select { padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
-    .status-live { background: #dcfce7; color: #166534; padding: 0.3rem 0.6rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem; }
-    .btn-query { background: var(--primary); color: #fff; padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; height: fit-content; }
+    .filters { display: flex; gap: 1rem; background: white; padding: 1.25rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); flex-wrap: wrap; align-items: flex-end; }
+    .filter-group { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; min-width: 140px; }
+    .filter-group label { font-size: 0.8rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
+    .filter-group select { padding: 0.65rem; border: 1px solid #e2e8f0; border-radius: 6px; background: white; font-size: 0.95rem; }
+    .status-badge { background: #dcfce7; color: #166534; padding: 0.4rem 0.8rem; border-radius: 99px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .btn-query { background: #2563eb; color: white; padding: 0.65rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; height: fit-content; }
+    .btn-query:hover { background: #1d4ed8; }
     
-    /* 📊 KPI & Top Lists */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .kpi-card { background: var(--card); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); text-align: center; }
-    .kpi-icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
-    .kpi-label { font-size: 0.85rem; color: var(--text-muted); }
-    .kpi-value { font-size: 1.8rem; font-weight: 700; margin: 0.3rem 0; }
-    .top-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .top-card { background: var(--card); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); }
-    .top-card h3 { margin-bottom: 0.8rem; font-size: 1rem; }
-    .rank-list { list-style: none; }
-    .rank-list li { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-    .rank-list li:last-child { border-bottom: none; }
-    .rank-badge { background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 6px; font-weight: 500; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+    .kpi-card { background: white; padding: 1.5rem; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .kpi-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .kpi-label { font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem; }
+    .kpi-value { font-size: 2.25rem; font-weight: 700; color: #0f172a; }
     
-    /* 🌍 Tablo */
-    .table-section { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 1.5rem; overflow: hidden; }
-    .table-tabs { display: flex; border-bottom: 1px solid var(--border); background: #f8fafc; }
-    .table-tab { padding: 0.8rem 1.2rem; border: none; background: transparent; cursor: pointer; font-weight: 500; color: var(--text-muted); }
-    .table-tab.active { background: #fff; color: var(--primary); border-bottom: 2px solid var(--primary); }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; min-width: 600px; }
-    th, td { padding: 0.8rem 1rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-    th { background: #f8fafc; font-weight: 600; color: var(--text-muted); }
-    tr:hover td { background: #f1f5f9; }
-    .status-pill { padding: 0.25rem 0.6rem; border-radius: 99px; font-size: 0.75rem; font-weight: 500; }
+    .table-section { background: white; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; font-weight: 600; color: #475569; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; }
+    tr:hover td { background: #f8fafc; }
+    .status { padding: 0.35rem 0.8rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
     .status-tamam { background: #dcfce7; color: #166534; }
     .status-bekle { background: #fef3c7; color: #92400e; }
     .status-itiraz { background: #fee2e2; color: #991b1b; }
-    .empty-state { text-align: center; padding: 2rem; color: var(--text-muted); }
+    .empty-state { text-align: center; padding: 2.5rem; color: #94a3b8; }
     
-    /* 📈 Grafikler */
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .chart-box { background: var(--card); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); }
-    .chart-box h3 { margin-bottom: 0.5rem; font-size: 0.95rem; }
-    .chart-controls { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
-    .chart-controls select { flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; }
-    canvas { max-height: 250px; }
+    .toast { position: fixed; top: 1.5rem; right: 1.5rem; padding: 1rem 1.5rem; border-radius: 8px; color: white; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.15); z-index: 2000; animation: slideIn 0.3s ease; }
+    .toast.success { background: #16a34a; }
+    .toast.error { background: #dc2626; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     
-    /* ⚠️ Modal & Misc */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
-    .modal { background: var(--card); width: 90%; max-width: 500px; padding: 1.5rem; border-radius: var(--radius); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
-    .loading { color: var(--text-muted); font-style: italic; }
-    @media (max-width: 640px) { .filter-bar { flex-direction: column; } .filter-group { width: 100%; } .dashboard-header { flex-direction: column; align-items: flex-start; } }
+    @media (max-width: 768px) {
+      .filters { flex-direction: column; }
+      .filter-group { width: 100%; }
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- 🔐 GİRİŞ EKRANI -->
+  <!-- 🔐 LOGIN -->
   <div id="login-screen">
     <div class="login-box">
       <h2>🏥 KHHB-2 Giriş</h2>
       <form id="login-form">
         <div class="form-group">
-          <label>E-posta</label>
-          <input type="email" id="login-email" required placeholder="ornek@kurum.gov.tr">
-          <div class="error-msg" id="err-email">Geçerli bir e-posta giriniz</div>
+          <label for="email">E-posta</label>
+          <input type="email" id="email" placeholder="ornek@kurum.gov.tr" value="admin@test.com">
+          <div class="error-msg" id="err-email">Geçerli bir e-posta adresi giriniz</div>
         </div>
         <div class="form-group">
-          <label>Şifre</label>
-          <input type="password" id="login-pass" required placeholder="••••••••">
-          <div class="error-msg" id="err-pass">Şifre en az 6 karakter olmalı</div>
+          <label for="pass">Şifre</label>
+          <input type="password" id="pass" placeholder="••••••••" value="123456">
+          <div class="error-msg" id="err-pass">Şifre en az 6 karakter olmalıdır</div>
         </div>
         <button type="submit" class="btn" id="btn-login">Giriş Yap</button>
       </form>
-      <p style="text-align:center; margin-top:1rem; font-size:0.8rem; color:#64748b;">Demo: admin@test.com / 123456</p>
+      <p class="demo-info">Demo: admin@test.com / 123456</p>
     </div>
   </div>
 
-  <!-- 🖥️ DASHBOARD EKRANI -->
-  <div id="dashboard-screen" class="hidden">
+  <!-- 🖥️ DASHBOARD -->
+  <div id="dashboard" class="hidden">
     <div class="container">
-      <header class="dashboard-header">
+      <header class="header">
         <div class="logo">🏥 KHHB-2 GÖREN ANALİZ</div>
-        <nav class="nav-tabs" id="main-nav">
-          <button class="nav-tab active" data-view="genel">Genel Bakış</button>
-          <button class="nav-tab" data-view="bolge">Tüm Bölge</button>
-          <button class="nav-tab" data-view="rapor">Kurum Raporları</button>
-          <button class="nav-tab" data-view="itiraz" data-requires="admin">İtirazlar</button>
-        </nav>
         <div class="user-info">
-          <span id="user-display">Yükleniyor...</span>
-          <button class="btn-sm" id="btn-logout">Çıkış</button>
+          <span id="user-name">Kullanıcı</span>
+          <button class="btn-logout" id="btn-logout">Çıkış</button>
         </div>
       </header>
 
-      <section class="filter-bar">
-        <span class="status-live">🟢 Canlı</span>
-        <div class="filter-group"><label>Yıl</label><select id="f-yil"><option>2026</option><option>2025</option></select></div>
-        <div class="filter-group"><label>Dönem</label><select id="f-donem"><option>Ocak</option><option>Şubat</option><option>Mart</option><option>Nisan</option><option>Mayıs</option><option>Haziran</option></select></div>
-        <div class="filter-group"><label>Kurum Türü</label><select id="f-tur"><option value="Tümü">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select></div>
-        <div class="filter-group"><label>Kurum Adı</label><select id="f-kurum"><option value="">Seçiniz</option></select></div>
+      <section class="filters">
+        <span class="status-badge">🟢 Canlı</span>
+        <div class="filter-group">
+          <label>Yıl</label>
+          <select id="f-yil"><option value="2026">2026</option><option value="2025">2025</option></select>
+        </div>
+        <div class="filter-group">
+          <label>Dönem</label>
+          <select id="f-donem">
+            <option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option>
+            <option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Kurum Türü</label>
+          <select id="f-tur">
+            <option value="Tümü">Tümü</option>
+            <option value="Hastane">Hastane</option>
+            <option value="ADSM">ADSM/ADSH</option>
+          </select>
+        </div>
         <button class="btn-query" id="btn-query">🔍 Sorgula</button>
       </section>
 
-      <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-icon">📊</div><div class="kpi-label">Toplam Kurum</div><div class="kpi-value" id="kpi-total">0</div></div>
-        <div class="kpi-card"><div class="kpi-icon">🏥</div><div class="kpi-label">Hastane Ortalaması</div><div class="kpi-value" id="kpi-hosp">0.0</div></div>
-        <div class="kpi-card"><div class="kpi-icon">🏛️</div><div class="kpi-label">ADSM Ortalaması</div><div class="kpi-value" id="kpi-adsm">0.0</div></div>
-      </div>
-
-      <div class="top-lists">
-        <div class="top-card"><h3>🏆 En İyi 5 Hastane</h3><ul class="rank-list" id="list-hosp"><li class="loading">Yükleniyor...</li></ul></div>
-        <div class="top-card"><h3>🏆 En İyi 5 ADSM/ADSH</h3><ul class="rank-list" id="list-adsm"><li class="loading">Yükleniyor...</li></ul></div>
-      </div>
-
-      <div class="table-section">
-        <div class="table-tabs">
-          <button class="table-tab active" data-filter="Tümü">Tüm Kurumlar</button>
-          <button class="table-tab" data-filter="Hastane">Hastaneler</button>
-          <button class="table-tab" data-filter="ADSM">ADSM/ADSH</button>
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon">📊</div>
+          <div class="kpi-label">Toplam Kurum</div>
+          <div class="kpi-value" id="kpi-total">0</div>
         </div>
-        <div class="table-wrap">
-          <table id="main-table">
-            <thead><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead>
-            <tbody id="table-body"><tr><td colspan="5" class="empty-state">Sorgulama yapınız...</td></tr></tbody>
-          </table>
+        <div class="kpi-card">
+          <div class="kpi-icon">🏥</div>
+          <div class="kpi-label">Hastane Ortalaması</div>
+          <div class="kpi-value" id="kpi-hosp">0.0</div>
         </div>
-      </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">🏛️</div>
+          <div class="kpi-label">ADSM Ortalaması</div>
+          <div class="kpi-value" id="kpi-adsm">0.0</div>
+        </div>
+      </section>
 
-      <div class="charts-grid">
-        <div class="chart-box">
-          <h3>📈 Gösterge Trendi</h3>
-          <div class="chart-controls"><select id="chart-gosterge"><option>Gösterge Seçin</option></select><button class="btn-query" id="btn-chart">Oluştur</button></div>
-          <canvas id="trend-chart"></canvas>
-        </div>
-        <div class="chart-box"><h3>📉 Dönemsel Trend</h3><canvas id="period-chart"></canvas></div>
-        <div class="chart-box"><h3>🥧 Başarı Dağılımı</h3><canvas id="dist-chart"></canvas></div>
-      </div>
+      <section class="table-section">
+        <table>
+          <thead>
+            <tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr>
+          </thead>
+          <tbody id="table-body">
+            <tr><td colspan="5" class="empty-state">Sorgulama yapınız...</td></tr>
+          </tbody>
+        </table>
+      </section>
     </div>
   </div>
 
   <script type="module">
-    // 🔑 AYARLAR (BURAYI DÜZENLEYİN)
+    // ✅ ESM Import - GitHub Pages uyumlu
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
+
+    // 🔑 CONFIG
     const CONFIG = {
       SUPABASE_URL: 'https://alisjxtoivkeyeyyuikr.supabase.co',
-      SUPABASE_ANON_KEY: 'BURAYA_SUPABASE_ANON_KEYINI_YAPISTIR', // 👈 DEĞİŞTİR
-      TABLE_NAME: 'performans' // Supabase'deki tablo adınız
+      SUPABASE_ANON_KEY: 'sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of'
     };
 
-    // 🌐 Supabase & Chart.js Global
-    const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-    let charts = {};
+    // Supabase client
+    const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    let currentUser = null;
 
-    // 🛡️ Auth Yönetimi
-    const Auth = {
-      session: null, user: null, role: 'guest', institutionId: null,
-      async init() {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) await this.setSession(data.session);
-        supabase.auth.onAuthStateChange((e, s) => e === 'SIGNED_IN' ? this.setSession(s) : (e === 'SIGNED_OUT' ? this.logout() : null));
-      },
-      async setSession(s) {
-        if (!s?.user) return;
-        this.session = s; this.user = s.user;
-        this.role = s.user.user_metadata?.role || 'user';
-        this.institutionId = s.user.user_metadata?.institution_id;
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('dashboard-screen').classList.remove('hidden');
-        document.getElementById('user-display').textContent = this.user.email;
-        document.querySelectorAll('[data-requires]').forEach(el => el.style.display = this.role === el.dataset.requires ? '' : 'none');
-        App.loadData();
-      },
-      async login(email, pass) {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-        return error ? { ok: false, msg: error.message } : { ok: true };
-      },
-      logout() { supabase.auth.signOut(); location.reload(); }
-    };
+    // 🍞 Toast notification
+    function toast(msg, type = 'error') {
+      document.querySelector('.toast')?.remove();
+      const t = document.createElement('div');
+      t.className = `toast ${type}`;
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 4000);
+    }
 
-    // 🖥️ UI & Veri Yönetimi
-    const App = {
-      data: [],
-      async loadData() {
-        const btn = document.getElementById('btn-query');
-        btn.textContent = '⏳ Yükleniyor...'; btn.disabled = true;
-        
-        try {
-          let query = supabase.from(CONFIG.TABLE_NAME).select('*');
-          const yil = document.getElementById('f-yil').value;
-          const donem = document.getElementById('f-donem').value;
-          const tur = document.getElementById('f-tur').value;
-          
-          query = query.eq('yil', yil).eq('donem', donem);
-          if (tur !== 'Tümü') query = query.eq('kurum_turu', tur);
-          if (Auth.role === 'user' && Auth.institutionId) query = query.eq('kurum_id', Auth.institutionId);
-          
-          const { data, error } = await query;
-          if (error) throw error;
-          this.data = data || [];
-          this.renderAll();
-        } catch (err) {
-          console.error('Veri hatası:', err);
-          // Demo/Fallback modu (Supabase bağlı değilse çalışır)
-          this.data = [
-            { kurum_adi: 'Örnek Hastane A', kurum_turu: 'Hastane', genel_puan: 92.4, rol_ortalamasi: 88.1, durum: 'Tamamlandı' },
-            { kurum_adi: 'Merkez ADSM', kurum_turu: 'ADSM', genel_puan: 78.2, rol_ortalamasi: 75.5, durum: 'Beklemede' },
-            { kurum_adi: 'Üniversite Hastanesi', kurum_turu: 'Hastane', genel_puan: 95.1, rol_ortalamasi: 93.0, durum: 'Tamamlandı' }
-          ];
-          this.renderAll();
-        } finally {
-          btn.textContent = '🔍 Sorgula'; btn.disabled = false;
-        }
-      },
-      renderAll() {
-        this.renderKPIs();
-        this.renderTopLists();
-        this.renderTable();
-        this.renderCharts();
-      },
-      renderKPIs() {
-        const total = this.data.length;
-        const hosp = this.data.filter(d => d.kurum_turu === 'Hastane');
-        const adsm = this.data.filter(d => ['ADSM','ADSH'].includes(d.kurum_turu));
-        const avg = (arr) => arr.length ? (arr.reduce((s,d)=>s+(d.genel_puan||0),0)/arr.length).toFixed(1) : '0.0';
-        
-        document.getElementById('kpi-total').textContent = total;
-        document.getElementById('kpi-hosp').textContent = avg(hosp);
-        document.getElementById('kpi-adsm').textContent = avg(adsm);
-      },
-      renderTopLists() {
-        const top = (arr, el) => {
-          const sorted = arr.sort((a,b)=>b.genel_puan - a.genel_puan).slice(0,5);
-          document.getElementById(el).innerHTML = sorted.length 
-            ? sorted.map((d,i)=>`<li><span>${i+1}. ${d.kurum_adi}</span><span class="rank-badge">${d.genel_puan}</span></li>`).join('')
-            : '<li class="loading">Veri yok</li>';
-        };
-        top(this.data.filter(d=>d.kurum_turu==='Hastane'), 'list-hosp');
-        top(this.data.filter(d=>['ADSM','ADSH'].includes(d.kurum_turu)), 'list-adsm');
-      },
-      renderTable() {
-        const tbody = document.getElementById('table-body');
-        const turFilter = document.querySelector('.table-tab.active')?.dataset.filter || 'Tümü';
-        const filtered = turFilter === 'Tümü' ? this.data : this.data.filter(d=>d.kurum_turu === turFilter);
-        
-        tbody.innerHTML = filtered.length
-          ? filtered.map(d => `<tr>
-              <td>${d.kurum_adi || '-'}</td>
-              <td>${d.kurum_turu || '-'}</td>
-              <td><strong>${d.genel_puan || '0'}</strong></td>
-              <td>${d.rol_ortalamasi || '0'}</td>
-              <td><span class="status-pill ${d.durum==='Tamamlandı'?'status-tamam':d.durum==='İtiraz Edildi'?'status-itiraz':'status-bekle'}">${d.durum || '-'}</span></td>
-            </tr>`).join('')
-          : '<tr><td colspan="5" class="empty-state">Sonuç bulunamadı</td></tr>';
-      },
-      renderCharts() {
-        // Trend Chart
-        charts.trend = this.initChart('trend-chart', 'line', {
-          labels: ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran'],
-          datasets: [{ label: 'Genel Puan', data: [82,85,88,91,89,94], borderColor: '#2563eb', tension: 0.4, fill: false }]
-        });
-        // Period Chart
-        charts.period = this.initChart('period-chart', 'bar', {
-          labels: ['Hastane','ADSM/ADSH'],
-          datasets: [{ label: 'Ortalama Puan', data: [89,76], backgroundColor: ['#2563eb','#10b981'] }]
-        });
-        // Distribution Chart
-        charts.dist = this.initChart('dist-chart', 'doughnut', {
-          labels: ['Tamamlandı','Beklemede','İtiraz'],
-          datasets: [{ data: [12,5,2], backgroundColor: ['#16a34a','#ca8a04','#dc2626'] }]
-        });
-      },
-      initChart(id, type, dataConfig) {
-        const ctx = document.getElementById(id);
-        if (!ctx) return;
-        if (charts[id]) charts[id].destroy();
-        return new Chart(ctx, { type, data: dataConfig, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
-      }
-    };
-
-    // 🎯 Event Listeners
+    // 🔐 LOGIN
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('login-email').value.trim();
-      const pass = document.getElementById('login-pass').value;
-      const btn = document.getElementById('btn-login');
-      btn.disabled = true; btn.textContent = 'Giriş Yapılıyor...';
       
-      const res = await Auth.login(email, pass);
-      if (!res.ok) {
-        alert(res.msg.includes('credentials') ? 'E-posta veya şifre hatalı' : res.msg);
-        btn.disabled = false; btn.textContent = 'Giriş Yap';
+      const email = document.getElementById('email').value.trim();
+      const pass = document.getElementById('pass').value;
+      const btn = document.getElementById('btn-login');
+      
+      // Validasyon
+      let valid = true;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        document.getElementById('err-email').classList.add('show');
+        document.getElementById('email').classList.add('error');
+        valid = false;
+      } else {
+        document.getElementById('err-email').classList.remove('show');
+        document.getElementById('email').classList.remove('error');
+      }
+      
+      if (pass.length < 6) {
+        document.getElementById('err-pass').classList.add('show');
+        document.getElementById('pass').classList.add('error');
+        valid = false;
+      } else {
+        document.getElementById('err-pass').classList.remove('show');
+        document.getElementById('pass').classList.remove('error');
+      }
+      
+      if (!valid) return;
+      
+      // Login
+      btn.disabled = true;
+      btn.textContent = 'Giriş yapılıyor...';
+      
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: pass
+        });
+        
+        if (error) throw error;
+        
+        currentUser = data.user;
+        
+        // Profile bilgilerini çek
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('rol, ad_soyad, email')
+          .eq('id', currentUser.id)
+          .single();
+        
+        if (profileError || !profile) {
+          throw new Error('Profil bulunamadı. Lütfen admin ile iletişime geçin.');
+        }
+        
+        // Dashboard'u göster
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        document.getElementById('user-name').textContent = profile.ad_soyad || email;
+        
+        toast('Giriş başarılı! Hoş geldiniz.', 'success');
+        
+        // İlk veri yükleme
+        loadData();
+        
+      } catch (err) {
+        console.error('Login error:', err);
+        toast(err.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Giriş Yap';
       }
     });
 
-    document.getElementById('btn-logout').addEventListener('click', Auth.logout);
-    document.getElementById('btn-query').addEventListener('click', App.loadData);
-    document.querySelectorAll('.table-tab').forEach(t => t.addEventListener('click', (e) => {
-      document.querySelectorAll('.table-tab').forEach(x => x.classList.remove('active'));
-      e.target.classList.add('active'); App.renderTable();
-    }));
-    document.getElementById('btn-chart').addEventListener('click', () => {
-      charts.trend.update(); alert('Grafik güncellendi (Demo verisi ile)');
+    // 🚪 LOGOUT
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      if (confirm('Çıkış yapmak istediğinize emin misiniz?')) {
+        await supabase.auth.signOut();
+        location.reload();
+      }
     });
 
+    // 📊 VERİ YÜKLE
+    document.getElementById('btn-query').addEventListener('click', loadData);
+
+    async function loadData() {
+      const btn = document.getElementById('btn-query');
+      btn.textContent = '⏳ Yükleniyor...';
+      btn.disabled = true;
+      
+      try {
+        const yil = document.getElementById('f-yil').value;
+        const donem = document.getElementById('f-donem').value;
+        const tur = document.getElementById('f-tur').value;
+        
+        // Supabase'den veri çek
+        let query = supabase
+          .from('toplam_puanlar')
+          .select('*')
+          .eq('yil', parseInt(yil))
+          .eq('donem', parseInt(donem))
+          .order('toplam_puan', { ascending: false })
+          .limit(50);
+        
+        if (tur !== 'Tümü') {
+          query = query.eq('kurum_tipi', tur);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        // Veriyi render et
+        renderData(data || []);
+        
+      } catch (err) {
+        console.error('Data error:', err);
+        toast('Veritabanı bağlantısı başarısız. Demo veriler gösteriliyor.', 'error');
+        
+        // Demo veri (fallback)
+        const demoData = [
+          { kurum_adi: 'İstanbul Şehir Hastanesi', kurum_tipi: 'Hastane', toplam_puan: 94.2, rol_ortalamasi: 89.5, durum: 'Tamamlandı' },
+          { kurum_adi: 'Ankara Merkez ADSM', kurum_tipi: 'ADSM', toplam_puan: 81.7, rol_ortalamasi: 78.3, durum: 'Beklemede' },
+          { kurum_adi: 'Ümraniye Eğitim ve Araştırma Hastanesi', kurum_tipi: 'Hastane', toplam_puan: 92.1, rol_ortalamasi: 88.7, durum: 'Tamamlandı' }
+        ];
+        renderData(demoData);
+      } finally {
+        btn.textContent = '🔍 Sorgula';
+        btn.disabled = false;
+      }
+    }
+
+    function renderData(data) {
+      // KPI hesaplamaları
+      const total = data.length;
+      const hosp = data.filter(d => d.kurum_tipi === 'Hastane');
+      const adsm = data.filter(d => d.kurum_tipi === 'ADSM');
+      
+      const avg = (arr) => {
+        if (!arr.length) return '0.0';
+        const sum = arr.reduce((acc, item) => acc + (parseFloat(item.toplam_puan) || 0), 0);
+        return (sum / arr.length).toFixed(1);
+      };
+      
+      document.getElementById('kpi-total').textContent = total;
+      document.getElementById('kpi-hosp').textContent = avg(hosp);
+      document.getElementById('kpi-adsm').textContent = avg(adsm);
+      
+      // Tablo render
+      const tbody = document.getElementById('table-body');
+      
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Sonuç bulunamadı</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = data.map(d => `
+        <tr>
+          <td><strong>${d.kurum_adi || '-'}</strong></td>
+          <td>${d.kurum_tipi || '-'}</td>
+          <td><strong>${parseFloat(d.toplam_puan).toFixed(1) || '-'}</strong></td>
+          <td>${parseFloat(d.rol_ortalamasi).toFixed(1) || '-'}</td>
+          <td><span class="status ${getStatusClass(d.durum)}">${d.durum || '-'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function getStatusClass(durum) {
+      if (durum === 'Tamamlandı') return 'status-tamam';
+      if (durum === 'İtiraz Edildi') return 'status-itiraz';
+      return 'status-bekle';
+    }
+
+    // 🔄 Session kontrolü (sayfa yenilendiğinde)
+    async function checkSession() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session && session.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('rol, ad_soyad')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profile) {
+            currentUser = session.user;
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.getElementById('user-name').textContent = profile.ad_soyad || session.user.email;
+            loadData();
+          }
+        }
+      } catch (err) {
+        console.error('Session check error:', err);
+      }
+    }
+
     // 🚀 Başlat
-    Auth.init();
+    checkSession();
   </script>
 </body>
 </html>
