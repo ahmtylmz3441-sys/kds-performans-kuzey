@@ -493,183 +493,37 @@ if (pdfUrl) {
     };
 
     async function raporlar() {
-    const container = document.getElementById('raporlar');
-    if (!container) return;
-    
-    // Yıl listesini al
-    const { data: yillar } = await _supabase.from('performans').select('yil');
-    const yilList = [...new Set((yillar||[]).map(y=>y.yil))].sort((a,b)=>b-a);
-    const donemler = [1,2,3,4,5,6,7,8,9,10,11,12];
-    
-    // Kurum listesini al
-    const { data: kList } = await _supabase.from('performans').select('kurum_adi, kurum_tipi');
-    const kurumlar = [...new Set((kList||[]).map(k=>k.kurum_adi))].sort();
-    const kurumTipleri = [...new Set((kList||[]).map(k=>k.kurum_tipi))];
-    
-    // Gösterge listesini al
-    const { data: gList } = await _supabase.from('performans').select('gosterge_adi');
-    const gostergeler = [...new Set((gList||[]).map(g=>g.gosterge_adi))].sort();
-    
-    container.innerHTML = `
-        <div class="row g-4">
-            <div class="col-12">
-                <div class="kds-card">
-                    <h6>📊 Raporlar & Analizler</h6>
-                    <div class="row mt-3">
-                        <div class="col-md-2">
-                            <label class="form-label">Yıl</label>
-                            <select id="rpYil" class="form-select">${yilList.map(y=>`<option>${y}</option>`).join('')}</select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Dönem</label>
-                            <select id="rpDonem" class="form-select">${donemler.map(d=>`<option value="${d}">${AYLAR[d]}</option>`).join('')}</select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Kurum Türü</label>
-                            <select id="rpTip" class="form-select"><option value="">Tümü</option>${kurumTipleri.map(t=>`<option>${t}</option>`).join('')}</select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Kurum</label>
-                            <select id="rpKurum" class="form-select"><option value="">Tüm Kurumlar</option>${kurumlar.map(k=>`<option value="${k}">${k}</option>`).join('')}</select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Gösterge</label>
-                            <select id="rpGosterge" class="form-select"><option value="">Tüm Göstergeler</option>${gostergeler.map(g=>`<option value="${g}">${g.substring(0,45)}</option>`).join('')}</select>
-                        </div>
-                        <div class="col-md-12 mt-2">
-                            <button class="btn-sm-custom" onclick="raporFiltrele()">Filtrele</button>
-                            <button class="btn-sm-custom ms-2" onclick="raporExcelIndir()">📎 Excel İndir</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12" id="raporSonuc"></div>
-        </div>
-    `;
-    
-    await raporFiltrele();
-};
-    async function raporFiltrele() {
-    const sonucDiv = document.getElementById('raporSonuc');
-    sonucDiv.innerHTML = '<div class="text-center py-5">Yükleniyor...</div>';
-    
-    const yil = document.getElementById('rpYil').value;
-    const donem = document.getElementById('rpDonem').value;
-    const tip = document.getElementById('rpTip').value;
-    const kurum = document.getElementById('rpKurum').value;
-    const gosterge = document.getElementById('rpGosterge').value;
-    
-    // Toplam puanları çek (sıralama için)
-    let puanQ = _supabase.from('toplam_puanlar').select('*');
-    if (yil) puanQ = puanQ.eq('yil', parseInt(yil));
-    if (donem) puanQ = puanQ.eq('donem', parseInt(donem));
-    if (tip) puanQ = puanQ.eq('kurum_tipi', tip);
-    if (kurum) puanQ = puanQ.eq('kurum_adi', kurum);
-    const { data: puanlar } = await puanQ.order('toplam_puan', { ascending: false });
-    
-    // Performans verilerini çek
-    let perfQ = _supabase.from('performans').select('*');
-    if (yil) perfQ = perfQ.eq('yil', parseInt(yil));
-    if (donem) perfQ = perfQ.eq('donem', parseInt(donem));
-    if (tip) perfQ = perfQ.eq('kurum_tipi', tip);
-    if (kurum) perfQ = perfQ.eq('kurum_adi', kurum);
-    if (gosterge) perfQ = perfQ.eq('gosterge_adi', gosterge);
-    const { data: perf } = await perfQ;
-    
-    // İtirazları çek
-    const { data: itirazlar } = await _supabase.from('itirazlar').select('performans_id');
-    const itirazSet = new Set(itirazlar?.map(i => i.performans_id));
-    
-    if (!perf?.length && !puanlar?.length) {
-        sonucDiv.innerHTML = '<div class="kds-card text-center py-5"><p class="text-muted">Veri bulunamadı. Filtreleri değiştirin.</p></div>';
-        return;
+        const { data: h1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
+        const { data: h2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
+        const { data: a1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
+        const { data: a2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
+        const hOrt = [(h1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h1?.length||1), (h2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h2?.length||1)];
+        const aOrt = [(a1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a1?.length||1), (a2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a2?.length||1)];
+        if (charts.trend) charts.trend.destroy();
+        charts.trend = new Chart(document.getElementById('trendChart'), { type: 'line', data: { labels: ['Ocak', 'Şubat'], datasets: [{ label: 'Hastane Ort.', data: hOrt, borderColor: '#0d6efd' }, { label: 'ADSM Ort.', data: aOrt, borderColor: '#6610f2' }] }, options: { responsive: true, maintainAspectRatio: false } });
+        const { data: tum } = await _supabase.from('toplam_puanlar').select('*').eq('donem',2);
+        const basarili = (tum||[]).filter(t => t.toplam_puan >= t.rol_ortalamasi).length;
+        if (charts.pie) charts.pie.destroy();
+        charts.pie = new Chart(document.getElementById('pieChart'), { type: 'doughnut', data: { labels: ['Hedef Üstü', 'Hedef Altı'], datasets: [{ data: [basarili, (tum?.length||0)-basarili], backgroundColor: ['#20c997', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+        const { data: gList } = await _supabase.from('performans').select('gosterge_adi');
+        const gostergeler = [...new Set((gList||[]).map(g=>g.gosterge_adi))];
+        const select = document.getElementById('raporGosterge');
+        select.innerHTML = '<option value="">Gösterge Seçin</option>' + gostergeler.map(g => `<option value="${g}">${g}</option>`).join('');
     }
-    
-    // Sıralama Tablosu
-    let tabloHtml = '';
-    if (puanlar?.length) {
-        tabloHtml = `<div class="kds-card mb-4">
-            <h6>🏆 Kurum Sıralaması</h6>
-            <div class="table-responsive">
-                <table class="table table-sm" id="siralamaTablosu">
-                    <thead class="table-light"><tr><th>#</th><th>Kurum Adı</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead>
-                    <tbody>${puanlar.map((k,i) => `
-                        <tr>
-                            <td>${i+1}</td>
-                            <td><strong>${k.kurum_adi}</strong></td>
-                            <td>${k.kurum_tipi}</td>
-                            <td class="fw-bold ${k.toplam_puan >= k.rol_ortalamasi ? 'text-success' : 'text-danger'}">${k.toplam_puan}</td>
-                            <td>${k.rol_ortalamasi}</td>
-                            <td>${k.toplam_puan >= k.rol_ortalamasi ? '<span class="badge-basarili">✅ Başarılı</span>' : '<span class="badge-kritik">⚠️ Gelişmeli</span>'}</td>
-                        </tr>
-                    `).join('')}</tbody>
-                </table>
-            </div>
-        </div>`;
-    }
-    
-    // Gösterge Listesi Tablosu
-    let gostergeHtml = '';
-    if (perf?.length && !gosterge) {
-        const gMap = {};
-        for (const r of perf) {
-            if (!gMap[r.gosterge_adi]) gMap[r.gosterge_adi] = { toplam: 0, iyi: 0 };
-            gMap[r.gosterge_adi].toplam++;
-            const iyi = r.gosterge_yonu === 'Pozitif' ? parseFloat(r.gd) >= parseFloat(r.tr_ort) : parseFloat(r.gd) <= parseFloat(r.tr_ort);
-            if (iyi) gMap[r.gosterge_adi].iyi++;
-        }
-        const gArr = Object.entries(gMap).map(([adi, v]) => ({ adi, oran: (v.iyi / v.toplam * 100).toFixed(1) })).sort((a,b)=>b.oran - a.oran);
-        gostergeHtml = `<div class="kds-card">
-            <h6>📊 Gösterge Başarı Oranları</h6>
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead class="table-light"><tr><th>Gösterge</th><th>Başarı Oranı</th></tr></thead>
-                    <tbody>${gArr.map(g => `
-                        <tr>
-                            <td>${g.adi}</td>
-                            <td><div class="progress-bar w-75 d-inline-block me-2"><div class="progress-fill bg-emerald-500" style="width:${g.oran}%"></div></div> % ${g.oran}</td>
-                        </tr>
-                    `).join('')}</tbody>
-                </table>
-            </div>
-        </div>`;
-    }
-    
-    // Gösterge detay tablosu (tek gösterge seçiliyse)
-    let detayHtml = '';
-    if (perf?.length && gosterge) {
-        const kurumlarList = [...new Set(perf.map(r => r.kurum_adi))];
-        detayHtml = `<div class="kds-card">
-            <h6>📈 "${gosterge}" - Kurum Bazlı Değerler</h6>
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead class="table-light"><tr><th>Kurum</th><th>GD</th><th>TR Ort</th><th>Puan</th><th>Değerlendirme</th><th>İtiraz</th></tr></thead>
-                    <tbody>${perf.map(r => {
-                        const iyi = r.gosterge_yonu === 'Pozitif' ? parseFloat(r.gd) >= parseFloat(r.tr_ort) : parseFloat(r.gd) <= parseFloat(r.tr_ort);
-                        return `<tr>
-                            <td><strong>${r.kurum_adi}</strong></td>
-                            <td>${r.gd ?? '-'}</td>
-                            <td>${r.tr_ort ?? '-'}</td>
-                            <td>${r.puan ?? '-'}/${r.gp ?? '-'}</td>
-                            <td><span class="${iyi ? 'badge-basarili' : 'badge-kritik'}">${iyi ? '✅ Başarılı' : '⚠️ Kritik'}</span></td>
-                            <td>${itirazSet.has(r.id) ? '<span class="badge-itiraz-var">📝 İtiraz var</span>' : '<span class="text-muted">—</span>'}</td>
-                        </tr>`;
-                    }).join('')}</tbody>
-                </table>
-            </div>
-        </div>`;
-    }
-    
-    sonucDiv.innerHTML = tabloHtml + gostergeHtml + detayHtml;
-};
-    async function raporExcelIndir() {
-    const tablo = document.getElementById('siralamaTablosu');
-    if (!tablo) { alert('Tablo bulunamadı'); return; }
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.table_to_sheet(tablo);
-    XLSX.utils.book_append_sheet(wb, ws, 'Kurum Sıralaması');
-    XLSX.writeFile(wb, `kds_rapor_${new Date().toISOString().slice(0,19)}.xlsx`);
-}
+
+    window.gitSayfa = async function(sayfa, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(sayfa).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        if (el) el.classList.add('active');
+        document.getElementById('filter-bar').style.display = (sayfa === 'kurum-bazli') ? 'flex' : 'none';
+        if (sayfa === 'genel-bakis') await dashboard();
+        if (sayfa === 'tum-bolge') await window.bolgeListesi();
+        if (sayfa === 'raporlar') await raporlar();
+        if (sayfa === 'itirazlar') await window.itirazlariGoster();
+        if (sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
+    };
+
     window.gitSayfa('genel-bakis');
     window.kurumFiltreGuncelle();
     itirazDurumlariniYukle();
