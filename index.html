@@ -532,25 +532,61 @@ if (pdfUrl) {
     const container = document.getElementById('raporlar');
     if (!container) return;
     
-    // 1. ADIM: Tüm verileri paralel çek
+    // Raporlar sayfasının HTML'ini oluştur - raporGosterge ID'si burada
+    container.innerHTML = `
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="kds-card">
+                    <h6>📉 Dönemsel Trend (Hastane/ADSM)</h6>
+                    <div class="chart-container"><canvas id="trendChart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="kds-card">
+                    <h6>🥧 Başarı Dağılımı</h6>
+                    <div class="chart-container"><canvas id="pieChart"></canvas></div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="kds-card">
+                    <h6>📈 Gösterge Bazlı Trend Analizi</h6>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Gösterge Seçin</label>
+                            <select id="raporGosterge" class="form-select">
+                                <option value="">Yükleniyor...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label>&nbsp;</label>
+                            <button class="btn-sm-custom w-100" id="raporGrafikBtn">Grafik Oluştur</button>
+                        </div>
+                    </div>
+                    <div class="chart-container mt-3"><canvas id="gostergeChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Verileri çek (Trend ve Pasta grafik için)
     const [puanlarRes, gListRes] = await Promise.all([
         _supabase.from('toplam_puanlar').select('toplam_puan, kurum_tipi, donem, rol_ortalamasi, kurum_adi'),
         _supabase.from('performans').select('gosterge_adi')
     ]);
-
+    
     const puanlar = puanlarRes.data || [];
     const gList = gListRes.data || [];
-
-    // 2. ADIM: Ortalamaları hesapla
+    
+    // Ortalamaları hesapla
     const hesapla = (tip, donem) => {
         const filtre = puanlar.filter(p => p.kurum_tipi === tip && p.donem === donem);
         return filtre.length ? filtre.reduce((s, v) => s + v.toplam_puan, 0) / filtre.length : 0;
     };
-
+    
     const hOrt = [hesapla('Hastane', 1), hesapla('Hastane', 2)];
     const aOrt = [hesapla('ADSM', 1), hesapla('ADSM', 2)];
-
-    // 3. ADIM: Trend Grafiği
+    
+    // Trend Grafiği
     if (charts.trend) charts.trend.destroy();
     charts.trend = new Chart(document.getElementById('trendChart'), { 
         type: 'line', 
@@ -560,76 +596,63 @@ if (pdfUrl) {
                 { label: 'Hastane Ort.', data: hOrt, borderColor: '#0d6efd', tension: 0.3, fill: false }, 
                 { label: 'ADSM Ort.', data: aOrt, borderColor: '#6610f2', tension: 0.3, fill: false }
             ] 
-        }, 
-        options: { responsive: true, maintainAspectRatio: false } 
+        }
     });
-
-    // 4. ADIM: Başarı Dağılımı
+    
+    // Başarı Dağılımı
     const sonDonem = Math.max(...puanlar.map(p => p.donem), 2);
     const tumSon = puanlar.filter(p => p.donem === sonDonem);
     const basarili = tumSon.filter(t => t.toplam_puan >= t.rol_ortalamasi).length;
-
+    
     if (charts.pie) charts.pie.destroy();
     charts.pie = new Chart(document.getElementById('pieChart'), { 
         type: 'doughnut', 
         data: { 
             labels: ['Hedef Üstü', 'Hedef Altı'], 
-            datasets: [{ 
-                data: [basarili, tumSon.length - basarili], 
-                backgroundColor: ['#20c997', '#dc3545'],
-                borderWidth: 2
-            }] 
-        }, 
-        options: { responsive: true, maintainAspectRatio: false, cutout: '70%' } 
+            datasets: [{ data: [basarili, tumSon.length - basarili], backgroundColor: ['#20c997', '#dc3545'] }] 
+        },
+        options: { cutout: '70%' }
     });
-
-    // 5. ADIM: Gösterge Listesi
-    const gostergeler = [...new Set(gList.map(g => g.gosterge_adi))].sort();
+    
+    // Gösterge listesini doldur
+    const benzersizGostergeler = [...new Map(gList.map(item => [item.gosterge_adi, item])).values()];
     const select = document.getElementById('raporGosterge');
-    if (select) {
-        select.innerHTML = '<option value="">Gösterge Seçin</option>' + 
-                          gostergeler.map(g => `<option value="${g}">${g}</option>`).join('');
-    }
+    select.innerHTML = '<option value="">Gösterge Seçin</option>' + 
+                      benzersizGostergeler.map(g => `<option value="${g.gosterge_adi}">${g.gosterge_adi}</option>`).join('');
     
-    // 6. ADIM: Kurum Sıralama Tablosu (Eksik kısım - Gemini eklememiş)
-    const sonDonemVerisi = puanlar.filter(p => p.donem === sonDonem).sort((a,b) => b.toplam_puan - a.toplam_puan);
-    const siralamaHtml = `<div class="card mt-4 p-3">
-        <h6>🏆 Kurum Sıralaması (${sonDonem}. Dönem)</h6>
-        <div class="table-responsive">
-            <table class="table table-sm">
-                <thead><tr><th>#</th><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead>
-                <tbody>
-                    ${sonDonemVerisi.map((k,i) => `
-                        <tr><td>${i+1}</td><td>${k.kurum_adi}</td><td>${k.kurum_tipi}</td>
-                        <td class="fw-bold">${k.toplam_puan}</td><td>${k.rol_ortalamasi}</td>
-                        <td>${k.toplam_puan >= k.rol_ortalamasi ? '<span class="badge-basarili">✅ Başarılı</span>' : '<span class="badge-kritik">⚠️ Gelişmeli</span>'}</td>
-                    </tr>`).join('')}
-                </tbody>
-            </table>
-        </div>
-    </div>`;
-    
-    // Raporlar sayfasının HTML'ini oluştur
-    container.innerHTML = `
-        <div class="row g-4">
-            <div class="col-md-6"><div class="kds-card"><h6>📉 Dönemsel Trend (Hastane/ADSM)</h6><div class="chart-container"><canvas id="trendChart"></canvas></div></div></div>
-            <div class="col-md-6"><div class="kds-card"><h6>🥧 Başarı Dağılımı</h6><div class="chart-container"><canvas id="pieChart"></canvas></div></div></div>
-            <div class="col-12"><div class="kds-card"><h6>📈 Gösterge Bazlı Trend Analizi</h6>
-                <div class="row mt-3"><div class="col-md-4"><label class="form-label">Gösterge Seçin</label><select id="raporGosterge" class="form-select"></select></div>
-                <div class="col-md-2"><label>&nbsp;</label><button class="btn-sm-custom w-100" onclick="window.gostergeAnalizYukle()">Grafik Oluştur</button></div></div>
-                <div class="chart-container mt-3"><canvas id="gostergeChart"></canvas></div>
-            </div></div>
-            <div class="col-12">${siralamaHtml}</div>
-        </div>`;
-    
-    // Grafikleri yeniden oluştur
-    if (charts.trend) charts.trend.destroy();
-    charts.trend = new Chart(document.getElementById('trendChart'), { 
-        type: 'line', data: { labels: ['Ocak', 'Şubat'], datasets: [{ label: 'Hastane Ort.', data: hOrt, borderColor: '#0d6efd' }, { label: 'ADSM Ort.', data: aOrt, borderColor: '#6610f2' }] } 
-    });
-    
-    if (charts.pie) charts.pie.destroy();
-    charts.pie = new Chart(document.getElementById('pieChart'), { type: 'doughnut', data: { labels: ['Hedef Üstü', 'Hedef Altı'], datasets: [{ data: [basarili, tumSon.length - basarili], backgroundColor: ['#20c997', '#dc3545'] }] } });
+    // Grafik oluşturma butonu
+    document.getElementById('raporGrafikBtn').onclick = async function() {
+        const gosterge = document.getElementById('raporGosterge').value;
+        if (!gosterge) { alert('Lütfen bir gösterge seçin'); return; }
+        
+        const { data } = await _supabase
+            .from('performans')
+            .select('kurum_adi, gd, donem')
+            .eq('gosterge_adi', gosterge)
+            .in('donem', [1, 2]);
+        
+        if (!data || data.length === 0) { alert('Veri bulunamadı'); return; }
+        
+        const kurumlar = [...new Set(data.map(d => d.kurum_adi))].slice(0, 12);
+        const ocakData = {}, subatData = {};
+        data.forEach(r => {
+            if (r.donem === 1) ocakData[r.kurum_adi] = r.gd;
+            else subatData[r.kurum_adi] = r.gd;
+        });
+        
+        if (window.gostergeChartInstance) window.gostergeChartInstance.destroy();
+        window.gostergeChartInstance = new Chart(document.getElementById('gostergeChart'), {
+            type: 'bar',
+            data: {
+                labels: kurumlar.map(k => k.split(' ')[0]),
+                datasets: [
+                    { label: 'Ocak GD', data: kurumlar.map(k => ocakData[k]), backgroundColor: '#3b82f6', borderRadius: 6 },
+                    { label: 'Şubat GD', data: kurumlar.map(k => subatData[k]), backgroundColor: '#f59e0b', borderRadius: 6 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+        });
+    };
 }
     window.gitSayfa = async function(sayfa, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
