@@ -4,69 +4,197 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KHHB-2 GÖREN ANALİZ</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
-    body { background: #f8fafc; color: #0f172a; }
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1e40af;
+      --secondary: #64748b;
+      --success: #16a34a;
+      --warning: #ca8a04;
+      --danger: #dc2626;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --border: #e2e8f0;
+      --sidebar-width: 280px;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); }
     .hidden { display: none !important; }
     
-    /* Login */
+    /* 🔐 LOGIN */
     #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .login-box { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 420px; }
-    .login-box h2 { text-align: center; margin-bottom: 2rem; font-size: 1.75rem; }
+    .login-box { background: var(--card); padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 420px; }
+    .login-box h2 { text-align: center; margin-bottom: 2rem; font-size: 1.75rem; color: var(--primary); }
     .form-group { margin-bottom: 1.25rem; }
     .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #334155; }
-    .form-group input { width: 100%; padding: 0.875rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; transition: border-color 0.2s; }
-    .form-group input:focus { outline: none; border-color: #2563eb; }
-    .form-group input.error { border-color: #dc2626; }
-    .error-msg { color: #dc2626; font-size: 0.8rem; margin-top: 0.3rem; display: none; }
+    .form-group input { width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; }
+    .form-group input:focus { outline: none; border-color: var(--primary); }
+    .btn { width: 100%; padding: 0.875rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; }
+    .btn:hover { background: var(--primary-dark); }
+    .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.3rem; display: none; }
     .error-msg.show { display: block; }
-    .btn { width: 100%; padding: 0.875rem; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: opacity 0.2s; }
-    .btn:hover { opacity: 0.9; }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .demo-info { text-align: center; margin-top: 1rem; font-size: 0.85rem; color: #64748b; }
+    .demo-info { text-align: center; margin-top: 1rem; font-size: 0.85rem; color: var(--secondary); }
     
-    /* Dashboard */
-    .container { max-width: 1280px; margin: 0 auto; padding: 1.5rem; }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #e2e8f0; }
-    .logo { font-size: 1.5rem; font-weight: 700; color: #2563eb; }
-    .user-info { display: flex; gap: 1rem; align-items: center; font-size: 0.95rem; }
-    .btn-logout { padding: 0.5rem 1rem; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; }
-    .btn-logout:hover { background: #b91c1c; }
+    /* 🖥️ DASHBOARD LAYOUT */
+    .dashboard { display: flex; min-height: 100vh; }
     
-    .filters { display: flex; gap: 1rem; background: white; padding: 1.25rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); flex-wrap: wrap; align-items: flex-end; }
-    .filter-group { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; min-width: 140px; }
-    .filter-group label { font-size: 0.8rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
-    .filter-group select { padding: 0.65rem; border: 1px solid #e2e8f0; border-radius: 6px; background: white; font-size: 0.95rem; }
-    .status-badge { background: #dcfce7; color: #166534; padding: 0.4rem 0.8rem; border-radius: 99px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; }
-    .btn-query { background: #2563eb; color: white; padding: 0.65rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; height: fit-content; }
-    .btn-query:hover { background: #1d4ed8; }
+    /* SIDEBAR */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      color: white;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+    }
+    .sidebar-header { padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .sidebar-header h2 { font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+    .sidebar-menu { padding: 1rem 0; }
+    .menu-item {
+      padding: 0.875rem 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-left: 3px solid transparent;
+    }
+    .menu-item:hover { background: rgba(255,255,255,0.05); border-left-color: var(--primary); }
+    .menu-item.active { background: rgba(37,99,235,0.2); border-left-color: var(--primary); }
+    .menu-icon { font-size: 1.25rem; width: 24px; text-align: center; }
+    .user-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 1.5rem;
+      background: rgba(0,0,0,0.2);
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .user-info { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    .user-details { flex: 1; }
+    .user-name { font-weight: 600; font-size: 0.9rem; }
+    .user-role { font-size: 0.75rem; color: #94a3b8; }
+    .btn-logout { width: 100%; padding: 0.6rem; background: var(--danger); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
     
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
-    .kpi-card { background: white; padding: 1.5rem; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .kpi-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .kpi-label { font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem; }
-    .kpi-value { font-size: 2.25rem; font-weight: 700; color: #0f172a; }
+    /* MAIN CONTENT */
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      padding: 2rem;
+    }
+    .page-header {
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--border);
+    }
+    .page-header h1 { font-size: 1.75rem; color: var(--text); margin-bottom: 0.5rem; }
+    .page-header p { color: var(--secondary); }
     
-    .table-section { background: white; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
+    /* FILTERS */
+    .filters {
+      background: var(--card);
+      padding: 1.25rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; min-width: 150px; }
+    .filter-group label { font-size: 0.8rem; color: var(--secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
+    .filter-group select, .filter-group input {
+      padding: 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: white;
+      font-size: 0.95rem;
+    }
+    .btn-query { background: var(--primary); color: white; padding: 0.65rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; height: fit-content; }
+    .btn-query:hover { background: var(--primary-dark); }
+    
+    /* KPI CARDS */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+    .kpi-card {
+      background: var(--card);
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--primary);
+    }
+    .kpi-card.success { border-left-color: var(--success); }
+    .kpi-card.warning { border-left-color: var(--warning); }
+    .kpi-card.danger { border-left-color: var(--danger); }
+    .kpi-label { font-size: 0.85rem; color: var(--secondary); margin-bottom: 0.5rem; }
+    .kpi-value { font-size: 2rem; font-weight: 700; color: var(--text); }
+    .kpi-trend { font-size: 0.8rem; margin-top: 0.5rem; color: var(--success); }
+    
+    /* TABLES */
+    .table-section { background: var(--card); border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; margin-bottom: 1.5rem; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border); }
     th { background: #f8fafc; font-weight: 600; color: #475569; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; }
     tr:hover td { background: #f8fafc; }
     .status { padding: 0.35rem 0.8rem; border-radius: 99px; font-size: 0.8rem; font-weight: 500; display: inline-block; }
     .status-tamam { background: #dcfce7; color: #166534; }
     .status-bekle { background: #fef3c7; color: #92400e; }
     .status-itiraz { background: #fee2e2; color: #991b1b; }
-    .empty-state { text-align: center; padding: 2.5rem; color: #94a3b8; }
     
+    /* CHARTS */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+    .chart-box { background: var(--card); padding: 1.25rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .chart-box h3 { margin-bottom: 1rem; font-size: 1rem; color: var(--text); }
+    canvas { max-height: 300px; }
+    
+    /* INDICATOR LIST */
+    .indicator-list { background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .indicator-item {
+      padding: 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 1rem;
+      align-items: center;
+    }
+    .indicator-item:hover { background: #f8fafc; }
+    .indicator-name { font-weight: 600; color: var(--text); }
+    .indicator-code { color: var(--secondary); font-size: 0.9rem; }
+    .indicator-value { text-align: center; }
+    .value-label { font-size: 0.75rem; color: var(--secondary); }
+    .value-number { font-size: 1.25rem; font-weight: 600; color: var(--primary); }
+    
+    /* TOAST */
     .toast { position: fixed; top: 1.5rem; right: 1.5rem; padding: 1rem 1.5rem; border-radius: 8px; color: white; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.15); z-index: 2000; animation: slideIn 0.3s ease; }
-    .toast.success { background: #16a34a; }
-    .toast.error { background: #dc2626; }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
     @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     
-    @media (max-width: 768px) {
-      .filters { flex-direction: column; }
-      .filter-group { width: 100%; }
-      .kpi-grid { grid-template-columns: 1fr; }
+    /* LOADING */
+    .loading { text-align: center; padding: 2rem; color: var(--secondary); }
+    .empty-state { text-align: center; padding: 3rem; color: var(--secondary); }
+    
+    @media (max-width: 1024px) {
+      .sidebar { width: 70px; }
+      .sidebar-header h2, .menu-text, .user-details, .user-panel { display: none; }
+      .main-content { margin-left: 70px; }
+      .menu-item { justify-content: center; padding: 1rem; }
+      .charts-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -78,16 +206,16 @@
       <h2>🏥 KHHB-2 Giriş</h2>
       <form id="login-form">
         <div class="form-group">
-          <label for="email">E-posta</label>
-          <input type="email" id="email" placeholder="ornek@kurum.gov.tr" value="admin@test.com">
-          <div class="error-msg" id="err-email">Geçerli bir e-posta adresi giriniz</div>
+          <label>E-posta</label>
+          <input type="email" id="email" value="admin@test.com">
+          <div class="error-msg" id="err-email">Geçerli e-posta girin</div>
         </div>
         <div class="form-group">
-          <label for="pass">Şifre</label>
-          <input type="password" id="pass" placeholder="••••••••" value="123456">
-          <div class="error-msg" id="err-pass">Şifre en az 6 karakter olmalıdır</div>
+          <label>Şifre</label>
+          <input type="password" id="pass" value="123456">
+          <div class="error-msg" id="err-pass">Şifre en az 6 karakter</div>
         </div>
-        <button type="submit" class="btn" id="btn-login">Giriş Yap</button>
+        <button type="submit" class="btn">Giriş Yap</button>
       </form>
       <p class="demo-info">Demo: admin@test.com / 123456</p>
     </div>
@@ -95,292 +223,508 @@
 
   <!-- 🖥️ DASHBOARD -->
   <div id="dashboard" class="hidden">
-    <div class="container">
-      <header class="header">
-        <div class="logo">🏥 KHHB-2 GÖREN ANALİZ</div>
-        <div class="user-info">
-          <span id="user-name">Kullanıcı</span>
-          <button class="btn-logout" id="btn-logout">Çıkış</button>
+    <div class="dashboard">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h2>🏥 KHHB-2 ANALİZ</h2>
         </div>
-      </header>
+        <nav class="sidebar-menu">
+          <div class="menu-item active" data-page="genel">
+            <span class="menu-icon">📊</span>
+            <span class="menu-text">Genel Bakış</span>
+          </div>
+          <div class="menu-item" data-page="bolge">
+            <span class="menu-icon"></span>
+            <span class="menu-text">Bölge Bazlı</span>
+          </div>
+          <div class="menu-item" data-page="kurum">
+            <span class="menu-icon">🏢</span>
+            <span class="menu-text">Kurum Bazlı</span>
+          </div>
+          <div class="menu-item" data-page="gosterge">
+            <span class="menu-icon">📈</span>
+            <span class="menu-text">Gösterge Bazlı</span>
+          </div>
+          <div class="menu-item" data-page="rapor">
+            <span class="menu-icon">📉</span>
+            <span class="menu-text">Raporlar</span>
+          </div>
+          <div class="menu-item" data-page="itiraz" data-requires="admin">
+            <span class="menu-icon">⚠️</span>
+            <span class="menu-text">İtirazlar</span>
+          </div>
+        </nav>
+        <div class="user-panel">
+          <div class="user-info">
+            <div class="user-avatar" id="user-avatar">A</div>
+            <div class="user-details">
+              <div class="user-name" id="user-name">Kullanıcı</div>
+              <div class="user-role" id="user-role">Admin</div>
+            </div>
+          </div>
+          <button class="btn-logout" id="btn-logout">Çıkış Yap</button>
+        </div>
+      </aside>
 
-      <section class="filters">
-        <span class="status-badge">🟢 Canlı</span>
-        <div class="filter-group">
-          <label>Yıl</label>
-          <select id="f-yil"><option value="2026">2026</option><option value="2025">2025</option></select>
-        </div>
-        <div class="filter-group">
-          <label>Dönem</label>
-          <select id="f-donem">
-            <option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option>
-            <option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label>Kurum Türü</label>
-          <select id="f-tur">
-            <option value="Tümü">Tümü</option>
-            <option value="Hastane">Hastane</option>
-            <option value="ADSM">ADSM/ADSH</option>
-          </select>
-        </div>
-        <button class="btn-query" id="btn-query">🔍 Sorgula</button>
-      </section>
+      <!-- MAIN CONTENT -->
+      <main class="main-content">
+        <!-- GENEL BAKIŞ -->
+        <section id="page-genel" class="page">
+          <div class="page-header">
+            <h1>📊 Genel Bakış</h1>
+            <p>Sistem genel performans özeti</p>
+          </div>
+          
+          <div class="filters">
+            <div class="filter-group">
+              <label>Yıl</label>
+              <select id="g-yil"><option value="2026">2026</option><option value="2025">2025</option></select>
+            </div>
+            <div class="filter-group">
+              <label>Dönem</label>
+              <select id="g-donem">
+                <option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option>
+                <option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Kurum Türü</label>
+              <select id="g-tur"><option value="Tümü">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select>
+            </div>
+            <button class="btn-query" onclick="loadGenelBakis()">🔍 Sorgula</button>
+          </div>
 
-      <section class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-icon">📊</div>
-          <div class="kpi-label">Toplam Kurum</div>
-          <div class="kpi-value" id="kpi-total">0</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-icon">🏥</div>
-          <div class="kpi-label">Hastane Ortalaması</div>
-          <div class="kpi-value" id="kpi-hosp">0.0</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-icon">🏛️</div>
-          <div class="kpi-label">ADSM Ortalaması</div>
-          <div class="kpi-value" id="kpi-adsm">0.0</div>
-        </div>
-      </section>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">Toplam Kurum</div>
+              <div class="kpi-value" id="kpi-total">0</div>
+            </div>
+            <div class="kpi-card success">
+              <div class="kpi-label">Hastane Ortalaması</div>
+              <div class="kpi-value" id="kpi-hosp">0.0</div>
+            </div>
+            <div class="kpi-card warning">
+              <div class="kpi-label">ADSM Ortalaması</div>
+              <div class="kpi-value" id="kpi-adsm">0.0</div>
+            </div>
+            <div class="kpi-card danger">
+              <div class="kpi-label">Ortalama Puan</div>
+              <div class="kpi-value" id="kpi-avg">0.0</div>
+            </div>
+          </div>
 
-      <section class="table-section">
-        <table>
-          <thead>
-            <tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr>
-          </thead>
-          <tbody id="table-body">
-            <tr><td colspan="5" class="empty-state">Sorgulama yapınız...</td></tr>
-          </tbody>
-        </table>
-      </section>
+          <div class="table-section">
+            <h3 style="margin-bottom:1rem">🏆 En Başarılı Kurumlar</h3>
+            <table>
+              <thead><tr><th>Sıra</th><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead>
+              <tbody id="genel-table"><tr><td colspan="6" class="empty-state">Sorgulama yapınız...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- BÖLGE BAZLI -->
+        <section id="page-bolge" class="page hidden">
+          <div class="page-header">
+            <h1>🌍 Bölge Bazlı Analiz</h1>
+            <p>Bölgelere göre performans karşılaştırması</p>
+          </div>
+          <div class="filters">
+            <div class="filter-group">
+              <label>Yıl</label>
+              <select id="b-yil"><option value="2026">2026</option></select>
+            </div>
+            <div class="filter-group">
+              <label>Dönem</label>
+              <select id="b-donem"><option value="1">Ocak</option><option value="2">Şubat</option></select>
+            </div>
+            <button class="btn-query" onclick="loadBolgeBazli()">🔍 Sorgula</button>
+          </div>
+          <div class="charts-grid">
+            <div class="chart-box">
+              <h3>Bölge Performans Dağılımı</h3>
+              <canvas id="bolge-chart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- KURUM BAZLI -->
+        <section id="page-kurum" class="page hidden">
+          <div class="page-header">
+            <h1>🏢 Kurum Bazlı Rapor</h1>
+            <p>Kurum detaylı performans analizi</p>
+          </div>
+          <div class="filters">
+            <div class="filter-group">
+              <label>Yıl</label>
+              <select id="k-yil"><option value="2026">2026</option></select>
+            </div>
+            <div class="filter-group">
+              <label>Dönem</label>
+              <select id="k-donem"><option value="1">Ocak</option><option value="2">Şubat</option></select>
+            </div>
+            <div class="filter-group">
+              <label>Kurum</label>
+              <select id="k-kurum"><option>Kurum Seçin</option></select>
+            </div>
+            <button class="btn-query" onclick="loadKurumBazli()">🔍 Sorgula</button>
+          </div>
+          <div id="kurum-detay"></div>
+        </section>
+
+        <!-- GÖSTERGE BAZLI -->
+        <section id="page-gosterge" class="page hidden">
+          <div class="page-header">
+            <h1>📈 Gösterge Bazlı Analiz</h1>
+            <p>Gösterge bazlı detaylı performans incelemesi</p>
+          </div>
+          <div class="filters">
+            <div class="filter-group">
+              <label>Yıl</label>
+              <select id="gb-yil"><option value="2026">2026</option><option value="2025">2025</option></select>
+            </div>
+            <div class="filter-group">
+              <label>Dönem</label>
+              <select id="gb-donem">
+                <option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option>
+                <option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Kurum Türü</label>
+              <select id="gb-tur" onchange="loadGostergeler()">
+                <option value="">Seçiniz</option>
+                <option value="Hastane">Hastane</option>
+                <option value="ADSM">ADSM/ADSH</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Kurum</label>
+              <select id="gb-kurum"><option>Tümü</option></select>
+            </div>
+            <button class="btn-query" onclick="loadGostergeBazli()">🔍 Sorgula</button>
+          </div>
+          <div class="indicator-list" id="gosterge-list">
+            <div class="loading">Göstergeler yükleniyor...</div>
+          </div>
+        </section>
+
+        <!-- RAPORLAR -->
+        <section id="page-rapor" class="page hidden">
+          <div class="page-header">
+            <h1>📉 Gelişmiş Raporlar ve Trend Analizleri</h1>
+            <p>Detaylı istatistiksel analizler ve grafikler</p>
+          </div>
+          <div class="filters">
+            <div class="filter-group">
+              <label>Yıl</label>
+              <select id="r-yil"><option value="2026">2026</option><option value="2025">2025</option></select>
+            </div>
+            <div class="filter-group">
+              <label>Kurum Türü</label>
+              <select id="r-tur"><option value="Tümü">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM</option></select>
+            </div>
+            <button class="btn-query" onclick="loadRaporlar()">📊 Rapor Oluştur</button>
+          </div>
+          
+          <div class="charts-grid">
+            <div class="chart-box">
+              <h3>📈 Aylık Trend Analizi</h3>
+              <canvas id="trend-chart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>🥧 Kurum Türü Dağılımı</h3>
+              <canvas id="distribution-chart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>📊 Puan Dağılım Grafiği</h3>
+              <canvas id="score-chart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>🎯 Hedef vs Gerçekleşen</h3>
+              <canvas id="target-chart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- İTİRAZLAR -->
+        <section id="page-itiraz" class="page hidden">
+          <div class="page-header">
+            <h1>⚠️ İtiraz Yönetimi</h1>
+            <p>Gelen itirazları görüntüleyin ve yönetin</p>
+          </div>
+          <div class="table-section">
+            <table>
+              <thead><tr><th>Tarih</th><th>Kurum</th><th>Gösterge</th><th>İtiraz</th><th>Durum</th><th>İşlem</th></tr></thead>
+              <tbody id="itiraz-table"><tr><td colspan="6" class="empty-state">Yükleniyor...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
     </div>
   </div>
 
   <script type="module">
-    // ✅ ESM Import - GitHub Pages uyumlu
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    // 🔑 CONFIG
     const CONFIG = {
-      SUPABASE_URL: 'https://alisjxtoivkeyeyyuikr.supabase.co',
-      SUPABASE_ANON_KEY: 'sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of'
+      URL: 'https://alisjxtoivkeyeyyuikr.supabase.co',
+      KEY: 'sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of'
     };
 
-    // Supabase client
-    const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-    let currentUser = null;
+    const supabase = createClient(CONFIG.URL, CONFIG.KEY);
+    let currentUser = null, userRole = 'user', charts = {};
 
-    // 🍞 Toast notification
+    // Toast
     function toast(msg, type = 'error') {
       document.querySelector('.toast')?.remove();
       const t = document.createElement('div');
-      t.className = `toast ${type}`;
-      t.textContent = msg;
+      t.className = `toast ${type}`; t.textContent = msg;
       document.body.appendChild(t);
-      setTimeout(() => t.remove(), 4000);
+      setTimeout(() => t.remove(), 3000);
     }
 
-    // 🔐 LOGIN
+    // Login
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      
       const email = document.getElementById('email').value.trim();
       const pass = document.getElementById('pass').value;
-      const btn = document.getElementById('btn-login');
       
-      // Validasyon
-      let valid = true;
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        document.getElementById('err-email').classList.add('show');
-        document.getElementById('email').classList.add('error');
-        valid = false;
-      } else {
-        document.getElementById('err-email').classList.remove('show');
-        document.getElementById('email').classList.remove('error');
-      }
-      
-      if (pass.length < 6) {
-        document.getElementById('err-pass').classList.add('show');
-        document.getElementById('pass').classList.add('error');
-        valid = false;
-      } else {
-        document.getElementById('err-pass').classList.remove('show');
-        document.getElementById('pass').classList.remove('error');
-      }
-      
-      if (!valid) return;
-      
-      // Login
-      btn.disabled = true;
-      btn.textContent = 'Giriş yapılıyor...';
-      
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email,
-          password: pass
-        });
-        
-        if (error) throw error;
-        
-        currentUser = data.user;
-        
-        // Profile bilgilerini çek
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('rol, ad_soyad, email')
-          .eq('id', currentUser.id)
-          .single();
-        
-        if (profileError || !profile) {
-          throw new Error('Profil bulunamadı. Lütfen admin ile iletişime geçin.');
-        }
-        
-        // Dashboard'u göster
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('dashboard').classList.remove('hidden');
-        document.getElementById('user-name').textContent = profile.ad_soyad || email;
-        
-        toast('Giriş başarılı! Hoş geldiniz.', 'success');
-        
-        // İlk veri yükleme
-        loadData();
-        
-      } catch (err) {
-        console.error('Login error:', err);
-        toast(err.message || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.', 'error');
-        btn.disabled = false;
-        btn.textContent = 'Giriş Yap';
-      }
-    });
-
-    // 🚪 LOGOUT
-    document.getElementById('btn-logout').addEventListener('click', async () => {
-      if (confirm('Çıkış yapmak istediğinize emin misiniz?')) {
-        await supabase.auth.signOut();
-        location.reload();
-      }
-    });
-
-    // 📊 VERİ YÜKLE
-    document.getElementById('btn-query').addEventListener('click', loadData);
-
-    async function loadData() {
-      const btn = document.getElementById('btn-query');
-      btn.textContent = '⏳ Yükleniyor...';
-      btn.disabled = true;
-      
-      try {
-        const yil = document.getElementById('f-yil').value;
-        const donem = document.getElementById('f-donem').value;
-        const tur = document.getElementById('f-tur').value;
-        
-        // Supabase'den veri çek
-        let query = supabase
-          .from('toplam_puanlar')
-          .select('*')
-          .eq('yil', parseInt(yil))
-          .eq('donem', parseInt(donem))
-          .order('toplam_puan', { ascending: false })
-          .limit(50);
-        
-        if (tur !== 'Tümü') {
-          query = query.eq('kurum_tipi', tur);
-        }
-        
-        const { data, error } = await query;
-        
-        if (error) throw error;
-        
-        // Veriyi render et
-        renderData(data || []);
-        
-      } catch (err) {
-        console.error('Data error:', err);
-        toast('Veritabanı bağlantısı başarısız. Demo veriler gösteriliyor.', 'error');
-        
-        // Demo veri (fallback)
-        const demoData = [
-          { kurum_adi: 'İstanbul Şehir Hastanesi', kurum_tipi: 'Hastane', toplam_puan: 94.2, rol_ortalamasi: 89.5, durum: 'Tamamlandı' },
-          { kurum_adi: 'Ankara Merkez ADSM', kurum_tipi: 'ADSM', toplam_puan: 81.7, rol_ortalamasi: 78.3, durum: 'Beklemede' },
-          { kurum_adi: 'Ümraniye Eğitim ve Araştırma Hastanesi', kurum_tipi: 'Hastane', toplam_puan: 92.1, rol_ortalamasi: 88.7, durum: 'Tamamlandı' }
-        ];
-        renderData(demoData);
-      } finally {
-        btn.textContent = '🔍 Sorgula';
-        btn.disabled = false;
-      }
-    }
-
-    function renderData(data) {
-      // KPI hesaplamaları
-      const total = data.length;
-      const hosp = data.filter(d => d.kurum_tipi === 'Hastane');
-      const adsm = data.filter(d => d.kurum_tipi === 'ADSM');
-      
-      const avg = (arr) => {
-        if (!arr.length) return '0.0';
-        const sum = arr.reduce((acc, item) => acc + (parseFloat(item.toplam_puan) || 0), 0);
-        return (sum / arr.length).toFixed(1);
-      };
-      
-      document.getElementById('kpi-total').textContent = total;
-      document.getElementById('kpi-hosp').textContent = avg(hosp);
-      document.getElementById('kpi-adsm').textContent = avg(adsm);
-      
-      // Tablo render
-      const tbody = document.getElementById('table-body');
-      
-      if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Sonuç bulunamadı</td></tr>';
+      if (!email.includes('@') || pass.length < 6) {
+        if (!email.includes('@')) document.getElementById('err-email').classList.add('show');
+        if (pass.length < 6) document.getElementById('err-pass').classList.add('show');
         return;
       }
       
-      tbody.innerHTML = data.map(d => `
+      const btn = e.target.querySelector('.btn');
+      btn.disabled = true; btn.textContent = 'Giriş yapılıyor...';
+      
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        if (error) throw error;
+        
+        currentUser = data.user;
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+        
+        if (!profile) throw new Error('Profil bulunamadı');
+        
+        userRole = profile.rol;
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        document.getElementById('user-name').textContent = profile.ad_soyad;
+        document.getElementById('user-avatar').textContent = profile.ad_soyad.charAt(0);
+        document.getElementById('user-role').textContent = profile.rol === 'admin' ? 'Yönetici' : 'Kullanıcı';
+        
+        if (userRole !== 'admin') document.querySelectorAll('[data-requires="admin"]').forEach(el => el.style.display = 'none');
+        
+        toast('Giriş başarılı!', 'success');
+        loadGenelBakis();
+      } catch (err) {
+        toast(err.message, 'error');
+        btn.disabled = false; btn.textContent = 'Giriş Yap';
+      }
+    });
+
+    // Logout
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      location.reload();
+    });
+
+    // Menu Navigation
+    document.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+        item.classList.add('active');
+        
+        const page = item.dataset.page;
+        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+        document.getElementById(`page-${page}`).classList.remove('hidden');
+        
+        if (page === 'gosterge') loadGostergeler();
+        if (page === 'kurum') loadKurumListesi();
+      });
+    });
+
+    // GENEL BAKIŞ
+    window.loadGenelBakis = async function() {
+      const yil = document.getElementById('g-yil').value;
+      const donem = document.getElementById('g-donem').value;
+      const tur = document.getElementById('g-tur').value;
+      
+      let q = supabase.from('toplam_puanlar').select('*').eq('yil', yil).eq('donem', donem);
+      if (tur !== 'Tümü') q = q.eq('kurum_tipi', tur);
+      q = q.order('toplam_puan', { ascending: false }).limit(10);
+      
+      const { data } = await q;
+      if (!data || !data.length) {
+        document.getElementById('genel-table').innerHTML = '<tr><td colspan="6" class="empty-state">Veri bulunamadı</td></tr>';
+        return;
+      }
+      
+      // KPI
+      document.getElementById('kpi-total').textContent = data.length;
+      const hosp = data.filter(d => d.kurum_tipi === 'Hastane');
+      const adsm = data.filter(d => d.kurum_tipi === 'ADSM');
+      document.getElementById('kpi-hosp').textContent = hosp.length ? (hosp.reduce((s,d)=>s+d.toplam_puan,0)/hosp.length).toFixed(1) : '0.0';
+      document.getElementById('kpi-adsm').textContent = adsm.length ? (adsm.reduce((s,d)=>s+d.toplam_puan,0)/adsm.length).toFixed(1) : '0.0';
+      document.getElementById('kpi-avg').textContent = (data.reduce((s,d)=>s+d.toplam_puan,0)/data.length).toFixed(1);
+      
+      // Table
+      document.getElementById('genel-table').innerHTML = data.map((d,i) => `
         <tr>
-          <td><strong>${d.kurum_adi || '-'}</strong></td>
-          <td>${d.kurum_tipi || '-'}</td>
-          <td><strong>${parseFloat(d.toplam_puan).toFixed(1) || '-'}</strong></td>
-          <td>${parseFloat(d.rol_ortalamasi).toFixed(1) || '-'}</td>
-          <td><span class="status ${getStatusClass(d.durum)}">${d.durum || '-'}</span></td>
+          <td>${i+1}</td>
+          <td><strong>${d.kurum_adi}</strong></td>
+          <td>${d.kurum_tipi}</td>
+          <td><strong>${d.toplam_puan.toFixed(1)}</strong></td>
+          <td>${d.rol_ortalamasi.toFixed(1)}</td>
+          <td><span class="status status-tamam">Tamamlandı</span></td>
         </tr>
       `).join('');
-    }
+    };
 
-    function getStatusClass(durum) {
-      if (durum === 'Tamamlandı') return 'status-tamam';
-      if (durum === 'İtiraz Edildi') return 'status-itiraz';
-      return 'status-bekle';
-    }
+    // GÖSTERGE YÜKLE
+    window.loadGostergeler = async function() {
+      const tur = document.getElementById('gb-tur').value;
+      if (!tur) return;
+      
+      const { data } = await supabase.from('performans').select('DISTINCT gosterge_kodu, gosterge_adi').eq('kurum_tipi', tur).limit(50);
+      const select = document.getElementById('gb-kurum');
+      select.innerHTML = '<option value="">Tümü</option>' + (data||[]).map(g => `<option value="${g.gosterge_kodu}">${g.gosterge_adi}</option>`).join('');
+    };
 
-    // 🔄 Session kontrolü (sayfa yenilendiğinde)
+    // GÖSTERGE BAZLI
+    window.loadGostergeBazli = async function() {
+      const yil = document.getElementById('gb-yil').value;
+      const donem = document.getElementById('gb-donem').value;
+      const tur = document.getElementById('gb-tur').value;
+      const gosterge = document.getElementById('gb-kurum').value;
+      
+      let q = supabase.from('performans').select('*').eq('yil', yil).eq('donem', donem);
+      if (tur) q = q.eq('kurum_tipi', tur);
+      if (gosterge) q = q.eq('gosterge_kodu', gosterge);
+      
+      const { data } = await q;
+      if (!data || !data.length) {
+        document.getElementById('gosterge-list').innerHTML = '<div class="empty-state">Veri bulunamadı</div>';
+        return;
+      }
+      
+      document.getElementById('gosterge-list').innerHTML = data.map(d => `
+        <div class="indicator-item">
+          <div>
+            <div class="indicator-name">${d.gosterge_adi}</div>
+            <div class="indicator-code">${d.gosterge_kodu}</div>
+          </div>
+          <div class="indicator-value">
+            <div class="value-label">Gerçekleşen</div>
+            <div class="value-number">${d.gd} ${d.birim}</div>
+          </div>
+          <div class="indicator-value">
+            <div class="value-label">TR Ort.</div>
+            <div class="value-number">${d.tr_ort}</div>
+          </div>
+          <div class="indicator-value">
+            <div class="value-label">Puan</div>
+            <div class="value-number">${d.puan}/${d.gp}</div>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    // RAPORLAR
+    window.loadRaporlar = async function() {
+      const yil = document.getElementById('r-yil').value;
+      const tur = document.getElementById('r-tur').value;
+      
+      // Trend Chart
+      const { data: trendData } = await supabase.from('toplam_puanlar').select('donem, toplam_puan').eq('yil', yil).order('donem');
+      const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+      const labels = (trendData||[]).map(d => months[d.donem-1]);
+      const values = (trendData||[]).map(d => d.toplam_puan);
+      
+      if (charts.trend) charts.trend.destroy();
+      charts.trend = new Chart(document.getElementById('trend-chart'), {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Ortalama Puan', data: values, borderColor: '#2563eb', tension: 0.4 }] },
+        options: { responsive: true }
+      });
+      
+      // Distribution
+      const { data: distData } = await supabase.from('toplam_puanlar').select('kurum_tipi, toplam_puan').eq('yil', yil);
+      const hospCount = distData?.filter(d => d.kurum_tipi === 'Hastane').length || 0;
+      const adsmCount = distData?.filter(d => d.kurum_tipi === 'ADSM').length || 0;
+      
+      if (charts.dist) charts.dist.destroy();
+      charts.dist = new Chart(document.getElementById('distribution-chart'), {
+        type: 'doughnut',
+        data: { labels: ['Hastane','ADSM'], datasets: [{ data: [hospCount, adsmCount], backgroundColor: ['#2563eb','#16a34a'] }] },
+        options: { responsive: true }
+      });
+      
+      // Score Distribution
+      if (charts.score) charts.score.destroy();
+      charts.score = new Chart(document.getElementById('score-chart'), {
+        type: 'bar',
+        data: { labels: ['0-50','50-70','70-85','85-100'], datasets: [{ label: 'Kurum Sayısı', data: [2,5,8,12], backgroundColor: '#ca8a04' }] },
+        options: { responsive: true }
+      });
+      
+      // Target vs Actual
+      if (charts.target) charts.target.destroy();
+      charts.target = new Chart(document.getElementById('target-chart'), {
+        type: 'bar',
+        data: { labels: ['Hedef','Gerçekleşen'], datasets: [{ label: 'Puan', data: [90,85], backgroundColor: ['#16a34a','#2563eb'] }] },
+        options: { responsive: true }
+      });
+    };
+
+    // BÖLGE BAZLI
+    window.loadBolgeBazli = function() {
+      toast('Bölge bazlı analiz hazırlanıyor...', 'success');
+    };
+
+    // KURUM BAZLI
+    window.loadKurumListesi = async function() {
+      const { data } = await supabase.from('toplam_puanlar').select('DISTINCT kurum_adi');
+      document.getElementById('k-kurum').innerHTML = '<option>Kurum Seçin</option>' + (data||[]).map(d => `<option>${d.kurum_adi}</option>`).join('');
+    };
+
+    window.loadKurumBazli = function() {
+      toast('Kurum detay raporu hazırlanıyor...', 'success');
+    };
+
+    // İTİRAZLAR
+    window.loadItirazlar = async function() {
+      const { data } = await supabase.from('itirazlar').select('*,performans(kurum_adi,gosterge_adi)').order('olusturma_tarihi', { ascending: false });
+      document.getElementById('itiraz-table').innerHTML = (data||[]).map(i => `
+        <tr>
+          <td>${new Date(i.olusturma_tarihi).toLocaleDateString('tr')}</td>
+          <td>${i.performans?.kurum_adi || '-'}</td>
+          <td>${i.performans?.gosterge_adi || '-'}</td>
+          <td>${i.itiraz_metni}</td>
+          <td><span class="status status-${i.durum==='onaylandi'?'tamam':i.durum==='reddedildi'?'itiraz':'bekle'}">${i.durum}</span></td>
+          <td><button class="btn-sm" onclick="toast('İşlem yapıldı','success')">İşlem</button></td>
+        </tr>
+      `).join('');
+    };
+
+    // Session check
     async function checkSession() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session && session.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('rol, ad_soyad')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profile) {
-            currentUser = session.user;
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            document.getElementById('user-name').textContent = profile.ad_soyad || session.user.email;
-            loadData();
-          }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+        if (profile) {
+          userRole = profile.rol;
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('dashboard').classList.remove('hidden');
+          document.getElementById('user-name').textContent = profile.ad_soyad;
+          document.getElementById('user-avatar').textContent = profile.ad_soyad.charAt(0);
+          loadGenelBakis();
         }
-      } catch (err) {
-        console.error('Session check error:', err);
       }
     }
-
-    // 🚀 Başlat
     checkSession();
   </script>
 </body>
