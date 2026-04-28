@@ -482,15 +482,51 @@ if (pdfUrl) {
     };
 
     window.gostergeAnalizYukle = async function() {
-        const gosterge = document.getElementById('raporGosterge').value;
-        if (!gosterge) return;
-        const { data } = await _supabase.from('performans').select('kurum_adi, gd, tr_ort, donem').eq('gosterge_adi', gosterge);
-        const sonuc = {};
-        data?.forEach(r => { if (!sonuc[r.kurum_adi]) sonuc[r.kurum_adi] = { ocak: null, subat: null }; if (r.donem==1) sonuc[r.kurum_adi].ocak = r.gd; else sonuc[r.kurum_adi].subat = r.gd; });
-        const labels = Object.keys(sonuc).slice(0,12);
-        if (charts.gosterge) charts.gosterge.destroy();
-        charts.gosterge = new Chart(document.getElementById('gostergeChart'), { type: 'line', data: { labels, datasets: [{ label: 'Ocak GD', data: labels.map(l=>sonuc[l].ocak), borderColor: '#3b82f6', tension: 0.3 }, { label: 'Şubat GD', data: labels.map(l=>sonuc[l].subat), borderColor: '#f59e0b', tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false } });
-    };
+    const gosterge = document.getElementById('raporGosterge').value;
+    if (!gosterge) {
+        alert('Lütfen bir gösterge seçin');
+        return;
+    }
+    
+    const { data } = await _supabase
+        .from('performans')
+        .select('kurum_adi, gd, donem')
+        .eq('gosterge_adi', gosterge)
+        .in('donem', [1, 2]);
+    
+    if (!data || data.length === 0) {
+        alert('Bu gösterge için veri bulunamadı');
+        return;
+    }
+    
+    // Kurum bazlı Ocak-Şubat verilerini düzenle
+    const kurumlar = [...new Set(data.map(d => d.kurum_adi))].slice(0, 12);
+    const ocakData = {}, subatData = {};
+    data.forEach(r => {
+        if (r.donem === 1) ocakData[r.kurum_adi] = r.gd;
+        else subatData[r.kurum_adi] = r.gd;
+    });
+    
+    // Grafik varsa temizle
+    if (window.gostergeAnalizChart) window.gostergeAnalizChart.destroy();
+    
+    const ctx = document.getElementById('gostergeChart').getContext('2d');
+    window.gostergeAnalizChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: kurumlar.map(k => k.split(' ')[0]),
+            datasets: [
+                { label: 'Ocak GD', data: kurumlar.map(k => ocakData[k]), backgroundColor: '#3b82f6', borderRadius: 6 },
+                { label: 'Şubat GD', data: kurumlar.map(k => subatData[k]), backgroundColor: '#f59e0b', borderRadius: 6 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } }
+        }
+    });
+};
 
     async function raporlar() {
     const container = document.getElementById('raporlar');
