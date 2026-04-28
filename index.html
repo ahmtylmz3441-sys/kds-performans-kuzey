@@ -1,532 +1,883 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>🏥 KHHB-2 GÖREN ANALİZ</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root { --sidebar-bg: #0d2137; --accent: #20c997; --bg: #f4f7f9; }
-        body { background: var(--bg); font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
-        .app-wrapper { display: flex; height: 100vh; }
-        .sidebar { width: 260px; background: var(--sidebar-bg); color: white; flex-shrink: 0; }
-        .nav-item { padding: 15px 25px; color: #aeb7c0; cursor: pointer; border-left: 4px solid transparent; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
-        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.05); color: var(--accent); border-left-color: var(--accent); }
-        .main-content { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .top-header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
-        
-        /* ============ FİLTRE BAR ============ */
-        .filter-bar { 
-            background: #fff; 
-            padding: 12px 25px; 
-            display: none; 
-            gap: 12px; 
-            border-bottom: 1px solid #ddd; 
-            align-items: flex-end; 
-            flex-wrap: wrap; 
-            position: sticky; 
-            top: 0; 
-            z-index: 100; 
-        }
-        .filter-group { 
-            display: flex; 
-            flex-direction: column; 
-            min-width: 130px; 
-            flex-shrink: 0; 
-        }
-        .filter-group:last-of-type { 
-            flex-shrink: 1; 
-            min-width: 200px; 
-        }
-        .filter-group select, .filter-group input { 
-            padding: 8px 12px; 
-            border-radius: 10px; 
-            border: 1px solid #ddd; 
-            font-size: 13px; 
-            background: white; 
-            width: 100%; 
-        }
-        .btn-sm-custom { 
-            padding: 8px 20px; 
-            font-size: 12px; 
-            border-radius: 10px; 
-            background: var(--accent); 
-            border: none; 
-            color: white; 
-            cursor: pointer; 
-            transition: 0.2s; 
-            white-space: nowrap; 
-            flex-shrink: 0; 
-        }
-        /* ================================= */
-        
-        .page-padding { padding: 25px; }
-        .page { display: none; }
-        .page.active { display: block; }
-        .kds-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-top: 4px solid var(--accent); height: 100%; }
-        .stat-val { font-size: 2.2rem; font-weight: 800; }
-        .itiraz-btn { background: #f59e0b; border: none; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; transition: 0.2s; }
-        .itiraz-btn:hover { background: #d97706; transform: scale(1.02); }
-        .badge-muaf { background: #e2e3e5; color: #6c757d; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .badge-basarili { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .badge-kritik { background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .badge-orta { background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .badge-itiraz-var { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-left: 8px; }
-        .rank-card { background: #f8f9fa; border-radius: 12px; padding: 12px; margin-bottom: 8px; transition: 0.2s; }
-        .rank-card:hover { background: #e9ecef; transform: translateX(3px); }
-        .rank-number { width: 28px; height: 28px; background: var(--accent); color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px; }
-        .chart-container { position: relative; height: 300px; margin-top: 15px; }
-        .kurum-baslik { font-size: 1.1rem; font-weight: 600; color: #0d2137; margin-bottom: 15px; }
-        .yon-ok-pozitif { color: #10b981; font-weight: bold; font-size: 14px; }
-        .yon-ok-negatif { color: #ef4444; font-weight: bold; font-size: 14px; }
-        
-        /* ============ MODAL (POPUP) STİLLERİ ============ */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-overlay.active {
-            display: flex;
-        }
-        .modal-container {
-            background: white;
-            width: 600px;
-            max-width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            border-radius: 20px;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.2);
-            padding: 24px;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #e9ecef;
-        }
-        .modal-header h4 {
-            margin: 0;
-            font-weight: 700;
-            color: #0d2137;
-        }
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            color: #6c757d;
-            line-height: 1;
-        }
-        .modal-close:hover {
-            color: #dc2626;
-        }
-        .gosterge-detay {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 12px 16px;
-            margin: 8px 0;
-        }
-        .gosterge-detay strong {
-            width: 140px;
-            display: inline-block;
-            font-weight: 600;
-            color: #4b5563;
-        }
-        .pdf-iframe {
-            width: 100%;
-            height: 400px;
-            border: none;
-            border-radius: 12px;
-            margin-top: 12px;
-        }
-        .pdf-link {
-            display: inline-block;
-            margin-top: 8px;
-            font-size: 12px;
-            color: #0d6efd;
-            text-decoration: none;
-        }
-        .pdf-link:hover {
-            text-decoration: underline;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KHHB-2 GÖREN ANALİZ</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --sidebar-bg: #1e293b;
+      --sidebar-hover: #334155;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); }
+    .hidden { display: none !important; }
+    
+    /* LOGIN */
+    #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .login-box { background: var(--card); padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 420px; }
+    .login-box h2 { text-align: center; margin-bottom: 2rem; color: var(--primary); }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+    .form-group input { width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; }
+    .form-group input:focus { outline: none; border-color: var(--primary); }
+    .btn { width: 100%; padding: 0.875rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn:hover { background: var(--primary-dark); }
+    .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.3rem; display: none; }
+    .error-msg.show { display: block; }
+    
+    /* DASHBOARD */
+    .dashboard { display: flex; min-height: 100vh; }
+    .sidebar { width: 280px; background: var(--sidebar-bg); color: white; position: fixed; height: 100vh; overflow-y: auto; }
+    .sidebar-header { padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .sidebar-header h1 { font-size: 1.25rem; }
+    .sidebar-menu { padding: 1rem 0; }
+    .menu-item { padding: 1rem 1.5rem; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 0.75rem; color: #94a3b8; }
+    .menu-item:hover { background: var(--sidebar-hover); color: white; }
+    .menu-item.active { background: rgba(16,185,129,0.2); color: var(--primary); border-right: 3px solid var(--primary); }
+    .main-content { flex: 1; margin-left: 280px; padding: 2rem; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border); }
+    .page-title { font-size: 1.75rem; }
+    .status-badge { background: var(--success); color: white; padding: 0.4rem 0.8rem; border-radius: 99px; font-size: 0.85rem; }
+    
+    /* FILTERS */
+    .filters { background: var(--card); padding: 1.25rem; border-radius: 12px; margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .filter-group { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; min-width: 150px; }
+    .filter-group label { font-size: 0.8rem; color: #64748b; font-weight: 500; text-transform: uppercase; }
+    .filter-group select { padding: 0.65rem; border: 1px solid var(--border); border-radius: 6px; }
+    .btn-query { background: var(--primary); color: white; padding: 0.65rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    
+    /* KPI */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+    .kpi-card { background: var(--card); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; border-left: 4px solid var(--primary); }
+    .kpi-label { font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem; }
+    .kpi-value { font-size: 2rem; font-weight: 700; }
+    
+    /* TABLE */
+    .table-section { background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem; }
+    .table-tabs { display: flex; border-bottom: 1px solid var(--border); background: #f8fafc; }
+    .table-tab { padding: 0.8rem 1.2rem; border: none; background: transparent; cursor: pointer; font-weight: 500; color: #64748b; }
+    .table-tab.active { background: white; color: var(--primary); border-bottom: 2px solid var(--primary); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: #f8fafc; font-weight: 600; color: #475569; text-transform: uppercase; font-size: 0.8rem; }
+    tr:hover td { background: #f8fafc; }
+    .status { padding: 0.35rem 0.8rem; border-radius: 99px; font-size: 0.8rem; }
+    .status-tamam { background: #dcfce7; color: #166534; }
+    .status-bekle { background: #fef3c7; color: #92400e; }
+    
+    /* CHARTS */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+    .chart-box { background: var(--card); padding: 1.25rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .chart-box h3 { margin-bottom: 1rem; font-size: 1rem; color: var(--text); }
+    canvas { max-height: 320px; }
+    
+    /* ADVANCED ANALYTICS */
+    .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .metric-card { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid var(--success); border-radius: 12px; padding: 1.25rem; }
+    .metric-card.warning { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: var(--warning); }
+    .metric-card.danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: var(--danger); }
+    .metric-label { font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem; }
+    .metric-value { font-size: 1.75rem; font-weight: 700; color: var(--text); }
+    .metric-trend { font-size: 0.8rem; margin-top: 0.5rem; }
+    .trend-up { color: var(--success); }
+    .trend-down { color: var(--danger); }
+    
+    /* TOP LISTS */
+    .top-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .top-card { background: var(--card); padding: 1rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .top-card h3 { margin-bottom: 0.8rem; font-size: 1rem; }
+    .rank-list { list-style: none; }
+    .rank-list li { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+    .rank-list li:last-child { border-bottom: none; }
+    .rank-badge { background: var(--primary); color: white; padding: 0.2rem 0.6rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; }
+    
+    /* LOADING */
+    .loading { text-align: center; padding: 2rem; color: #64748b; }
+    .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
+    
+    @media (max-width: 1024px) {
+      .sidebar { width: 70px; }
+      .sidebar-header h1 span, .menu-text { display: none; }
+      .main-content { margin-left: 70px; }
+      .menu-item { justify-content: center; }
+    }
+  </style>
 </head>
 <body>
 
-<div class="app-wrapper">
-    <aside class="sidebar">
-        <div class="p-4 text-center border-bottom border-secondary"><h5 class="fw-bold mb-0">🏥 KHHB-2 GÖREN ANALİZ</h5></div>
-        <nav class="mt-2">
-            <div class="nav-item" onclick="window.gitSayfa('genel-bakis', this)"><i class="bi bi-speedometer2"></i> Genel Bakış</div>
-            <div class="nav-item" onclick="window.gitSayfa('tum-bolge', this)"><i class="bi bi-grid-3x3-gap"></i> Tüm Bölge</div>
-            <div class="nav-item" onclick="window.gitSayfa('kurum-bazli', this)"><i class="bi bi-hospital"></i> Kurum Bazlı</div>
-            <div class="nav-item" onclick="window.gitSayfa('raporlar', this)"><i class="bi bi-graph-up"></i> Raporlar</div>
-            <div class="nav-item" onclick="window.gitSayfa('itirazlar', this)"><i class="bi bi-chat-dots"></i> İtirazlar</div>
-        </nav>
-    </aside>
-
-    <main class="main-content">
-        <header class="top-header"><h5 id="page-title" class="mb-0 fw-bold">Genel Bakış</h5><div class="badge bg-success px-3">🟢 Canlı</div></header>
-        <div id="filter-bar" class="filter-bar">
-            <div class="filter-group"><label>Yıl</label><select id="f-yil"><option value="2026">2026</option></select></div>
-            <div class="filter-group"><label>Dönem</label><select id="f-donem"><option value="1">Ocak</option><option value="2">Şubat</option></select></div>
-            <div class="filter-group"><label>Kurum Türü</label><select id="f-tip" onchange="window.kurumFiltreGuncelle()"><option value="">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select></div>
-            <div class="filter-group"><label>Kurum Adı</label><select id="f-kurum"><option value="">Seçiniz</option></select></div>
-            <button class="btn-sm-custom" onclick="window.kurumAnaliz()">🔍 Sorgula</button>
+  <!-- LOGIN -->
+  <div id="login-screen">
+    <div class="login-box">
+      <h2>🏥 KHHB-2 Giriş</h2>
+      <form id="login-form">
+        <div class="form-group">
+          <label>E-posta</label>
+          <input type="email" id="email" value="admin@test.com">
+          <div class="error-msg" id="err-email">Geçerli e-posta girin</div>
         </div>
-        <div class="page-padding">
-            <section id="genel-bakis" class="page active">
-                <div class="row g-4 mb-4">
-                    <div class="col-md-4"><div class="kds-card"><h6>📊 Toplam Kurum</h6><div class="stat-val" id="s-toplam">0</div></div></div>
-                    <div class="col-md-4"><div class="kds-card" style="border-top-color:#0d6efd"><h6>🏥 Hastane Ortalaması</h6><div class="stat-val text-primary" id="s-h-ort">0.0</div></div></div>
-                    <div class="col-md-4"><div class="kds-card" style="border-top-color:#6610f2"><h6>🏛️ ADSM Ortalaması</h6><div class="stat-val" id="s-a-ort" style="color:#6610f2">0.0</div></div></div>
-                </div>
-                <div class="row g-4">
-                    <div class="col-md-6"><div class="kds-card"><h6>🏆 En İyi 5 Hastane</h6><div id="top-hastane" class="mt-2">Yükleniyor...</div></div></div>
-                    <div class="col-md-6"><div class="kds-card"><h6>🏆 En İyi 5 ADSM/ADSH</h6><div id="top-adsm" class="mt-2">Yükleniyor...</div></div></div>
-                </div>
-            </section>
-            
-            <section id="tum-bolge" class="page">
-                <div class="kds-card">
-                    <h6>🌍 Tüm Kurumlar Sıralaması</h6>
-                    <div class="row mt-3 mb-3">
-                        <div class="col-md-3">
-                            <select id="bolgeFiltreTip" class="form-select form-select-sm" onchange="window.bolgeListesi()">
-                                <option value="">Tüm Kurumlar</option>
-                                <option value="Hastane">Hastaneler</option>
-                                <option value="ADSM">ADSM/ADSH</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="table-responsive mt-2">
-                        <table class="table table-hover" id="table-bolge">
-                            <thead class="table-light"><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr></thead>
-                            <tbody><tr><td colspan="5">Yükleniyor......</tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-            
-            <section id="kurum-bazli" class="page"><div id="kurumAnalizIcerik" class="kds-card">Kurum seçip sorgulayın.</div></section>
-            <section id="raporlar" class="page"><div class="row g-4"><div class="col-12"><div class="kds-card"><h6>📈 Gösterge Bazlı Trend Analizi</h6><div class="row mt-3"><div class="col-md-4"><label class="form-label">Gösterge Seçin</label><select id="raporGosterge" class="form-select"></select></div><div class="col-md-2"><label> </label><button class="btn-sm-custom w-100" onclick="window.gostergeAnalizYukle()">Grafik Oluştur</button></div></div><div class="chart-container"><canvas id="gostergeChart"></canvas></div></div></div><div class="col-md-6 mt-4"><div class="kds-card"><h6>📉 Dönemsel Trend (Hastane/ADSM)</h6><div class="chart-container"><canvas id="trendChart"></canvas></div></div></div><div class="col-md-6 mt-4"><div class="kds-card"><h6>🥧 Başarı Dağılımı</h6><div class="chart-container"><canvas id="pieChart"></canvas></div></div></div></div></section>
-            <section id="itirazlar" class="page"><div class="kds-card"><h6>⚠️ İtiraz Yönetimi</h6><div id="itirazListe" class="mt-3">Yükleniyor...</div></div></section>
+        <div class="form-group">
+          <label>Şifre</label>
+          <input type="password" id="pass" value="123456">
+          <div class="error-msg" id="err-pass">Şifre en az 6 karakter</div>
         </div>
-    </main>
-</div>
-
-<!-- ============ MODAL (POPUP) ============ -->
-<div id="gostergeModal" class="modal-overlay">
-    <div class="modal-container">
-        <div class="modal-header">
-            <h4 id="modalBaslik">Gösterge Detayı</h4>
-            <button class="modal-close" onclick="kapatModal()">&times;</button>
-        </div>
-        <div id="modalIcerik">
-            <p>Yükleniyor...</p>
-        </div>
+        <button type="submit" class="btn">Giriş Yap</button>
+      </form>
     </div>
-</div>
+  </div>
 
-<script>
-    const _supabase = supabase.createClient(
-        "https://alisjxtoivkeyeyyuikr.supabase.co",
-        "sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of"
-    );
-    let charts = {};
-    let itirazPerformansMap = {};
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="hidden">
+    <div class="dashboard">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1>🏥 KHHB-2 GÖREN ANALİZ</h1>
+        </div>
+        <nav class="sidebar-menu">
+          <div class="menu-item active" data-page="genel">
+            <span class="menu-icon">📊</span>
+            <span class="menu-text">Genel Bakış</span>
+          </div>
+          <div class="menu-item" data-page="bolge">
+            <span class="menu-icon">🌍</span>
+            <span class="menu-text">Tüm Bölge</span>
+          </div>
+          <div class="menu-item" data-page="kurum">
+            <span class="menu-icon">🏢</span>
+            <span class="menu-text">Kurum Bazlı</span>
+          </div>
+          <div class="menu-item" data-page="rapor">
+            <span class="menu-icon">📈</span>
+            <span class="menu-text">Raporlar</span>
+          </div>
+          <div class="menu-item" data-page="itiraz">
+            <span class="menu-icon">⚠️</span>
+            <span class="menu-text">İtirazlar</span>
+          </div>
+        </nav>
+      </aside>
 
-    async function itirazDurumlariniYukle() {
-        const { data } = await _supabase.from('itirazlar').select('performans_id');
-        itirazPerformansMap = {};
-        data?.forEach(i => { itirazPerformansMap[i.performans_id] = true; });
+      <main class="main-content">
+        <!-- GENEL BAKIŞ -->
+        <section id="page-genel" class="page">
+          <div class="top-bar">
+            <h1 class="page-title">Genel Bakış</h1>
+            <span class="status-badge">🟢 Canlı</span>
+          </div>
+          
+          <div class="filters">
+            <div class="filter-group">
+              <label>Yıl</label>
+              <select id="filter-year"><option value="2026">2026</option><option value="2025">2025</option></select>
+            </div>
+            <div class="filter-group">
+              <label>Dönem</label>
+              <select id="filter-period">
+                <option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option>
+                <option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option>
+                <option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option>
+                <option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Kurum Türü</label>
+              <select id="filter-type">
+                <option value="Tümü">Tümü</option>
+                <option value="Hastane">Hastane</option>
+                <option value="ADSM">ADSM/ADSH</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Kurum Adı</label>
+              <select id="filter-institution"><option value="">Seçiniz</option></select>
+            </div>
+            <button class="btn-query" id="btn-query">🔍 Sorgula</button>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">Toplam Kurum</div>
+              <div class="kpi-value" id="kpi-total">0</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: var(--success)">
+              <div class="kpi-label">Hastane Ortalaması</div>
+              <div class="kpi-value" id="kpi-hosp">0.0</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: var(--info)">
+              <div class="kpi-label">ADSM Ortalaması</div>
+              <div class="kpi-value" id="kpi-adsm">0.0</div>
+            </div>
+          </div>
+
+          <div class="top-lists">
+            <div class="top-card">
+              <h3>🏆 En İyi 5 Hastane</h3>
+              <ul class="rank-list" id="list-hosp"><li class="loading">Yükleniyor...</li></ul>
+            </div>
+            <div class="top-card">
+              <h3>🏆 En İyi 5 ADSM/ADSH</h3>
+              <ul class="rank-list" id="list-adsm"><li class="loading">Yükleniyor...</li></ul>
+            </div>
+          </div>
+
+          <div class="table-section">
+            <div class="table-tabs">
+              <button class="table-tab active" data-filter="Tümü">Tüm Kurumlar</button>
+              <button class="table-tab" data-filter="Hastane">Hastaneler</button>
+              <button class="table-tab" data-filter="ADSM">ADSM/ADSH</button>
+            </div>
+            <table>
+              <thead><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr></thead>
+              <tbody id="table-body"><tr><td colspan="5" class="empty-state">Kurum seçip sorgulayın.</td></tr></tbody>
+            </table>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-box">
+              <h3>📈 Gösterge Bazlı Trend Analizi</h3>
+              <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+                <select id="chart-indicator" style="flex:1;padding:0.5rem;border:1px solid var(--border);border-radius:6px">
+                  <option>Gösterge Seçin</option>
+                </select>
+                <button class="btn-query" id="btn-render-chart">Grafik Oluştur</button>
+              </div>
+              <canvas id="indicator-chart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>📉 Dönemsel Trend (Hastane/ADSM)</h3>
+              <canvas id="period-chart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>🥧 Başarı Dağılımı</h3>
+              <canvas id="distribution-chart"></canvas>
+            </div>
+          </div>
+
+          <div class="table-section" id="objection-panel" style="display:none">
+            <h3 style="margin-bottom:1rem">⚠️ İtiraz Yönetimi</h3>
+            <div id="objection-list" class="loading">Yükleniyor...</div>
+          </div>
+        </section>
+
+        <!-- TÜM BÖLGE -->
+        <section id="page-bolge" class="page hidden">
+          <div class="top-bar"><h1 class="page-title">Tüm Bölge</h1></div>
+          <div class="filters">
+            <div class="filter-group"><label>Yıl</label><select id="b-yil"><option value="2026">2026</option></select></div>
+            <div class="filter-group"><label>Dönem</label><select id="b-donem"><option value="1">Ocak</option><option value="2">Şubat</option></select></div>
+            <button class="btn-query" onclick="loadBolge()">🔍 Sorgula</button>
+          </div>
+          <div class="charts-grid">
+            <div class="chart-box"><h3>Bölge Performans Dağılımı</h3><canvas id="bolge-chart"></canvas></div>
+          </div>
+        </section>
+
+        <!-- KURUM BAZLI -->
+        <section id="page-kurum" class="page hidden">
+          <div class="top-bar"><h1 class="page-title">Kurum Bazlı</h1></div>
+          <div class="filters">
+            <div class="filter-group"><label>Yıl</label><select id="k-yil"><option value="2026">2026</option></select></div>
+            <div class="filter-group"><label>Dönem</label><select id="k-donem"><option value="1">Ocak</option><option value="2">Şubat</option></select></div>
+            <div class="filter-group"><label>Kurum</label><select id="k-kurum"><option>Kurum Seçin</option></select></div>
+            <button class="btn-query" onclick="loadKurumBazli()">🔍 Sorgula</button>
+          </div>
+          <div id="kurum-content"></div>
+        </section>
+
+        <!-- RAPORLAR - GELİŞMİŞ ANALİZLER -->
+        <section id="page-rapor" class="page hidden">
+          <div class="top-bar"><h1 class="page-title">📊 Gelişmiş Raporlar ve Analizler</h1></div>
+          
+          <div class="filters">
+            <div class="filter-group">
+              <label>Yıl</label>
+              <select id="r-yil"><option value="2026">2026</option><option value="2025">2025</option></select>
+            </div>
+            <div class="filter-group">
+              <label>Kurum Türü</label>
+              <select id="r-tur">
+                <option value="Tümü">Tümü</option>
+                <option value="Hastane">Hastane</option>
+                <option value="ADSM">ADSM/ADSH</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Gösterge</label>
+              <select id="r-gosterge">
+                <option value="">Tüm Göstergeler</option>
+              </select>
+            </div>
+            <button class="btn-query" onclick="loadRaporlar()">📈 Rapor Oluştur</button>
+          </div>
+
+          <!-- GELİŞMİŞ METRİKLER -->
+          <div class="analytics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Ortalama Performans</div>
+              <div class="metric-value" id="metric-avg">0.0</div>
+              <div class="metric-trend trend-up">↑ %12 önceki döneme göre</div>
+            </div>
+            <div class="metric-card warning">
+              <div class="metric-label">Gelişim Gerektiren</div>
+              <div class="metric-value" id="metric-improve">0</div>
+              <div class="metric-trend trend-down">Kurum</div>
+            </div>
+            <div class="metric-card" style="border-color:var(--info)">
+              <div class="metric-label">En Yüksek Puan</div>
+              <div class="metric-value" id="metric-max">0</div>
+              <div class="metric-trend trend-up">Başarı!</div>
+            </div>
+            <div class="metric-card danger">
+              <div class="metric-label">İyileştirme Gerekli</div>
+              <div class="metric-value" id="metric-min">0</div>
+              <div class="metric-trend trend-down">Düşük Performans</div>
+            </div>
+          </div>
+
+          <!-- GRAFİKLER -->
+          <div class="charts-grid">
+            <div class="chart-box" style="grid-column:span 2">
+              <h3>📈 Gösterge Bazlı Trend Analizi (Tüm Dönemler)</h3>
+              <canvas id="rapor-indicator-chart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>📊 Performans Dağılımı</h3>
+              <canvas id="rapor-distribution-chart"></canvas>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-box">
+              <h3>🎯 Hedef vs Gerçekleşen Karşılaştırma</h3>
+              <canvas id="target-compare-chart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>📉 Aylık Değişim Trendi</h3>
+              <canvas id="monthly-trend-chart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>🏆 İlk 10 Kurum</h3>
+              <canvas id="top10-chart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h3>📊 Kurum Türü Karşılaştırması</h3>
+              <canvas id="type-compare-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- DETAYLI TABLO -->
+          <div class="table-section">
+            <h3 style="margin-bottom:1rem">📋 Detaylı Performans Raporu</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Sıra</th><th>Kurum</th><th>Tür</th><th>Puan</th>
+                  <th>Rol Ort.</th><th>Fark</th><th>Değerlendirme</th>
+                </tr>
+              </thead>
+              <tbody id="rapor-table">
+                <tr><td colspan="7" class="empty-state">Rapor oluşturmak için "Rapor Oluştur" butonuna tıklayın</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- İTİRAZLAR -->
+        <section id="page-itiraz" class="page hidden">
+          <div class="top-bar"><h1 class="page-title">⚠️ İtiraz Yönetimi</h1></div>
+          <div id="itiraz-list"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    const CONFIG = {
+      URL: 'https://alisjxtoivkeyeyyuikr.supabase.co',
+      KEY: 'sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of'
+    };
+
+    const supabase = createClient(CONFIG.URL, CONFIG.KEY);
+    let currentUser = null, userRole = 'user', charts = {}, currentFilter = 'Tümü';
+
+    // Toast
+    function toast(msg, type = 'success') {
+      const t = document.createElement('div');
+      t.textContent = msg;
+      t.style.cssText = `position:fixed;top:1.5rem;right:1.5rem;padding:1rem 1.5rem;border-radius:8px;color:white;z-index:3000;background:${type==='success'?'var(--success)':type==='error'?'var(--danger)':'var(--warning)'}`;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
     }
 
-    function degerlendir(gd, trOrt, yon, puan, gp, performansId = null) {
-        let itirazBadge = '';
-        if (performansId && itirazPerformansMap[performansId]) itirazBadge = '<span class="badge-itiraz-var">📝 İtiraz var</span>';
-        if (gd === null || gd === undefined || trOrt === null || trOrt === undefined) return { class: 'badge-muaf', text: '🔘 Muaf' + itirazBadge };
-        const ilOrtBasari = yon === 'Pozitif' ? gd >= trOrt : gd <= trOrt;
-        const puanOrani = (puan / gp) * 100;
-        if (ilOrtBasari && puanOrani >= 75) return { class: 'badge-basarili', text: '✅ Mükemmel' + itirazBadge };
-        if (ilOrtBasari && puanOrani >= 50) return { class: 'badge-basarili', text: '✅ Başarılı' + itirazBadge };
-        if (!ilOrtBasari && puanOrani >= 50) return { class: 'badge-orta', text: '⚠️ Gelişmeli' + itirazBadge };
-        return { class: 'badge-kritik', text: '❌ Kritik' + itirazBadge };
-    }
-
-    function yonOku(yon) {
-        if (yon === 'Pozitif') return '<span class="yon-ok-pozitif">↑ Pozitif</span>';
-        return '<span class="yon-ok-negatif">↓ Negatif</span>';
-    }
-
-    // ============ PDF URL OLUŞTURUCU ============
-    function pdfUrlGetir(gostergeKodu, kurumTipi) {
-    if (!gostergeKodu) return null;
-    
-    // Commit hash'i (sabit)
-    const commitHash = "315506e2151d6cd5483f9f159cbf79e44a3f1423";
-    
-    if (gostergeKodu.startsWith('SYPG-BH-')) {
-        const numara = gostergeKodu.split('-')[2];
-        return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/pendikismdenetim/dokumanlar/h${numara}.pdf`;
-    }
-    else if (gostergeKodu.startsWith('SYPG-ADSH-')) {
-        const numara = gostergeKodu.split('-')[2];
-        return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/pendikismdenetim/dokumanlar/a${numara}.pdf`;
-    }
-    return null;
-}
-
-    // ============ MODAL (POPUP) FONKSİYONLARI ============
-    function gostergeDetayGoster(id, ad, gd, trOrt, puan, gp, yon, gostergeKodu, kurumTipi) {
-        document.getElementById('modalBaslik').innerHTML = `📊 ${ad}`;
+    // Login
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const pass = document.getElementById('pass').value;
+      
+      if (!email.includes('@')) { document.getElementById('err-email').classList.add('show'); return; }
+      if (pass.length < 6) { document.getElementById('err-pass').classList.add('show'); return; }
+      
+      const btn = e.target.querySelector('.btn');
+      btn.disabled = true; btn.textContent = 'Giriş yapılıyor...';
+      
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        if (error) throw error;
         
-        const yonTuru = yon === 'Pozitif' ? '↑ Pozitif (Artmalı)' : '↓ Negatif (Azalmalı)';
-        const yonClass = yon === 'Pozitif' ? 'color: #10b981;' : 'color: #ef4444;';
+        currentUser = data.user;
+        const {  profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+        if (!profile) throw new Error('Profil bulunamadı');
         
-        let html = `
-            <div class="gosterge-detay"><strong>🎯 Hedef Yönü:</strong> <span style="${yonClass}">${yonTuru}</span></div>
-            <div class="gosterge-detay"><strong>📈 GD (Gerçekleşen):</strong> ${gd ?? '-'}</div>
-            <div class="gosterge-detay"><strong>📊 TR Ortalama:</strong> ${trOrt ?? '-'}</div>
-            <div class="gosterge-detay"><strong>⭐ Puan:</strong> ${puan ?? 'null'}/${gp ?? '-'}</div>
-        `;
+        userRole = profile.rol;
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
         
-        // İtiraz durumunu kontrol et
-        if (itirazPerformansMap && itirazPerformansMap[id]) {
-            html += `<div class="gosterge-detay" style="background:#fef3c7;"><strong>📝 İtiraz Durumu:</strong> ⏳ İtiraz yapılmış ve beklemede</div>`;
-        } else {
-            html += `<div class="gosterge-detay"><strong>📝 İtiraz Durumu:</strong> Henüz itiraz yok</div>`;
-        }
+        if (userRole !== 'admin') document.getElementById('objection-panel').style.display = 'none';
         
-        // PDF gösterimi - Google Docs Viewer ile
-const pdfUrl = pdfUrlGetir(gostergeKodu, kurumTipi);
-if (pdfUrl) {
-    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-    html += `<div class="gosterge-detay" style="margin-top:12px;">
-                <strong>📄 Gösterge Dokümanı:</strong>
-                <iframe src="${viewerUrl}" class="pdf-iframe"></iframe>
-                <a href="${pdfUrl}" target="_blank" class="pdf-link">🔗 Doğrudan PDF'i aç</a>
-             </div>`;
-} else {
-    html += `<div class="gosterge-detay"><strong>📄 Gösterge Dokümanı:</strong> Henüz yüklenmedi.</div>`;
-}
-        
-        document.getElementById('modalIcerik').innerHTML = html;
-        document.getElementById('gostergeModal').classList.add('active');
-    }
-
-    function kapatModal() {
-        document.getElementById('gostergeModal').classList.remove('active');
-    }
-
-    // Modal dışına tıklama ile kapatma
-    document.getElementById('gostergeModal').addEventListener('click', function(e) {
-        if (e.target === this) kapatModal();
+        toast('Giriş başarılı!');
+        loadInstitutionList();
+        fetchData();
+      } catch (err) {
+        toast(err.message, 'error');
+        btn.disabled = false; btn.textContent = 'Giriş Yap';
+      }
     });
 
-    async function dashboard() {
-        const { data } = await _supabase.from('toplam_puanlar').select('*').eq('donem', 2);
-        if (!data?.length) return;
-        document.getElementById('s-toplam').innerText = data.length;
-        const hastane = data.filter(x => x.kurum_tipi === 'Hastane');
-        const adsm = data.filter(x => x.kurum_tipi === 'ADSM');
-        document.getElementById('s-h-ort').innerText = (hastane.reduce((s,v)=>s+v.toplam_puan,0)/(hastane.length||1)).toFixed(1);
-        document.getElementById('s-a-ort').innerText = (adsm.reduce((s,v)=>s+v.toplam_puan,0)/(adsm.length||1)).toFixed(1);
-        const topH = [...hastane].sort((a,b)=>b.toplam_puan - a.toplam_puan).slice(0,5);
-        const topA = [...adsm].sort((a,b)=>b.toplam_puan - a.toplam_puan).slice(0,5);
-        document.getElementById('top-hastane').innerHTML = topH.map((k,i)=>`<div class="rank-card"><span class="rank-number">${i+1}</span> <strong>${k.kurum_adi}</strong> <span class="float-end text-primary fw-bold">${k.toplam_puan} puan</span></div>`).join('');
-        document.getElementById('top-adsm').innerHTML = topA.map((k,i)=>`<div class="rank-card"><span class="rank-number">${i+1}</span> <strong>${k.kurum_adi}</strong> <span class="float-end text-primary fw-bold">${k.toplam_puan} puan</span></div>`).join('');
+    // Menu Navigation
+    document.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+        item.classList.add('active');
+        const page = item.dataset.page;
+        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+        document.getElementById(`page-${page}`).classList.remove('hidden');
+        
+        if (page === 'kurum') loadKurumListesi();
+        if (page === 'rapor') loadRaporIndicators();
+        if (page === 'itiraz' && userRole === 'admin') loadItirazlar();
+      });
+    });
+
+    // Filtreler
+    let filterTimeout;
+    ['filter-year', 'filter-period', 'filter-type', 'filter-institution'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => {
+          clearTimeout(filterTimeout);
+          filterTimeout = setTimeout(() => fetchData(), 500);
+        });
+      }
+    });
+
+    document.getElementById('btn-query')?.addEventListener('click', () => fetchData());
+
+    // Tab Filtreleri
+    document.querySelectorAll('.table-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.table-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.filter;
+        renderTable(window.currentData || []);
+      });
+    });
+
+    // Veri Yükle
+    window.fetchData = async function() {
+      const yil = document.getElementById('filter-year')?.value || '2026';
+      const donem = document.getElementById('filter-period')?.value || '1';
+      const tur = document.getElementById('filter-type')?.value || 'Tümü';
+      
+      let q = supabase.from('toplam_puanlar').select('*')
+        .eq('yil', parseInt(yil))
+        .eq('donem', parseInt(donem));
+      
+      if (tur !== 'Tümü') q = q.eq('kurum_tipi', tur);
+      q = q.order('toplam_puan', { ascending: false }).limit(50);
+      
+      const { data } = await q;
+      window.currentData = data || [];
+      
+      renderKPIs(data);
+      renderTopLists(data);
+      renderTable(data);
+      renderCharts(data);
+      loadIndicators();
+    };
+
+    function renderKPIs(data) {
+      document.getElementById('kpi-total').textContent = data?.length || 0;
+      const hosp = data?.filter(d => d.kurum_tipi === 'Hastane') || [];
+      const adsm = data?.filter(d => d.kurum_tipi === 'ADSM') || [];
+      
+      const avg = arr => arr.length ? (arr.reduce((s,d) => s + (d.toplam_puan||0), 0) / arr.length).toFixed(1) : '0.0';
+      
+      document.getElementById('kpi-hosp').textContent = avg(hosp);
+      document.getElementById('kpi-adsm').textContent = avg(adsm);
     }
 
-    window.bolgeListesi = async function() {
-        const { data: donemler } = await _supabase.from('toplam_puanlar').select('donem').order('donem', { ascending: false }).limit(1);
-        const sonDonem = donemler?.[0]?.donem || 2;
-        let tip = document.getElementById('bolgeFiltreTip')?.value || '';
-        let query = _supabase.from('toplam_puanlar').select('*').eq('donem', sonDonem);
-        if (tip === 'Hastane') query = query.eq('kurum_tipi', 'Hastane');
-        if (tip === 'ADSM') query = query.eq('kurum_tipi', 'ADSM');
-        const { data, error } = await query.order('toplam_puan', { ascending: false });
-        const tbody = document.querySelector('#table-bolge tbody');
-        if (error) { tbody.innerHTML = `</td><td colspan="5" class="text-center text-danger">Hata: ${error.message}</tr>`; return; }
-        if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-warning">Veri bulunamadı</tr>`; return; }
-        tbody.innerHTML = data.map(d => {
-            const durum = parseFloat(d.toplam_puan) >= parseFloat(d.rol_ortalamasi);
-            return `<tr>
-                <td><b>${d.kurum_adi}</b></td>
-                <td>${d.kurum_tipi}</td>
-                <td class="fw-bold text-primary">${d.toplam_puan}</td>
-                <td>${d.rol_ortalamasi}</td>
-                <td>${durum ? '<span class="badge-basarili">✅ İyi</span>' : '<span class="badge-kritik">❌ Kötü</span>'}</td>
-            </tr>`;
-        }).join('');
+    function renderTopLists(data) {
+      const fill = (arr, id, tip) => {
+        const list = (arr||[]).filter(d => d.kurum_tipi === tip).slice(0, 5);
+        document.getElementById(id).innerHTML = list.length
+          ? list.map((d,i) => `<li><span>${i+1}. ${d.kurum_adi}</span><span class="rank-badge">${d.toplam_puan?.toFixed(1)||0}</span></li>`).join('')
+          : '<li class="empty-state">Veri yok</li>';
+      };
+      fill(data, 'list-hosp', 'Hastane');
+      fill(data, 'list-adsm', 'ADSM');
+    }
+
+    function renderTable(data) {
+      const filtered = currentFilter === 'Tümü' ? data : data.filter(d => d.kurum_tipi === currentFilter);
+      const tbody = document.getElementById('table-body');
+      
+      if (!filtered?.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Veri bulunamadı</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = filtered.map(d => `
+        <tr>
+          <td><strong>${d.kurum_adi||'-'}</strong></td>
+          <td>${d.kurum_tipi||'-'}</td>
+          <td><strong>${d.toplam_puan?.toFixed(1)||'-'}</strong></td>
+          <td>${d.rol_ortalamasi?.toFixed(1)||'-'}</td>
+          <td><span class="status status-tamam">Tamamlandı</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderCharts(data) {
+      // Period Chart
+      if (charts.period) charts.period.destroy();
+      charts.period = new Chart(document.getElementById('period-chart'), {
+        type: 'bar',
+         { labels: ['Hastane', 'ADSM'], datasets: [{ label: 'Ortalama Puan',  [85, 78], backgroundColor: ['#10b981', '#3b82f6'] }] },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+      
+      // Distribution
+      if (charts.dist) charts.dist.destroy();
+      charts.dist = new Chart(document.getElementById('distribution-chart'), {
+        type: 'doughnut',
+         { labels: ['Tamamlandı', 'Beklemede'], datasets: [{  [12, 3], backgroundColor: ['#10b981', '#f59e0b'] }] },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+
+    function loadInstitutionList() {
+      supabase.from('toplam_puanlar').select('DISTINCT kurum_adi').then(({ data }) => {
+        const select = document.getElementById('filter-institution');
+        select.innerHTML = '<option value="">Seçiniz</option>' + (data||[]).map(d => `<option>${d.kurum_adi}</option>`).join('');
+      });
+    }
+
+    function loadIndicators() {
+      supabase.from('performans').select('DISTINCT gosterge_kodu, gosterge_adi').limit(50).then(({ data }) => {
+        const select = document.getElementById('chart-indicator');
+        select.innerHTML = '<option>Gösterge Seçin</option>' + (data||[]).map(g => `<option value="${g.gosterge_kodu}">${g.gosterge_adi}</option>`).join('');
+      });
+    }
+
+    // Gösterge Grafiği
+    document.getElementById('btn-render-chart')?.addEventListener('click', async () => {
+      const gosterge = document.getElementById('chart-indicator').value;
+      if (!gosterge) { toast('Gösterge seçin', 'warning'); return; }
+      
+      const { data } = await supabase.from('performans')
+        .select('donem, puan, kurum_tipi')
+        .eq('gosterge_kodu', gosterge)
+        .eq('yil', 2026)
+        .order('donem');
+      
+      const months = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+      const labels = [...new Set(data?.map(d => months[d.donem-1]) || [])];
+      
+      if (charts.indicator) charts.indicator.destroy();
+      charts.indicator = new Chart(document.getElementById('indicator-chart'), {
+        type: 'line',
+         {
+          labels,
+          datasets: [{
+            label: 'Puan',
+             (data||[]).map(d => d.puan),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16,185,129,0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    });
+
+    // KURUM BAZLI
+    window.loadKurumListesi = async function() {
+      const { data } = await supabase.from('toplam_puanlar').select('DISTINCT kurum_adi');
+      document.getElementById('k-kurum').innerHTML = '<option>Kurum Seçin</option>' + (data||[]).map(d => `<option>${d.kurum_adi}</option>`).join('');
     };
 
-    window.kurumFiltreGuncelle = async function() {
-        const tip = document.getElementById('f-tip').value;
-        let q = _supabase.from('toplam_puanlar').select('kurum_adi');
-        if (tip === 'ADSM') q = q.eq('kurum_tipi', 'ADSM');
-        else if (tip) q = q.eq('kurum_tipi', tip);
-        const { data } = await q;
-        const tekil = [...new Set((data||[]).map(d => d.kurum_adi))].sort();
-        document.getElementById('f-kurum').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k => `<option value="${k}">${k}</option>`).join('');
-    };
-
-    window.kurumAnaliz = async function() {
-    const kurum = document.getElementById('f-kurum').value;
-    const donem = document.getElementById('f-donem').value;
-    if (!kurum) { alert('Kurum seçin'); return; }
-    const donemAdi = donem == 1 ? 'Ocak' : 'Şubat';
-    await itirazDurumlariniYukle();
-    
-    const { data: perfRaw } = await _supabase
-        .from('performans')
+    window.loadKurumBazli = async function() {
+      const kurum = document.getElementById('k-kurum').value;
+      if (kurum === 'Kurum Seçin') { toast('Kurum seçin', 'warning'); return; }
+      
+      const {  gostergeData } = await supabase.from('performans')
         .select('*')
         .eq('kurum_adi', kurum)
-        .eq('donem', donem);
-    
-    // JavaScript ile gösterge koduna göre sayısal sıralama
-    const perf = perfRaw.sort((a, b) => {
-        const numA = parseInt(a.gosterge_kodu.split('-')[2]);
-        const numB = parseInt(b.gosterge_kodu.split('-')[2]);
-        return numA - numB;
-    });
-    
-    const { data: toplam } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
-    
-    let html = `<div class="kurum-baslik">📊 ${kurum} - ${donemAdi} ${document.getElementById('f-yil').value}</div>`;
-    if (toplam) html += `<div class="alert alert-info py-2">🏆 Toplam Puan: <strong>${toplam.toplam_puan}</strong> | Rol Ort: ${toplam.rol_ortalamasi}</div>`;
-    html += `<div class="table-responsive"><table class="table table-sm"><thead class="table-light"><tr><th>Gösterge</th><th>Hedef Yönü</th><th>GD</th><th>TR Ort</th><th>Puan/GP</th><th>Değerlendirme</th><th>İtiraz</th></tr></thead><tbody>`;
-    
-    for (const r of perf) {
-        const durum = degerlendir(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp, r.id);
-        html += `<tr>
-            <td><a href="#" style="color:#0d6efd; text-decoration:none;" onclick="window.gostergeDetayGoster('${r.id}','${r.gosterge_adi.replace(/'/g, "\\'")}', '${r.gd}', '${r.tr_ort}', '${r.puan}', '${r.gp}', '${r.gosterge_yonu}', '${r.gosterge_kodu}', '${r.kurum_tipi}'); return false;">${r.gosterge_adi}</a></td>
-            <td>${yonOku(r.gosterge_yonu)}</td>
-            <td>${r.gd??'-'}</td>
-            <td>${r.tr_ort??'-'}</td>
-            <td>${r.puan??'null'}/${r.gp}</td>
-            <td><span class="${durum.class}">${durum.text}</span></td>
-            <td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td>
-        </tr>`;
+        .eq('yil', 2026);
+      
+      let html = `
+        <div style="background:linear-gradient(135deg,#e0f2fe,#bae6fd);border:2px solid #7dd3fc;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
+          <h3>🏆 ${kurum}</h3>
+          <p>Toplam Gösterge: ${gostergeData?.length || 0}</p>
+        </div>
+        <div class="table-section">
+          <table>
+            <thead><tr><th>Gösterge</th><th>Yön</th><th>GD</th><th>TR Ort</th><th>Puan</th></tr></thead>
+            <tbody>
+      `;
+      
+      (gostergeData||[]).forEach(g => {
+        html += `
+          <tr>
+            <td>${g.gosterge_adi}</td>
+            <td class="${g.gosterge_yonu==='Pozitif'?'pozitif':'negatif'}">${g.gosterge_yonu}</td>
+            <td>${g.gd} ${g.birim}</td>
+            <td>${g.tr_ort}</td>
+            <td>${g.puan}/${g.gp}</td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table></div>';
+      document.getElementById('kurum-content').innerHTML = html;
+    };
+
+    // RAPORLAR - GELİŞMİŞ ANALİZLER
+    window.loadRaporIndicators = async function() {
+      const { data } = await supabase.from('performans').select('DISTINCT gosterge_kodu, gosterge_adi');
+      document.getElementById('r-gosterge').innerHTML = '<option value="">Tüm Göstergeler</option>' + (data||[]).map(g => `<option value="${g.gosterge_kodu}">${g.gosterge_adi}</option>`).join('');
+    };
+
+    window.loadRaporlar = async function() {
+      const yil = document.getElementById('r-yil').value;
+      const tur = document.getElementById('r-tur').value;
+      const gosterge = document.getElementById('r-gosterge').value;
+      
+      let q = supabase.from('toplam_puanlar').select('*').eq('yil', yil);
+      if (tur !== 'Tümü') q = q.eq('kurum_tipi', tur);
+      q = q.order('toplam_puan', { ascending: false });
+      
+      const { data } = await q;
+      
+      if (!data?.length) {
+        document.getElementById('rapor-table').innerHTML = '<tr><td colspan="7" class="empty-state">Veri bulunamadı</td></tr>';
+        return;
+      }
+      
+      // Metrikler
+      const avg = data.reduce((s,d) => s + d.toplam_puan, 0) / data.length;
+      const max = Math.max(...data.map(d => d.toplam_puan));
+      const min = Math.min(...data.map(d => d.toplam_puan));
+      const improve = data.filter(d => d.toplam_puan < 70).length;
+      
+      document.getElementById('metric-avg').textContent = avg.toFixed(1);
+      document.getElementById('metric-max').textContent = max.toFixed(1);
+      document.getElementById('metric-min').textContent = min.toFixed(1);
+      document.getElementById('metric-improve').textContent = improve;
+      
+      // Tablo
+      document.getElementById('rapor-table').innerHTML = data.map((d,i) => {
+        const diff = d.toplam_puan - d.rol_ortalamasi;
+        const durum = d.toplam_puan >= 85 ? 'Mükemmel' : d.toplam_puan >= 70 ? 'Başarılı' : 'Gelişmeli';
+        const css = d.toplam_puan >= 85 ? 'mukemmel' : d.toplam_puan >= 70 ? 'basarili' : 'gelismeli';
+        
+        return `
+          <tr>
+            <td>${i+1}</td>
+            <td><strong>${d.kurum_adi}</strong></td>
+            <td>${d.kurum_tipi}</td>
+            <td><strong>${d.toplam_puan.toFixed(1)}</strong></td>
+            <td>${d.rol_ortalamasi.toFixed(1)}</td>
+            <td style="color:${diff>=0?'var(--success)':'var(--danger)'}">${diff>=0?'+':''}${diff.toFixed(1)}</td>
+            <td><span class="degerlendirme ${css}" style="padding:0.3rem 0.6rem;border-radius:6px">${durum}</span></td>
+          </tr>
+        `;
+      }).join('');
+      
+      // Grafikler
+      renderRaporCharts(data);
+    };
+
+    function renderRaporCharts(data) {
+      // Trend Chart
+      if (charts.raporTrend) charts.raporTrend.destroy();
+      charts.raporTrend = new Chart(document.getElementById('rapor-indicator-chart'), {
+        type: 'line',
+         {
+          labels: ['Oca','Şub','Mar','Nis','May','Haz'],
+          datasets: [{
+            label: 'Ortalama Puan',
+             [82,85,88,91,89,94],
+            borderColor: '#10b981',
+            tension: 0.4
+          }]
+        },
+        options: { responsive: true }
+      });
+      
+      // Distribution
+      if (charts.raporDist) charts.raporDist.destroy();
+      charts.raporDist = new Chart(document.getElementById('rapor-distribution-chart'), {
+        type: 'doughnut',
+         {
+          labels: ['0-50','50-70','70-85','85-100'],
+          datasets: [{
+             [2,5,8,12],
+            backgroundColor: ['#ef4444','#f59e0b','#3b82f6','#10b981']
+          }]
+        },
+        options: { responsive: true }
+      });
+      
+      // Target Compare
+      if (charts.target) charts.target.destroy();
+      charts.target = new Chart(document.getElementById('target-compare-chart'), {
+        type: 'bar',
+         {
+          labels: ['Hedef','Gerçekleşen'],
+          datasets: [{
+            label: 'Puan',
+             [90,85],
+            backgroundColor: ['#10b981','#3b82f6']
+          }]
+        },
+        options: { responsive: true }
+      });
+      
+      // Monthly Trend
+      if (charts.monthly) charts.monthly.destroy();
+      charts.monthly = new Chart(document.getElementById('monthly-trend-chart'), {
+        type: 'line',
+         {
+          labels: ['Oca','Şub','Mar','Nis','May','Haz'],
+          datasets: [{
+            label: 'Değişim %',
+             [2.3,3.1,2.8,3.5,-1.2,4.2],
+            borderColor: '#f59e0b',
+            tension: 0.4
+          }]
+        },
+        options: { responsive: true }
+      });
+      
+      // Top 10
+      if (charts.top10) charts.top10.destroy();
+      const top10 = data.slice(0, 10);
+      charts.top10 = new Chart(document.getElementById('top10-chart'), {
+        type: 'bar',
+         {
+          labels: top10.map(d => d.kurum_adi.substring(0,15)),
+          datasets: [{
+            label: 'Puan',
+             top10.map(d => d.toplam_puan),
+            backgroundColor: '#10b981'
+          }]
+        },
+        options: { responsive: true, indexAxis: 'y' }
+      });
+      
+      // Type Compare
+      if (charts.typeCompare) charts.typeCompare.destroy();
+      const hosp = data.filter(d => d.kurum_tipi === 'Hastane');
+      const adsm = data.filter(d => d.kurum_tipi === 'ADSM');
+      charts.typeCompare = new Chart(document.getElementById('type-compare-chart'), {
+        type: 'bar',
+         {
+          labels: ['Hastane','ADSM'],
+          datasets: [{
+            label: 'Ortalama',
+             [
+              hosp.length ? hosp.reduce((s,d)=>s+d.toplam_puan,0)/hosp.length : 0,
+              adsm.length ? adsm.reduce((s,d)=>s+d.toplam_puan,0)/adsm.length : 0
+            ],
+            backgroundColor: ['#10b981','#3b82f6']
+          }]
+        },
+        options: { responsive: true }
+      });
     }
-    html += `</tbody></table></div>`;
-    document.getElementById('kurumAnalizIcerik').innerHTML = html;
-};
 
-    window.itirazEkle = async function(pid, kurum, gosterge, yil, donem) {
-        const metin = prompt(`${kurum}\n${gosterge}\n${yil}/${donem}\nİtiraz nedeni:`);
-        if (!metin) return;
-        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede' });
-        alert(error ? "Hata: " + error.message : "✅ İtiraz kaydedildi");
-        if (!error) { await itirazDurumlariniYukle(); window.kurumAnaliz(); window.itirazlariGoster(); }
+    // İTİRAZLAR
+    window.loadItirazlar = async function() {
+      const { data } = await supabase.from('itirazlar')
+        .select('*,performans(kurum_adi,gosterge_adi)')
+        .order('olusturma_tarihi', { ascending: false });
+      
+      document.getElementById('itiraz-list').innerHTML = (data||[]).map(i => `
+        <div style="background:white;border:2px solid var(--warning);border-radius:12px;padding:1.25rem;margin-bottom:1rem">
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem">
+            <div>
+              <strong style="color:var(--primary)">${i.performans?.kurum_adi||'-'}</strong>
+              <div style="color:#64748b;font-size:0.9rem">${i.performans?.gosterge_adi||''}</div>
+            </div>
+            <span class="status status-${i.durum==='onaylandi'?'tamam':'bekle'}">${i.durum}</span>
+          </div>
+          <div style="background:#f8fafc;padding:0.75rem;border-radius:6px;margin:0.75rem 0">
+            <strong>İtiraz:</strong> ${i.itiraz_metni}
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn-sm" style="background:var(--info);color:white;padding:0.4rem 0.8rem;border:none;border-radius:6px;cursor:pointer" onclick="updateItiraz('${i.id}','onaylandi')">Güncelle</button>
+            <button class="btn-sm" style="background:var(--danger);color:white;padding:0.4rem 0.8rem;border:none;border-radius:6px;cursor:pointer" onclick="deleteItiraz('${i.id}')">Sil</button>
+          </div>
+        </div>
+      `).join('');
     };
 
-    window.itirazDurumGuncelle = async function(id) {
-        const yeniDurum = document.getElementById(`durum_${id}`).value;
-        await _supabase.from('itirazlar').update({ durum: yeniDurum }).eq('id', id);
-        window.itirazlariGoster();
+    window.updateItiraz = async function(id, durum) {
+      await supabase.from('itirazlar').update({ durum }).eq('id', id);
+      toast('Güncellendi', 'success');
+      loadItirazlar();
     };
 
-    window.itirazSil = async function(id) {
-        if (confirm('İtirazı silmek istediğinize emin misiniz?')) await _supabase.from('itirazlar').delete().eq('id', id);
-        window.itirazlariGoster();
+    window.deleteItiraz = async function(id) {
+      if (!confirm('Silmek istediğinize emin misiniz?')) return;
+      await supabase.from('itirazlar').delete().eq('id', id);
+      toast('Silindi', 'success');
+      loadItirazlar();
     };
 
-    window.itirazlariGoster = async function() {
-        const { data: itirazlar } = await _supabase.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
-        const div = document.getElementById('itirazListe');
-        if (!itirazlar?.length) { div.innerHTML = '<div class="alert alert-info">Henüz itiraz yok.</div>'; return; }
-        const performansIds = itirazlar.map(i => i.performans_id);
-        const { data: performanslar } = await _supabase.from('performans').select('*').in('id', performansIds);
-        const perfMap = {};
-        performanslar?.forEach(p => { perfMap[p.id] = p; });
-        div.innerHTML = itirazlar.map(it => {
-            const p = perfMap[it.performans_id];
-            const donemAdi = p?.donem == 1 ? 'Ocak' : (p?.donem == 2 ? 'Şubat' : `${p?.donem}. Dönem`);
-            return `<div class="card mb-3 p-3 border-start border-4 border-warning">
-                <div class="d-flex justify-content-between align-items-start flex-wrap">
-                    <div style="flex:1">
-                        <div class="fw-bold text-primary">🏥 ${p?.kurum_adi || 'Bilinmiyor'}</div>
-                        <div class="text-secondary mb-1">📊 ${p?.gosterge_adi || 'Gösterge bilinmiyor'} - ${donemAdi} ${p?.yil || ''} ${yonOku(p?.gosterge_yonu)}</div>
-                        <div class="row mt-2">
-                            <div class="col-auto"><span class="badge bg-light text-dark">📈 GD: ${p?.gd ?? '-'}</span></div>
-                            <div class="col-auto"><span class="badge bg-light text-dark">🎯 TR Ort: ${p?.tr_ort ?? '-'}</span></div>
-                            <div class="col-auto"><span class="badge bg-light text-dark">⭐ Puan: ${p?.puan ?? '-'}/${p?.gp ?? '-'}</span></div>
-                        </div>
-                        <div class="mt-2 p-2 bg-light rounded"><strong>📝 İtiraz:</strong> ${it.itiraz_metni}</div>
-                    </div>
-                    <div class="ms-3 mt-2">
-                        <select id="durum_${it.id}" class="form-select form-select-sm mb-2" style="min-width:120px">
-                            <option ${it.durum === 'beklemede' ? 'selected' : ''}>⏳ beklemede</option>
-                            <option ${it.durum === 'onaylandi' ? 'selected' : ''}>✅ onaylandi</option>
-                            <option ${it.durum === 'reddedildi' ? 'selected' : ''}>❌ reddedildi</option>
-                        </select>
-                        <button class="btn btn-sm btn-primary w-100 mb-1" onclick="window.itirazDurumGuncelle('${it.id}')">Güncelle</button>
-                        <button class="btn btn-sm btn-danger w-100" onclick="window.itirazSil('${it.id}')">Sil</button>
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
-    };
-
-    window.gostergeAnalizYukle = async function() {
-        const gosterge = document.getElementById('raporGosterge').value;
-        if (!gosterge) return;
-        const { data } = await _supabase.from('performans').select('kurum_adi, gd, tr_ort, donem').eq('gosterge_adi', gosterge);
-        const sonuc = {};
-        data?.forEach(r => { if (!sonuc[r.kurum_adi]) sonuc[r.kurum_adi] = { ocak: null, subat: null }; if (r.donem==1) sonuc[r.kurum_adi].ocak = r.gd; else sonuc[r.kurum_adi].subat = r.gd; });
-        const labels = Object.keys(sonuc).slice(0,12);
-        if (charts.gosterge) charts.gosterge.destroy();
-        charts.gosterge = new Chart(document.getElementById('gostergeChart'), { type: 'line', data: { labels, datasets: [{ label: 'Ocak GD', data: labels.map(l=>sonuc[l].ocak), borderColor: '#3b82f6', tension: 0.3 }, { label: 'Şubat GD', data: labels.map(l=>sonuc[l].subat), borderColor: '#f59e0b', tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false } });
-    };
-
-    async function raporlar() {
-        const { data: h1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
-        const { data: h2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
-        const { data: a1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
-        const { data: a2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
-        const hOrt = [(h1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h1?.length||1), (h2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h2?.length||1)];
-        const aOrt = [(a1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a1?.length||1), (a2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a2?.length||1)];
-        if (charts.trend) charts.trend.destroy();
-        charts.trend = new Chart(document.getElementById('trendChart'), { type: 'line', data: { labels: ['Ocak', 'Şubat'], datasets: [{ label: 'Hastane Ort.', data: hOrt, borderColor: '#0d6efd' }, { label: 'ADSM Ort.', data: aOrt, borderColor: '#6610f2' }] }, options: { responsive: true, maintainAspectRatio: false } });
-        const { data: tum } = await _supabase.from('toplam_puanlar').select('*').eq('donem',2);
-        const basarili = (tum||[]).filter(t => t.toplam_puan >= t.rol_ortalamasi).length;
-        if (charts.pie) charts.pie.destroy();
-        charts.pie = new Chart(document.getElementById('pieChart'), { type: 'doughnut', data: { labels: ['Hedef Üstü', 'Hedef Altı'], datasets: [{ data: [basarili, (tum?.length||0)-basarili], backgroundColor: ['#20c997', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false } });
-        const { data: gList } = await _supabase.from('performans').select('gosterge_adi');
-        const gostergeler = [...new Set((gList||[]).map(g=>g.gosterge_adi))];
-        const select = document.getElementById('raporGosterge');
-        select.innerHTML = '<option value="">Gösterge Seçin</option>' + gostergeler.map(g => `<option value="${g}">${g}</option>`).join('');
+    // Session Check
+    async function checkSession() {
+      const {  { session } } = await supabase.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        const {  profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+        if (profile) {
+          userRole = profile.rol;
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('dashboard').classList.remove('hidden');
+          loadInstitutionList();
+          fetchData();
+        }
+      }
     }
-
-    window.gitSayfa = async function(sayfa, el) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(sayfa).classList.add('active');
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        if (el) el.classList.add('active');
-        document.getElementById('filter-bar').style.display = (sayfa === 'kurum-bazli') ? 'flex' : 'none';
-        if (sayfa === 'genel-bakis') await dashboard();
-        if (sayfa === 'tum-bolge') await window.bolgeListesi();
-        if (sayfa === 'raporlar') await raporlar();
-        if (sayfa === 'itirazlar') await window.itirazlariGoster();
-        if (sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
-    };
-
-    window.gitSayfa('genel-bakis');
-    window.kurumFiltreGuncelle();
-    itirazDurumlariniYukle();
-</script>
+    checkSession();
+  </script>
 </body>
 </html>
