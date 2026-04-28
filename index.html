@@ -384,37 +384,41 @@ if (pdfUrl) {
     };
 
     window.kurumAnaliz = async function() {
-        const kurum = document.getElementById('f-kurum').value;
-        const donem = document.getElementById('f-donem').value;
-        if (!kurum) { alert('Kurum seçin'); return; }
-        const donemAdi = donem == 1 ? 'Ocak' : 'Şubat';
-        await itirazDurumlariniYukle();
-        const { data: perf } = await _supabase
-    .from('performans')
-    .select('*')
-    .eq('kurum_adi', kurum)
-    .eq('donem', donem)
-    .order('gosterge_kodu', { ascending: true });
-        const { data: toplam } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
-        let html = `<div class="kurum-baslik">📊 ${kurum} - ${donemAdi} ${document.getElementById('f-yil').value} Dönemi Analizi</div>`;
-        if (toplam) html += `<div class="alert alert-info py-2">🏆 Toplam Puan: <strong>${toplam.toplam_puan}</strong> | Rol Ort: ${toplam.rol_ortalamasi}</div>`;
-        html += `<div class="table-responsive"><table class="table table-sm"><thead class="table-light"><tr><th>Gösterge</th><th>Hedef Yönü</th><th>GD</th><th>TR Ort</th><th>Puan/GP</th><th>Değerlendirme</th><th>İtiraz</th></tr></thead><tbody>`;
-        for (const r of perf||[]) {
-            const durum = degerlendir(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp, r.id);
-            // Gösterge adını tıklanabilir yap
-            html += `<tr>
-                <td><a href="#" style="color:#0d6efd; text-decoration:none; font-weight:500;" onclick="gostergeDetayGoster('${r.id}','${r.gosterge_adi.replace(/'/g, "\\'")}', '${r.gd}', '${r.tr_ort}', '${r.puan}', '${r.gp}', '${r.gosterge_yonu}', '${r.gosterge_kodu}', '${r.kurum_tipi}'); return false;">${r.gosterge_adi}</a></td>
-                <td>${yonOku(r.gosterge_yonu)}</td>
-                <td>${r.gd??'-'}</td>
-                <td>${r.tr_ort??'-'}</td>
-                <td>${r.puan??'null'}/${r.gp}</td>
-                <td><span class="${durum.class}">${durum.text}</span></td>
-                <td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td>
-             </tr>`;
-        }
-        html += `</tbody><table></div>`;
-        document.getElementById('kurumAnalizIcerik').innerHTML = html;
-    };
+    const kurum = document.getElementById('f-kurum').value;
+    const donem = document.getElementById('f-donem').value;
+    if (!kurum) { alert('Kurum seçin'); return; }
+    const donemAdi = donem == 1 ? 'Ocak' : 'Şubat';
+    await itirazDurumlariniYukle();
+    
+    // SIRALAMA EKLENDİ - gosterge_kodu'na göre
+    const { data: perf } = await _supabase
+        .from('performans')
+        .select('*')
+        .eq('kurum_adi', kurum)
+        .eq('donem', donem)
+        .order('gosterge_kodu', { ascending: true });  // ← BURASI ÖNEMLİ
+    
+    const { data: toplam } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', donem).maybeSingle();
+    
+    let html = `<div class="kurum-baslik">📊 ${kurum} - ${donemAdi} ${document.getElementById('f-yil').value}</div>`;
+    if (toplam) html += `<div class="alert alert-info py-2">🏆 Toplam Puan: <strong>${toplam.toplam_puan}</strong> | Rol Ort: ${toplam.rol_ortalamasi}</div>`;
+    html += `<div class="table-responsive"><table class="table table-sm"><thead class="table-light"><tr><th>Gösterge</th><th>Hedef Yönü</th><th>GD</th><th>TR Ort</th><th>Puan/GP</th><th>Değerlendirme</th><th>İtiraz</th></tr></thead><tbody>`;
+    
+    for (const r of perf||[]) {
+        const durum = degerlendir(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp, r.id);
+        html += `<tr>
+            <td><a href="#" style="color:#0d6efd; text-decoration:none;" onclick="window.gostergeDetayGoster('${r.id}','${r.gosterge_adi.replace(/'/g, "\\'")}', '${r.gd}', '${r.tr_ort}', '${r.puan}', '${r.gp}', '${r.gosterge_yonu}', '${r.gosterge_kodu}', '${r.kurum_tipi}'); return false;">${r.gosterge_adi}</a></td>
+            <td>${yonOku(r.gosterge_yonu)}</td>
+            <td>${r.gd??'-'}</td>
+            <td>${r.tr_ort??'-'}</td>
+            <td>${r.puan??'null'}/${r.gp}</td>
+            <td><span class="${durum.class}">${durum.text}</span></td>
+            <td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td>
+        </tr>`;
+    }
+    html += `</tbody><td></div>`;
+    document.getElementById('kurumAnalizIcerik').innerHTML = html;
+};
 
     window.itirazEkle = async function(pid, kurum, gosterge, yil, donem) {
         const metin = prompt(`${kurum}\n${gosterge}\n${yil}/${donem}\nİtiraz nedeni:`);
