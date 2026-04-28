@@ -1,286 +1,356 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KHHB-2 GÖREN ANALİZ</title>
+  
+  <!-- 📦 CDN Bağımlılıkları (Kurulum gerektirmez) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <style>
-    :root { --primary: #2563eb; --bg: #f8fafc; --card: #fff; --text: #0f172a; --border: #e2e8f0; --success: #16a34a; --danger: #dc2626; }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
-    body { background: var(--bg); color: var(--text); }
+    :root {
+      --bg: #f8fafc; --card: #ffffff; --primary: #2563eb; --primary-hover: #1d4ed8;
+      --text: #0f172a; --text-muted: #64748b; --border: #e2e8f0;
+      --success: #16a34a; --warning: #ca8a04; --danger: #dc2626;
+      --radius: 12px; --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      --font: system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.5; }
     .hidden { display: none !important; }
+    .container { max-width: 1280px; margin: 0 auto; padding: 1rem; }
     
-    /* Login */
+    /* 🎫 Login Ekranı */
     #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .login-box { background: var(--card); padding: 2rem; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%; max-width: 400px; }
+    .login-box { background: var(--card); padding: 2rem; border-radius: var(--radius); box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%; max-width: 380px; }
     .login-box h2 { text-align: center; margin-bottom: 1.5rem; }
     .form-group { margin-bottom: 1rem; }
-    .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 500; }
+    .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 500; font-size: 0.9rem; }
     .form-group input { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; }
-    .btn { width: 100%; padding: 0.8rem; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    .btn:hover { opacity: 0.9; }
-    .error { color: var(--danger); font-size: 0.8rem; margin-top: 0.3rem; display: none; }
-    .error.show { display: block; }
-    .toast { position: fixed; top: 1rem; right: 1rem; padding: 0.8rem 1.2rem; background: var(--danger); color: #fff; border-radius: 8px; z-index: 2000; }
-    .toast.success { background: var(--success); }
+    .form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .btn { width: 100%; padding: 0.8rem; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+    .btn:hover { background: var(--primary-hover); }
+    .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.3rem; display: none; }
+    .error-msg.show { display: block; }
     
-    /* Dashboard */
-    .container { max-width: 1280px; margin: 0 auto; padding: 1rem; }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
-    .logo { font-size: 1.25rem; font-weight: 700; }
-    .user-info { display: flex; gap: 1rem; align-items: center; }
-    .btn-sm { padding: 0.4rem 0.8rem; background: var(--danger); color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    /* 🖥️ Dashboard Layout */
+    .dashboard-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+    .logo { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+    .nav-tabs { display: flex; gap: 0.5rem; background: #f1f5f9; padding: 0.3rem; border-radius: 8px; }
+    .nav-tab { padding: 0.5rem 1rem; border: none; background: transparent; border-radius: 6px; font-size: 0.85rem; cursor: pointer; color: var(--text-muted); }
+    .nav-tab.active { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 500; }
+    .user-info { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; }
+    .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #ef4444; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
     
-    .filters { display: flex; gap: 0.8rem; background: var(--card); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
-    .filter-group label { font-size: 0.75rem; color: #64748b; }
-    .filter-group select { padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; }
-    .btn-query { background: var(--primary); color: #fff; padding: 0.6rem 1.3rem; border: none; border-radius: 6px; cursor: pointer; height: fit-content; }
+    /* 🔍 Filtreler */
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 0.8rem; background: var(--card); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 1.5rem; align-items: flex-end; }
+    .filter-group { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; min-width: 140px; }
+    .filter-group label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+    .filter-group select { padding: 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+    .status-live { background: #dcfce7; color: #166534; padding: 0.3rem 0.6rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem; }
+    .btn-query { background: var(--primary); color: #fff; padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; height: fit-content; }
     
+    /* 📊 KPI & Top Lists */
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .kpi-card { background: var(--card); padding: 1.2rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .kpi-value { font-size: 2rem; font-weight: 700; margin: 0.4rem 0; }
+    .kpi-card { background: var(--card); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); text-align: center; }
+    .kpi-icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
+    .kpi-label { font-size: 0.85rem; color: var(--text-muted); }
+    .kpi-value { font-size: 1.8rem; font-weight: 700; margin: 0.3rem 0; }
+    .top-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .top-card { background: var(--card); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); }
+    .top-card h3 { margin-bottom: 0.8rem; font-size: 1rem; }
+    .rank-list { list-style: none; }
+    .rank-list li { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .rank-list li:last-child { border-bottom: none; }
+    .rank-badge { background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 6px; font-weight: 500; }
     
-    .table-section { background: var(--card); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 0.9rem; text-align: left; border-bottom: 1px solid var(--border); }
-    th { background: #f8fafc; font-weight: 600; }
-    .status { padding: 0.3rem 0.7rem; border-radius: 99px; font-size: 0.75rem; }
+    /* 🌍 Tablo */
+    .table-section { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 1.5rem; overflow: hidden; }
+    .table-tabs { display: flex; border-bottom: 1px solid var(--border); background: #f8fafc; }
+    .table-tab { padding: 0.8rem 1.2rem; border: none; background: transparent; cursor: pointer; font-weight: 500; color: var(--text-muted); }
+    .table-tab.active { background: #fff; color: var(--primary); border-bottom: 2px solid var(--primary); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    th, td { padding: 0.8rem 1rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    th { background: #f8fafc; font-weight: 600; color: var(--text-muted); }
+    tr:hover td { background: #f1f5f9; }
+    .status-pill { padding: 0.25rem 0.6rem; border-radius: 99px; font-size: 0.75rem; font-weight: 500; }
     .status-tamam { background: #dcfce7; color: #166534; }
     .status-bekle { background: #fef3c7; color: #92400e; }
+    .status-itiraz { background: #fee2e2; color: #991b1b; }
+    .empty-state { text-align: center; padding: 2rem; color: var(--text-muted); }
+    
+    /* 📈 Grafikler */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .chart-box { background: var(--card); padding: 1rem; border-radius: var(--radius); box-shadow: var(--shadow); }
+    .chart-box h3 { margin-bottom: 0.5rem; font-size: 0.95rem; }
+    .chart-controls { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .chart-controls select { flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; }
+    canvas { max-height: 250px; }
+    
+    /* ⚠️ Modal & Misc */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .modal { background: var(--card); width: 90%; max-width: 500px; padding: 1.5rem; border-radius: var(--radius); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
+    .loading { color: var(--text-muted); font-style: italic; }
+    @media (max-width: 640px) { .filter-bar { flex-direction: column; } .filter-group { width: 100%; } .dashboard-header { flex-direction: column; align-items: flex-start; } }
   </style>
 </head>
 <body>
 
-  <!-- LOGIN -->
+  <!-- 🔐 GİRİŞ EKRANI -->
   <div id="login-screen">
     <div class="login-box">
       <h2>🏥 KHHB-2 Giriş</h2>
       <form id="login-form">
         <div class="form-group">
           <label>E-posta</label>
-          <input type="email" id="email" placeholder="admin@test.com" value="admin@test.com">
-          <div class="error" id="err-email">Geçerli e-posta girin</div>
+          <input type="email" id="login-email" required placeholder="ornek@kurum.gov.tr">
+          <div class="error-msg" id="err-email">Geçerli bir e-posta giriniz</div>
         </div>
         <div class="form-group">
           <label>Şifre</label>
-          <input type="password" id="pass" placeholder="123456" value="123456">
-          <div class="error" id="err-pass">Şifre en az 6 karakter</div>
+          <input type="password" id="login-pass" required placeholder="••••••••">
+          <div class="error-msg" id="err-pass">Şifre en az 6 karakter olmalı</div>
         </div>
         <button type="submit" class="btn" id="btn-login">Giriş Yap</button>
       </form>
+      <p style="text-align:center; margin-top:1rem; font-size:0.8rem; color:#64748b;">Demo: admin@test.com / 123456</p>
     </div>
   </div>
 
-  <!-- DASHBOARD -->
-  <div id="dashboard" class="hidden">
+  <!-- 🖥️ DASHBOARD EKRANI -->
+  <div id="dashboard-screen" class="hidden">
     <div class="container">
-      <div class="header">
+      <header class="dashboard-header">
         <div class="logo">🏥 KHHB-2 GÖREN ANALİZ</div>
+        <nav class="nav-tabs" id="main-nav">
+          <button class="nav-tab active" data-view="genel">Genel Bakış</button>
+          <button class="nav-tab" data-view="bolge">Tüm Bölge</button>
+          <button class="nav-tab" data-view="rapor">Kurum Raporları</button>
+          <button class="nav-tab" data-view="itiraz" data-requires="admin">İtirazlar</button>
+        </nav>
         <div class="user-info">
-          <span id="user-name">Kullanıcı</span>
+          <span id="user-display">Yükleniyor...</span>
           <button class="btn-sm" id="btn-logout">Çıkış</button>
         </div>
-      </div>
+      </header>
 
-      <div class="filters">
-        <div class="filter-group">
-          <label>Yıl</label>
-          <select id="f-yil"><option value="2026">2026</option><option value="2025">2025</option></select>
-        </div>
-        <div class="filter-group">
-          <label>Dönem</label>
-          <select id="f-donem"><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option></select>
-        </div>
-        <div class="filter-group">
-          <label>Kurum Türü</label>
-          <select id="f-tur"><option value="Tümü">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM</option></select>
-        </div>
+      <section class="filter-bar">
+        <span class="status-live">🟢 Canlı</span>
+        <div class="filter-group"><label>Yıl</label><select id="f-yil"><option>2026</option><option>2025</option></select></div>
+        <div class="filter-group"><label>Dönem</label><select id="f-donem"><option>Ocak</option><option>Şubat</option><option>Mart</option><option>Nisan</option><option>Mayıs</option><option>Haziran</option></select></div>
+        <div class="filter-group"><label>Kurum Türü</label><select id="f-tur"><option value="Tümü">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select></div>
+        <div class="filter-group"><label>Kurum Adı</label><select id="f-kurum"><option value="">Seçiniz</option></select></div>
         <button class="btn-query" id="btn-query">🔍 Sorgula</button>
-      </div>
+      </section>
 
       <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">Toplam Kurum</div><div class="kpi-value" id="kpi-total">0</div></div>
-        <div class="kpi-card"><div class="kpi-label">Hastane Ort.</div><div class="kpi-value" id="kpi-hosp">0.0</div></div>
-        <div class="kpi-card"><div class="kpi-label">ADSM Ort.</div><div class="kpi-value" id="kpi-adsm">0.0</div></div>
+        <div class="kpi-card"><div class="kpi-icon">📊</div><div class="kpi-label">Toplam Kurum</div><div class="kpi-value" id="kpi-total">0</div></div>
+        <div class="kpi-card"><div class="kpi-icon">🏥</div><div class="kpi-label">Hastane Ortalaması</div><div class="kpi-value" id="kpi-hosp">0.0</div></div>
+        <div class="kpi-card"><div class="kpi-icon">🏛️</div><div class="kpi-label">ADSM Ortalaması</div><div class="kpi-value" id="kpi-adsm">0.0</div></div>
+      </div>
+
+      <div class="top-lists">
+        <div class="top-card"><h3>🏆 En İyi 5 Hastane</h3><ul class="rank-list" id="list-hosp"><li class="loading">Yükleniyor...</li></ul></div>
+        <div class="top-card"><h3>🏆 En İyi 5 ADSM/ADSH</h3><ul class="rank-list" id="list-adsm"><li class="loading">Yükleniyor...</li></ul></div>
       </div>
 
       <div class="table-section">
-        <table>
-          <thead><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead>
-          <tbody id="table-body"><tr><td colspan="5" style="text-align:center">Sorgulama yapınız...</td></tr></tbody>
-        </table>
+        <div class="table-tabs">
+          <button class="table-tab active" data-filter="Tümü">Tüm Kurumlar</button>
+          <button class="table-tab" data-filter="Hastane">Hastaneler</button>
+          <button class="table-tab" data-filter="ADSM">ADSM/ADSH</button>
+        </div>
+        <div class="table-wrap">
+          <table id="main-table">
+            <thead><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead>
+            <tbody id="table-body"><tr><td colspan="5" class="empty-state">Sorgulama yapınız...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-box">
+          <h3>📈 Gösterge Trendi</h3>
+          <div class="chart-controls"><select id="chart-gosterge"><option>Gösterge Seçin</option></select><button class="btn-query" id="btn-chart">Oluştur</button></div>
+          <canvas id="trend-chart"></canvas>
+        </div>
+        <div class="chart-box"><h3>📉 Dönemsel Trend</h3><canvas id="period-chart"></canvas></div>
+        <div class="chart-box"><h3>🥧 Başarı Dağılımı</h3><canvas id="dist-chart"></canvas></div>
       </div>
     </div>
   </div>
 
   <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
+    // 🔑 AYARLAR (BURAYI DÜZENLEYİN)
     const CONFIG = {
-      URL: 'https://alisjxtoivkeyeyyuikr.supabase.co',
-      KEY: 'sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of'
+      SUPABASE_URL: 'https://alisjxtoivkeyeyyuikr.supabase.co',
+      SUPABASE_ANON_KEY: 'BURAYA_SUPABASE_ANON_KEYINI_YAPISTIR', // 👈 DEĞİŞTİR
+      TABLE_NAME: 'performans' // Supabase'deki tablo adınız
     };
 
-    const supabase = createClient(CONFIG.URL, CONFIG.KEY);
-    let currentUser = null;
+    // 🌐 Supabase & Chart.js Global
+    const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    let charts = {};
 
-    // Toast
-    function toast(msg, type = 'error') {
-      document.querySelector('.toast')?.remove();
-      const t = document.createElement('div');
-      t.className = `toast ${type}`;
-      t.textContent = msg;
-      document.body.appendChild(t);
-      setTimeout(() => t.remove(), 3000);
-    }
+    // 🛡️ Auth Yönetimi
+    const Auth = {
+      session: null, user: null, role: 'guest', institutionId: null,
+      async init() {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) await this.setSession(data.session);
+        supabase.auth.onAuthStateChange((e, s) => e === 'SIGNED_IN' ? this.setSession(s) : (e === 'SIGNED_OUT' ? this.logout() : null));
+      },
+      async setSession(s) {
+        if (!s?.user) return;
+        this.session = s; this.user = s.user;
+        this.role = s.user.user_metadata?.role || 'user';
+        this.institutionId = s.user.user_metadata?.institution_id;
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('dashboard-screen').classList.remove('hidden');
+        document.getElementById('user-display').textContent = this.user.email;
+        document.querySelectorAll('[data-requires]').forEach(el => el.style.display = this.role === el.dataset.requires ? '' : 'none');
+        App.loadData();
+      },
+      async login(email, pass) {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        return error ? { ok: false, msg: error.message } : { ok: true };
+      },
+      logout() { supabase.auth.signOut(); location.reload(); }
+    };
 
-    // Login
+    // 🖥️ UI & Veri Yönetimi
+    const App = {
+      data: [],
+      async loadData() {
+        const btn = document.getElementById('btn-query');
+        btn.textContent = '⏳ Yükleniyor...'; btn.disabled = true;
+        
+        try {
+          let query = supabase.from(CONFIG.TABLE_NAME).select('*');
+          const yil = document.getElementById('f-yil').value;
+          const donem = document.getElementById('f-donem').value;
+          const tur = document.getElementById('f-tur').value;
+          
+          query = query.eq('yil', yil).eq('donem', donem);
+          if (tur !== 'Tümü') query = query.eq('kurum_turu', tur);
+          if (Auth.role === 'user' && Auth.institutionId) query = query.eq('kurum_id', Auth.institutionId);
+          
+          const { data, error } = await query;
+          if (error) throw error;
+          this.data = data || [];
+          this.renderAll();
+        } catch (err) {
+          console.error('Veri hatası:', err);
+          // Demo/Fallback modu (Supabase bağlı değilse çalışır)
+          this.data = [
+            { kurum_adi: 'Örnek Hastane A', kurum_turu: 'Hastane', genel_puan: 92.4, rol_ortalamasi: 88.1, durum: 'Tamamlandı' },
+            { kurum_adi: 'Merkez ADSM', kurum_turu: 'ADSM', genel_puan: 78.2, rol_ortalamasi: 75.5, durum: 'Beklemede' },
+            { kurum_adi: 'Üniversite Hastanesi', kurum_turu: 'Hastane', genel_puan: 95.1, rol_ortalamasi: 93.0, durum: 'Tamamlandı' }
+          ];
+          this.renderAll();
+        } finally {
+          btn.textContent = '🔍 Sorgula'; btn.disabled = false;
+        }
+      },
+      renderAll() {
+        this.renderKPIs();
+        this.renderTopLists();
+        this.renderTable();
+        this.renderCharts();
+      },
+      renderKPIs() {
+        const total = this.data.length;
+        const hosp = this.data.filter(d => d.kurum_turu === 'Hastane');
+        const adsm = this.data.filter(d => ['ADSM','ADSH'].includes(d.kurum_turu));
+        const avg = (arr) => arr.length ? (arr.reduce((s,d)=>s+(d.genel_puan||0),0)/arr.length).toFixed(1) : '0.0';
+        
+        document.getElementById('kpi-total').textContent = total;
+        document.getElementById('kpi-hosp').textContent = avg(hosp);
+        document.getElementById('kpi-adsm').textContent = avg(adsm);
+      },
+      renderTopLists() {
+        const top = (arr, el) => {
+          const sorted = arr.sort((a,b)=>b.genel_puan - a.genel_puan).slice(0,5);
+          document.getElementById(el).innerHTML = sorted.length 
+            ? sorted.map((d,i)=>`<li><span>${i+1}. ${d.kurum_adi}</span><span class="rank-badge">${d.genel_puan}</span></li>`).join('')
+            : '<li class="loading">Veri yok</li>';
+        };
+        top(this.data.filter(d=>d.kurum_turu==='Hastane'), 'list-hosp');
+        top(this.data.filter(d=>['ADSM','ADSH'].includes(d.kurum_turu)), 'list-adsm');
+      },
+      renderTable() {
+        const tbody = document.getElementById('table-body');
+        const turFilter = document.querySelector('.table-tab.active')?.dataset.filter || 'Tümü';
+        const filtered = turFilter === 'Tümü' ? this.data : this.data.filter(d=>d.kurum_turu === turFilter);
+        
+        tbody.innerHTML = filtered.length
+          ? filtered.map(d => `<tr>
+              <td>${d.kurum_adi || '-'}</td>
+              <td>${d.kurum_turu || '-'}</td>
+              <td><strong>${d.genel_puan || '0'}</strong></td>
+              <td>${d.rol_ortalamasi || '0'}</td>
+              <td><span class="status-pill ${d.durum==='Tamamlandı'?'status-tamam':d.durum==='İtiraz Edildi'?'status-itiraz':'status-bekle'}">${d.durum || '-'}</span></td>
+            </tr>`).join('')
+          : '<tr><td colspan="5" class="empty-state">Sonuç bulunamadı</td></tr>';
+      },
+      renderCharts() {
+        // Trend Chart
+        charts.trend = this.initChart('trend-chart', 'line', {
+          labels: ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran'],
+          datasets: [{ label: 'Genel Puan', data: [82,85,88,91,89,94], borderColor: '#2563eb', tension: 0.4, fill: false }]
+        });
+        // Period Chart
+        charts.period = this.initChart('period-chart', 'bar', {
+          labels: ['Hastane','ADSM/ADSH'],
+          datasets: [{ label: 'Ortalama Puan', data: [89,76], backgroundColor: ['#2563eb','#10b981'] }]
+        });
+        // Distribution Chart
+        charts.dist = this.initChart('dist-chart', 'doughnut', {
+          labels: ['Tamamlandı','Beklemede','İtiraz'],
+          datasets: [{ data: [12,5,2], backgroundColor: ['#16a34a','#ca8a04','#dc2626'] }]
+        });
+      },
+      initChart(id, type, dataConfig) {
+        const ctx = document.getElementById(id);
+        if (!ctx) return;
+        if (charts[id]) charts[id].destroy();
+        return new Chart(ctx, { type, data: dataConfig, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+      }
+    };
+
+    // 🎯 Event Listeners
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('email').value.trim();
-      const pass = document.getElementById('pass').value;
-      
-      // Validasyon
-      let valid = true;
-      if (!email.includes('@')) { document.getElementById('err-email').classList.add('show'); valid = false; }
-      else document.getElementById('err-email').classList.remove('show');
-      
-      if (pass.length < 6) { document.getElementById('err-pass').classList.add('show'); valid = false; }
-      else document.getElementById('err-pass').classList.remove('show');
-      
-      if (!valid) return;
-      
+      const email = document.getElementById('login-email').value.trim();
+      const pass = document.getElementById('login-pass').value;
       const btn = document.getElementById('btn-login');
-      btn.disabled = true;
-      btn.textContent = 'Giriş yapılıyor...';
+      btn.disabled = true; btn.textContent = 'Giriş Yapılıyor...';
       
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-        
-        if (error) throw error;
-        
-        currentUser = data.user;
-        
-        // Profile bilgilerini çek
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-        
-        if (!profile) {
-          toast('Profil bulunamadı', 'error');
-          btn.disabled = false;
-          btn.textContent = 'Giriş Yap';
-          return;
-        }
-        
-        // Dashboard'u göster
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('dashboard').classList.remove('hidden');
-        document.getElementById('user-name').textContent = profile.ad_soyad || email;
-        
-        toast('Giriş başarılı!', 'success');
-        
-        // İlk yükleme
-        loadData();
-        
-      } catch (err) {
-        console.error('Login error:', err);
-        toast(err.message || 'Giriş başarısız', 'error');
-        btn.disabled = false;
-        btn.textContent = 'Giriş Yap';
+      const res = await Auth.login(email, pass);
+      if (!res.ok) {
+        alert(res.msg.includes('credentials') ? 'E-posta veya şifre hatalı' : res.msg);
+        btn.disabled = false; btn.textContent = 'Giriş Yap';
       }
     });
 
-    // Logout
-    document.getElementById('btn-logout').addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      location.reload();
+    document.getElementById('btn-logout').addEventListener('click', Auth.logout);
+    document.getElementById('btn-query').addEventListener('click', App.loadData);
+    document.querySelectorAll('.table-tab').forEach(t => t.addEventListener('click', (e) => {
+      document.querySelectorAll('.table-tab').forEach(x => x.classList.remove('active'));
+      e.target.classList.add('active'); App.renderTable();
+    }));
+    document.getElementById('btn-chart').addEventListener('click', () => {
+      charts.trend.update(); alert('Grafik güncellendi (Demo verisi ile)');
     });
 
-    // Veri yükle
-    document.getElementById('btn-query').addEventListener('click', loadData);
-
-    async function loadData() {
-      const btn = document.getElementById('btn-query');
-      btn.textContent = '⏳ Yükleniyor...';
-      
-      try {
-        const yil = document.getElementById('f-yil').value;
-        const donem = document.getElementById('f-donem').value;
-        const tur = document.getElementById('f-tur').value;
-        
-        let query = supabase.from('toplam_puanlar').select('*')
-          .eq('yil', yil)
-          .eq('donem', donem);
-        
-        if (tur !== 'Tümü') query = query.eq('kurum_tipi', tur);
-        query = query.order('toplam_puan', { ascending: false }).limit(50);
-        
-        const { data, error } = await query;
-        
-        if (error) throw error;
-        
-        renderData(data || []);
-        
-      } catch (err) {
-        console.error('Data error:', err);
-        toast('Veri yüklenemedi', 'error');
-        
-        // Demo veri
-        const demoData = [
-          { kurum_adi: 'İstanbul Şehir Hastanesi', kurum_tipi: 'Hastane', toplam_puan: 94.2, rol_ortalamasi: 89.5, durum: 'Tamamlandı' },
-          { kurum_adi: 'Ankara Merkez ADSM', kurum_tipi: 'ADSM', toplam_puan: 81.7, rol_ortalamasi: 78.3, durum: 'Beklemede' }
-        ];
-        renderData(demoData);
-      } finally {
-        btn.textContent = '🔍 Sorgula';
-      }
-    }
-
-    function renderData(data) {
-      // KPI
-      const total = data.length;
-      const hosp = data.filter(d => d.kurum_tipi === 'Hastane');
-      const adsm = data.filter(d => d.kurum_tipi === 'ADSM');
-      const avg = arr => arr.length ? (arr.reduce((s, d) => s + (d.toplam_puan || 0), 0) / arr.length).toFixed(1) : '0.0';
-      
-      document.getElementById('kpi-total').textContent = total;
-      document.getElementById('kpi-hosp').textContent = avg(hosp);
-      document.getElementById('kpi-adsm').textContent = avg(adsm);
-      
-      // Tablo
-      const tbody = document.getElementById('table-body');
-      if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">Sonuç bulunamadı</td></tr>';
-        return;
-      }
-      
-      tbody.innerHTML = data.map(d => `
-        <tr>
-          <td><strong>${d.kurum_adi || '-'}</strong></td>
-          <td>${d.kurum_tipi || '-'}</td>
-          <td><strong>${d.toplam_puan?.toFixed(1) || '-'}</strong></td>
-          <td>${d.rol_ortalamasi?.toFixed(1) || '-'}</td>
-          <td><span class="status ${d.durum === 'Tamamlandı' ? 'status-tamam' : 'status-bekle'}">${d.durum || '-'}</span></td>
-        </tr>
-      `).join('');
-    }
-
-    // Session kontrolü
-    async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        if (profile) {
-          document.getElementById('login-screen').classList.add('hidden');
-          document.getElementById('dashboard').classList.remove('hidden');
-          document.getElementById('user-name').textContent = profile.ad_soyad || session.user.email;
-          loadData();
-        }
-      }
-    }
-
-    // Başlat
-    checkSession();
+    // 🚀 Başlat
+    Auth.init();
   </script>
 </body>
 </html>
