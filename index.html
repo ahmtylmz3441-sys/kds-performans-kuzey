@@ -376,31 +376,33 @@
       },
       
       renderCharts(gostergeKodu) {
-        supabase.from(CONFIG.TABLE_PERF).select('donem,puan').eq('yil', 2026).eq('gosterge_kodu', gostergeKodu).order('donem').then(({  rows }) => {
-          const labels = (rows||[]).map(r => `${r.donem}.Ay`), values = (rows||[]).map(r => r.puan);
-          if (charts.trend) charts.trend.destroy();
-          charts.trend = new Chart(document.getElementById('trend-chart'), {
-            type: 'line',
-             { labels: labels.length ? labels : ['O','Ş','M','N','M','H'], datasets: [{ label: 'Puan',  values.length ? values : [82,85,88,91,89,94], borderColor: '#2563eb', tension: 0.4 }] },
-            options: { responsive: true, plugins: { legend: { display: false } } }
-          });
-        });
-        
-        if (charts.period) charts.period.destroy();
-        charts.period = new Chart(document.getElementById('period-chart'), {
-          type: 'bar',
-           { labels: ['Hastane','ADSM'], datasets: [{ label: 'Ortalama',  [89,76], backgroundColor: ['#2563eb','#10b981'] }] },
-          options: { responsive: true, plugins: { legend: { display: false } } }
-        });
-        
-        if (charts.dist) charts.dist.destroy();
-        charts.dist = new Chart(document.getElementById('dist-chart'), {
-          type: 'doughnut',
-           { labels: ['Tamamlandı','Beklemede','İtiraz'], datasets: [{  [12,5,2], backgroundColor: ['#16a34a','#ca8a04','#dc2626'] }] },
-          options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-        });
-      }
-    };
+  // Trend Chart
+  supabase.from(CONFIG.TABLE_PERF).select('donem,puan').eq('yil', 2026).eq('gosterge_kodu', gostergeKodu).order('donem').then(({ data: rows }) => {
+    const labels = (rows||[]).map(r => `${r.donem}.Ay`), values = (rows||[]).map(r => r.puan);
+    if (charts.trend) charts.trend.destroy();
+    charts.trend = new Chart(document.getElementById('trend-chart'), {
+      type: 'line',
+      data: { labels: labels.length ? labels : ['O','Ş','M','N','M','H'], datasets: [{ label: 'Puan', data: values.length ? values : [82,85,88,91,89,94], borderColor: '#2563eb', tension: 0.4 }] },
+      options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+  });
+  
+  // Period Chart
+  if (charts.period) charts.period.destroy();
+  charts.period = new Chart(document.getElementById('period-chart'), {
+    type: 'bar',
+    data: { labels: ['Hastane','ADSM'], datasets: [{ label: 'Ortalama', data: [89,76], backgroundColor: ['#2563eb','#10b981'] }] },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+  });
+  
+  // Distribution Chart
+  if (charts.dist) charts.dist.destroy();
+  charts.dist = new Chart(document.getElementById('dist-chart'), {
+    type: 'doughnut',
+    data: { labels: ['Tamamlandı','Beklemede','İtiraz'], datasets: [{ data: [12,5,2], backgroundColor: ['#16a34a','#ca8a04','#dc2626'] }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  });
+}
 
     // 🎯 Events
     document.getElementById('login-form').addEventListener('submit', async (e) => {
