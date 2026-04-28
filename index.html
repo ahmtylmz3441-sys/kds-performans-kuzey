@@ -607,45 +607,70 @@ if (pdfUrl) {
     
     // ============ GRAFİK OLUŞTUR ============
     const grafikOlustur = async () => {
-        const gosterge = document.getElementById('raporGosterge').value;
-        const kurumTip = document.getElementById('raporKurumTip').value;
-        const kurum = document.getElementById('raporKurum').value;
-        
-        if (!gosterge) { alert('Lütfen bir gösterge seçin'); return; }
-        
-        let q = _supabase
-            .from('performans')
-            .select('kurum_adi, gd, donem')
-            .eq('gosterge_adi', gosterge)
-            .in('donem', [1, 2]);
-        
-        if (kurumTip) q = q.eq('kurum_tipi', kurumTip);
-        if (kurum) q = q.eq('kurum_adi', kurum);
-        
-        const { data } = await q;
-        if (!data || data.length === 0) { alert('Veri bulunamadı'); return; }
-        
-        const kurumlar = kurum ? [kurum] : [...new Set(data.map(d => d.kurum_adi))];
-        const ocakData = {}, subatData = {};
-        data.forEach(r => {
-            if (r.donem === 1) ocakData[r.kurum_adi] = r.gd;
-            else subatData[r.kurum_adi] = r.gd;
-        });
-        
-        if (window.gostergeChartInstance) window.gostergeChartInstance.destroy();
-        
-        window.gostergeChartInstance = new Chart(document.getElementById('gostergeChart'), {
-            type: 'line',
-            data: {
-                labels: kurumlar.map(k => k.split(' ').slice(0,2).join(' ')),
-                datasets: [
-                    { label: 'Ocak GD', data: kurumlar.map(k => ocakData[k]), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.3, fill: true },
-                    { label: 'Şubat GD', data: kurumlar.map(k => subatData[k]), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.3, fill: true }
-                ]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
-        });
-    };
+    const gosterge = document.getElementById('raporGosterge').value;
+    const kurumTip = document.getElementById('raporKurumTip').value;
+    const kurum = document.getElementById('raporKurum').value;
+    
+    if (!gosterge) { alert('Lütfen bir gösterge seçin'); return; }
+    
+    let q = _supabase
+        .from('performans')
+        .select('kurum_adi, gd, donem')
+        .eq('gosterge_adi', gosterge)
+        .in('donem', [1, 2]);
+    
+    if (kurumTip) q = q.eq('kurum_tipi', kurumTip);
+    if (kurum) q = q.eq('kurum_adi', kurum);
+    
+    const { data } = await q;
+    if (!data || data.length === 0) { alert('Veri bulunamadı'); return; }
+    
+    const kurumlar = kurum ? [kurum] : [...new Set(data.map(d => d.kurum_adi))];
+    const ocakData = {}, subatData = {};
+    data.forEach(r => {
+        if (r.donem === 1) ocakData[r.kurum_adi] = parseFloat(r.gd);
+        else subatData[r.kurum_adi] = parseFloat(r.gd);
+    });
+    
+    if (window.gostergeChartInstance) window.gostergeChartInstance.destroy();
+    
+    window.gostergeChartInstance = new Chart(document.getElementById('gostergeChart'), {
+        type: 'line',
+        data: {
+            labels: kurumlar.map(k => k.split(' ').slice(0,2).join(' ')),
+            datasets: [
+                { 
+                    label: 'Ocak GD', 
+                    data: kurumlar.map(k => ocakData[k]), 
+                    borderColor: '#3b82f6', 
+                    backgroundColor: 'rgba(59,130,246,0.1)',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#3b82f6',
+                    tension: 0.2,
+                    fill: false
+                },
+                { 
+                    label: 'Şubat GD', 
+                    data: kurumlar.map(k => subatData[k]), 
+                    borderColor: '#f59e0b', 
+                    backgroundColor: 'rgba(245,158,11,0.1)',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#f59e0b',
+                    tension: 0.2,
+                    fill: false
+                }
+            ]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: false } }
+        }
+    });
+};
     
     // ============ EVENTLER ============
     document.getElementById('raporKurumTip').onchange = kurumListesiniGuncelle;
