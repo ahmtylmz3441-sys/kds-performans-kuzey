@@ -240,3 +240,26 @@
 </script>
 </body>
 </html>
+// Kodunun en sonuna, mevcut çağrıları silip bunu yapıştır:
+window.addEventListener('DOMContentLoaded', async () => {
+    console.log("Sistem başlatılıyor...");
+    try {
+        // Fonksiyonların tanımlı olduğundan emin olalım
+        if (typeof itirazDurumlariniYukle === "function") await itirazDurumlariniYukle();
+        
+        // İlk açılış sayfasını tetikle
+        const genelBakisNav = document.querySelector('.nav-item');
+        if (typeof gitSayfa === "function") {
+            await gitSayfa('genel-bakis', genelBakisNav);
+        }
+        
+        // Filtreleri doldur
+        if (typeof kurumFiltreGuncelle === "function") await kurumFiltreGuncelle();
+        
+        console.log("Sistem başarıyla yüklendi.");
+    } catch (error) {
+        console.error("Başlatma sırasında bir hata oluştu:", error);
+        // Hata olsa bile kullanıcıya bir şey gösterelim
+        document.getElementById('genel-bakis').innerHTML = `<div class="alert alert-danger m-4">Veriler yüklenirken bir hata oluştu. Lütfen bağlantınızı kontrol edin.</div>`;
+    }
+});
