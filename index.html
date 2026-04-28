@@ -5,20 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KHHB-2 Test</title>
   
-  <!-- ✅ ÇALIŞAN SUPABASE CDN -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- ✅ jsDelivr CDN - Daha Güvenilir -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/dist/umd/index.min.js" defer></script>
   
   <style>
     body { font-family: system-ui, sans-serif; padding: 2rem; background: #f8fafc; }
     .error { background: #fee2e2; color: #dc2626; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
     .success { background: #dcfce7; color: #16a34a; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
     button { padding: 0.75rem 1.5rem; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; }
-    input { padding: 0.75rem; margin: 0.5rem; border: 1px solid #e2e8f0; border-radius: 8px; }
+    input { padding: 0.75rem; margin: 0.5rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 300px; }
+    .loading { color: #64748b; }
   </style>
 </head>
 <body>
   <h1>🏥 KHHB-2 Test</h1>
-  <div id="status">⏳ Yükleniyor...</div>
+  <div id="status" class="loading">⏳ Supabase yükleniyor...</div>
   
   <div id="login-box" style="display:none; margin-top:2rem;">
     <h2>Giriş Testi</h2>
@@ -33,22 +34,36 @@
       KEY: 'sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of'
     };
 
-    // Supabase'i başlat
-    let supabase;
-    try {
-      supabase = supabase.createClient(CONFIG.URL, CONFIG.KEY);
-      document.getElementById('status').innerHTML = '<div class="success">✅ Supabase yüklendi!</div>';
-      document.getElementById('login-box').style.display = 'block';
-      testDB();
-    } catch(e) {
-      document.getElementById('status').innerHTML = `<div class="error">❌ Hata: ${e.message}</div>`;
+    // Supabase yüklenene kadar bekle
+    function initSupabase() {
+      if (typeof window.supabase === 'undefined') {
+        document.getElementById('status').innerHTML = '<div class="error">❌ Supabase CDN yüklenemedi. Sayfayı yenileyin.</div>';
+        return;
+      }
+
+      try {
+        window.supabaseClient = window.supabase.createClient(CONFIG.URL, CONFIG.KEY);
+        document.getElementById('status').innerHTML = '<div class="success">✅ Supabase yüklendi! Bağlantı test ediliyor...</div>';
+        document.getElementById('login-box').style.display = 'block';
+        testDB();
+      } catch(e) {
+        document.getElementById('status').innerHTML = `<div class="error">❌ Hata: ${e.message}</div>`;
+      }
+    }
+
+    // DOM yüklendiğinde başlat
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSupabase);
+    } else {
+      // 1 saniye bekle (CDN yüklensin)
+      setTimeout(initSupabase, 1000);
     }
 
     async function testDB() {
       try {
-        const { data, error } = await supabase.from('toplam_puanlar').select('*').limit(1);
+        const { data, error } = await window.supabaseClient.from('toplam_puanlar').select('*').limit(1);
         if (error) throw error;
-        document.getElementById('status').innerHTML += '<div class="success">✅ Veritabanı bağlantısı OK!</div>';
+        document.getElementById('status').innerHTML += '<div class="success">✅ Veritabanı bağlantısı başarılı!</div>';
       } catch(e) {
         document.getElementById('status').innerHTML += `<div class="error">❌ DB Hatası: ${e.message}</div>`;
       }
@@ -58,9 +73,9 @@
       const email = document.getElementById('email').value;
       const pass = document.getElementById('pass').value;
       
-      document.getElementById('status').innerHTML += '<div>⏳ Giriş deneniyor...</div>';
+      document.getElementById('status').innerHTML += '<div class="loading">⏳ Giriş deneniyor...</div>';
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await window.supabaseClient.auth.signInWithPassword({
         email, password: pass
       });
       
