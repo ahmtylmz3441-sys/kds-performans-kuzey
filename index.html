@@ -25,19 +25,6 @@
     body { background: var(--bg); color: var(--text); }
     .hidden { display: none !important; }
     
-    /* LOGIN */
-    #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .login-box { background: var(--card); padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 420px; }
-    .login-box h2 { text-align: center; margin-bottom: 2rem; color: var(--primary); }
-    .form-group { margin-bottom: 1.25rem; }
-    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
-    .form-group input { width: 100%; padding: 0.875rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; }
-    .form-group input:focus { outline: none; border-color: var(--primary); }
-    .btn { width: 100%; padding: 0.875rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    .btn:hover { background: var(--primary-dark); }
-    .error-msg { color: var(--danger); font-size: 0.8rem; margin-top: 0.3rem; display: none; }
-    .error-msg.show { display: block; }
-    
     /* DASHBOARD */
     .dashboard { display: flex; min-height: 100vh; }
     .sidebar { width: 280px; background: var(--sidebar-bg); color: white; position: fixed; height: 100vh; overflow-y: auto; }
@@ -118,28 +105,8 @@
 </head>
 <body>
 
-  <!-- LOGIN -->
-  <div id="login-screen">
-    <div class="login-box">
-      <h2>🏥 KHHB-2 Giriş</h2>
-      <form id="login-form">
-        <div class="form-group">
-          <label>E-posta</label>
-          <input type="email" id="email" value="admin@test.com">
-          <div class="error-msg" id="err-email">Geçerli e-posta girin</div>
-        </div>
-        <div class="form-group">
-          <label>Şifre</label>
-          <input type="password" id="pass" value="123456">
-          <div class="error-msg" id="err-pass">Şifre en az 6 karakter</div>
-        </div>
-        <button type="submit" class="btn">Giriş Yap</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- DASHBOARD -->
-  <div id="dashboard" class="hidden">
+  <!-- DASHBOARD (LOGIN KALDIRILDI - DİREKT AÇILIYOR) -->
+  <div id="dashboard">
     <div class="dashboard">
       <aside class="sidebar">
         <div class="sidebar-header">
@@ -412,7 +379,7 @@
     };
 
     const supabase = createClient(CONFIG.URL, CONFIG.KEY);
-    let currentUser = null, userRole = 'user', charts = {}, currentFilter = 'Tümü';
+    let charts = {}, currentFilter = 'Tümü';
 
     // Toast
     function toast(msg, type = 'success') {
@@ -423,39 +390,14 @@
       setTimeout(() => t.remove(), 3000);
     }
 
-    // Login
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email').value.trim();
-      const pass = document.getElementById('pass').value;
+    // ✅ DİREKT DASHBOARD AÇILIYOR (LOGIN KALDIRILDI)
+    document.addEventListener('DOMContentLoaded', () => {
+      // Dashboard'ı direkt göster
+      document.getElementById('dashboard').style.display = 'block';
       
-      if (!email.includes('@')) { document.getElementById('err-email').classList.add('show'); return; }
-      if (pass.length < 6) { document.getElementById('err-pass').classList.add('show'); return; }
-      
-      const btn = e.target.querySelector('.btn');
-      btn.disabled = true; btn.textContent = 'Giriş yapılıyor...';
-      
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-        if (error) throw error;
-        
-        currentUser = data.user;
-        const {  profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-        if (!profile) throw new Error('Profil bulunamadı');
-        
-        userRole = profile.rol;
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('dashboard').classList.remove('hidden');
-        
-        if (userRole !== 'admin') document.getElementById('objection-panel').style.display = 'none';
-        
-        toast('Giriş başarılı!');
-        loadInstitutionList();
-        fetchData();
-      } catch (err) {
-        toast(err.message, 'error');
-        btn.disabled = false; btn.textContent = 'Giriş Yap';
-      }
+      // İlk veri yükleme
+      loadInstitutionList();
+      fetchData();
     });
 
     // Menu Navigation
@@ -469,7 +411,7 @@
         
         if (page === 'kurum') loadKurumListesi();
         if (page === 'rapor') loadRaporIndicators();
-        if (page === 'itiraz' && userRole === 'admin') loadItirazlar();
+        if (page === 'itiraz') loadItirazlar();
       });
     });
 
@@ -567,7 +509,7 @@
       if (charts.period) charts.period.destroy();
       charts.period = new Chart(document.getElementById('period-chart'), {
         type: 'bar',
-         { labels: ['Hastane', 'ADSM'], datasets: [{ label: 'Ortalama Puan',  [85, 78], backgroundColor: ['#10b981', '#3b82f6'] }] },
+        data: { labels: ['Hastane', 'ADSM'], datasets: [{ label: 'Ortalama Puan', data: [85, 78], backgroundColor: ['#10b981', '#3b82f6'] }] },
         options: { responsive: true, plugins: { legend: { display: false } } }
       });
       
@@ -575,7 +517,7 @@
       if (charts.dist) charts.dist.destroy();
       charts.dist = new Chart(document.getElementById('distribution-chart'), {
         type: 'doughnut',
-         { labels: ['Tamamlandı', 'Beklemede'], datasets: [{  [12, 3], backgroundColor: ['#10b981', '#f59e0b'] }] },
+        data: { labels: ['Tamamlandı', 'Beklemede'], datasets: [{ data: [12, 3], backgroundColor: ['#10b981', '#f59e0b'] }] },
         options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
       });
     }
@@ -611,11 +553,11 @@
       if (charts.indicator) charts.indicator.destroy();
       charts.indicator = new Chart(document.getElementById('indicator-chart'), {
         type: 'line',
-         {
+        data: {
           labels,
           datasets: [{
             label: 'Puan',
-             (data||[]).map(d => d.puan),
+            data: (data||[]).map(d => d.puan),
             borderColor: '#10b981',
             backgroundColor: 'rgba(16,185,129,0.1)',
             tension: 0.4,
@@ -636,7 +578,7 @@
       const kurum = document.getElementById('k-kurum').value;
       if (kurum === 'Kurum Seçin') { toast('Kurum seçin', 'warning'); return; }
       
-      const {  gostergeData } = await supabase.from('performans')
+      const { data: gostergeData } = await supabase.from('performans')
         .select('*')
         .eq('kurum_adi', kurum)
         .eq('yil', 2026);
@@ -729,11 +671,11 @@
       if (charts.raporTrend) charts.raporTrend.destroy();
       charts.raporTrend = new Chart(document.getElementById('rapor-indicator-chart'), {
         type: 'line',
-         {
+        data: {
           labels: ['Oca','Şub','Mar','Nis','May','Haz'],
           datasets: [{
             label: 'Ortalama Puan',
-             [82,85,88,91,89,94],
+            data: [82,85,88,91,89,94],
             borderColor: '#10b981',
             tension: 0.4
           }]
@@ -745,10 +687,10 @@
       if (charts.raporDist) charts.raporDist.destroy();
       charts.raporDist = new Chart(document.getElementById('rapor-distribution-chart'), {
         type: 'doughnut',
-         {
+        data: {
           labels: ['0-50','50-70','70-85','85-100'],
           datasets: [{
-             [2,5,8,12],
+            data: [2,5,8,12],
             backgroundColor: ['#ef4444','#f59e0b','#3b82f6','#10b981']
           }]
         },
@@ -759,11 +701,11 @@
       if (charts.target) charts.target.destroy();
       charts.target = new Chart(document.getElementById('target-compare-chart'), {
         type: 'bar',
-         {
+        data: {
           labels: ['Hedef','Gerçekleşen'],
           datasets: [{
             label: 'Puan',
-             [90,85],
+            data: [90,85],
             backgroundColor: ['#10b981','#3b82f6']
           }]
         },
@@ -774,11 +716,11 @@
       if (charts.monthly) charts.monthly.destroy();
       charts.monthly = new Chart(document.getElementById('monthly-trend-chart'), {
         type: 'line',
-         {
+        data: {
           labels: ['Oca','Şub','Mar','Nis','May','Haz'],
           datasets: [{
             label: 'Değişim %',
-             [2.3,3.1,2.8,3.5,-1.2,4.2],
+            data: [2.3,3.1,2.8,3.5,-1.2,4.2],
             borderColor: '#f59e0b',
             tension: 0.4
           }]
@@ -791,11 +733,11 @@
       const top10 = data.slice(0, 10);
       charts.top10 = new Chart(document.getElementById('top10-chart'), {
         type: 'bar',
-         {
+        data: {
           labels: top10.map(d => d.kurum_adi.substring(0,15)),
           datasets: [{
             label: 'Puan',
-             top10.map(d => d.toplam_puan),
+            data: top10.map(d => d.toplam_puan),
             backgroundColor: '#10b981'
           }]
         },
@@ -808,11 +750,11 @@
       const adsm = data.filter(d => d.kurum_tipi === 'ADSM');
       charts.typeCompare = new Chart(document.getElementById('type-compare-chart'), {
         type: 'bar',
-         {
+        data: {
           labels: ['Hastane','ADSM'],
           datasets: [{
             label: 'Ortalama',
-             [
+            data: [
               hosp.length ? hosp.reduce((s,d)=>s+d.toplam_puan,0)/hosp.length : 0,
               adsm.length ? adsm.reduce((s,d)=>s+d.toplam_puan,0)/adsm.length : 0
             ],
@@ -861,23 +803,6 @@
       toast('Silindi', 'success');
       loadItirazlar();
     };
-
-    // Session Check
-    async function checkSession() {
-      const {  { session } } = await supabase.auth.getSession();
-      if (session) {
-        currentUser = session.user;
-        const {  profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-        if (profile) {
-          userRole = profile.rol;
-          document.getElementById('login-screen').classList.add('hidden');
-          document.getElementById('dashboard').classList.remove('hidden');
-          loadInstitutionList();
-          fetchData();
-        }
-      }
-    }
-    checkSession();
   </script>
 </body>
 </html>
