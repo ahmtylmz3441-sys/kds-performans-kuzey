@@ -615,9 +615,10 @@ if (pdfUrl) {
     
     let q = _supabase
         .from('performans')
-        .select('kurum_adi, gd, donem')
+        .select('kurum_adi, gd, donem, yil')
         .eq('gosterge_adi', gosterge)
-        .in('donem', [1, 2]);
+        .order('yil', { ascending: true })
+        .order('donem', { ascending: true });
     
     if (kurumTip) q = q.eq('kurum_tipi', kurumTip);
     if (kurum) q = q.eq('kurum_adi', kurum);
@@ -625,44 +626,55 @@ if (pdfUrl) {
     const { data } = await q;
     if (!data || data.length === 0) { alert('Veri bulunamadı'); return; }
     
-    const kurumlar = kurum ? [kurum] : [...new Set(data.map(d => d.kurum_adi))];
-    const ocakData = {}, subatData = {};
-    data.forEach(r => {
-        if (r.donem === 1) ocakData[r.kurum_adi] = parseFloat(r.gd);
-        else subatData[r.kurum_adi] = parseFloat(r.gd);
+    // Dönemleri (ayları) bul
+    const donemler = [...new Map(data.map(r => [`${r.yil}|${r.donem}`, { yil: r.yil, donem: r.donem, label: `${AYLAR[r.donem]} ${r.yil}` }])).values()].sort((a,b) => {
+        if (a.yil !== b.yil) return a.yil - b.yil;
+        return a.donem - b.donem;
     });
     
+    // Kurumları bul
+    const kurumlar = kurum ? [kurum] : [...new Set(data.map(d => d.kurum_adi))];
+    
+    // Verileri düzenle
+    const datasets = kurumlar.map(k => {
+        const degerler = donemler.map(d => {
+            const bul = data.find(r => r.kurum_adi === k && r.yil === d.yil && r.donem === d.donem);
+            return bul ? parseFloat(bul.gd) : null;
+        });
+        return {
+            label: k.split(' ').slice(0,2).join(' '),
+            data: degerler,
+            borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 4,
+            tension: 0.2,
+            fill: false
+        };
+    });
+    
+    // Canvas'ı temizle
+    const canvasParent = document.getElementById('gostergeChart').parentElement;
     if (window.gostergeChartInstance) window.gostergeChartInstance.destroy();
+    canvasParent.innerHTML = '<canvas id="gostergeChart" style="height:300px; width:100%"></canvas>';
     
     window.gostergeChartInstance = new Chart(document.getElementById('gostergeChart'), {
         type: 'line',
         data: {
-            labels: kurumlar.map(k => k.split(' ').slice(0,2).join(' ')),
-            datasets: [
-                { 
-                    label: 'Ocak GD', 
-                    data: kurumlar.map(k => ocakData[k]), 
-                    borderColor: '#3b82f6', 
-                    backgroundColor: 'rgba(59,130,246,0.1)',
-                    borderWidth: 3,
-                    pointRadius: 5,
-                    pointBackgroundColor: '#3b82f6',
-                    tension: 0.2,
-                    fill: false
-                },
-                { 
-                    label: 'Şubat GD', 
-                    data: kurumlar.map(k => subatData[k]), 
-                    borderColor: '#f59e0b', 
-                    backgroundColor: 'rgba(245,158,11,0.1)',
-                    borderWidth: 3,
-                    pointRadius: 5,
-                    pointBackgroundColor: '#f59e0b',
-                    tension: 0.2,
-                    fill: false
-                }
-            ]
+            labels: donemler.map(d => d.label),
+            datasets: datasets
         },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { position: 'top', labels: { font: { size: 10 } } },
+                tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw}` } }
+            },
+            scales: { y: { beginAtZero: false, title: { display: true, text: 'GD Değeri' } } }
+        }
+    });
+};
         options: { 
             responsive: true, 
             maintainAspectRatio: false,
