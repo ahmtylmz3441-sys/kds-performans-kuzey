@@ -493,24 +493,63 @@ if (pdfUrl) {
     };
 
     async function raporlar() {
-        const { data: h1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
-        const { data: h2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
-        const { data: a1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
-        const { data: a2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
-        const hOrt = [(h1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h1?.length||1), (h2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h2?.length||1)];
-        const aOrt = [(a1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a1?.length||1), (a2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a2?.length||1)];
-        if (charts.trend) charts.trend.destroy();
-        charts.trend = new Chart(document.getElementById('trendChart'), { type: 'line', data: { labels: ['Ocak', 'Şubat'], datasets: [{ label: 'Hastane Ort.', data: hOrt, borderColor: '#0d6efd' }, { label: 'ADSM Ort.', data: aOrt, borderColor: '#6610f2' }] }, options: { responsive: true, maintainAspectRatio: false } });
-        const { data: tum } = await _supabase.from('toplam_puanlar').select('*').eq('donem',2);
-        const basarili = (tum||[]).filter(t => t.toplam_puan >= t.rol_ortalamasi).length;
-        if (charts.pie) charts.pie.destroy();
-        charts.pie = new Chart(document.getElementById('pieChart'), { type: 'doughnut', data: { labels: ['Hedef Üstü', 'Hedef Altı'], datasets: [{ data: [basarili, (tum?.length||0)-basarili], backgroundColor: ['#20c997', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false } });
-        const { data: gList } = await _supabase.from('performans').select('gosterge_adi');
-        const gostergeler = [...new Set((gList||[]).map(g=>g.gosterge_adi))];
-        const select = document.getElementById('raporGosterge');
-        select.innerHTML = '<option value="">Gösterge Seçin</option>' + gostergeler.map(g => `<option value="${g}">${g}</option>`).join('');
-    }
+    // 1. ADIM: Tüm verileri tek seferde, paralel çekiyoruz (Hız artışı sağlar)
+    const [puanlarRes, gListRes] = await Promise.all([
+        _supabase.from('toplam_puanlar').select('toplam_puan, kurum_tipi, donem, rol_ortalamasi'),
+        _supabase.from('performans').select('gosterge_adi')
+    ]);
 
+    const puanlar = puanlarRes.data || [];
+    const gList = gListRes.data || [];
+
+    // 2. ADIM: Ortalamaları JavaScript tarafında hesaplıyoruz (Veritabanını yormuyoruz)
+    const hesapla = (tip, donem) => {
+        const filtre = puanlar.filter(p => p.kurum_tipi === tip && p.donem === donem);
+        return filtre.length ? filtre.reduce((s, v) => s + v.toplam_puan, 0) / filtre.length : 0;
+    };
+
+    const hOrt = [hesapla('Hastane', 1), hesapla('Hastane', 2)];
+    const aOrt = [hesapla('ADSM', 1), hesapla('ADSM', 2)];
+
+    // 3. ADIM: Trend Grafiği (Daha yumuşak çizgiler ekledik)
+    if (charts.trend) charts.trend.destroy();
+    charts.trend = new Chart(document.getElementById('trendChart'), { 
+        type: 'line', 
+        data: { 
+            labels: ['Ocak', 'Şubat'], 
+            datasets: [
+                { label: 'Hastane Ort.', data: hOrt, borderColor: '#0d6efd', tension: 0.3, fill: false }, 
+                { label: 'ADSM Ort.', data: aOrt, borderColor: '#6610f2', tension: 0.3, fill: false }
+            ] 
+        }, 
+        options: { responsive: true, maintainAspectRatio: false } 
+    });
+
+    // 4. ADIM: Başarı Dağılımı (En son döneme göre otomatik hesaplar)
+    const sonDonem = Math.max(...puanlar.map(p => p.donem), 2);
+    const tumSon = puanlar.filter(p => p.donem === sonDonem);
+    const basarili = tumSon.filter(t => t.toplam_puan >= t.rol_ortalamasi).length;
+
+    if (charts.pie) charts.pie.destroy();
+    charts.pie = new Chart(document.getElementById('pieChart'), { 
+        type: 'doughnut', 
+        data: { 
+            labels: ['Hedef Üstü', 'Hedef Altı'], 
+            datasets: [{ 
+                data: [basarili, tumSon.length - basarili], 
+                backgroundColor: ['#20c997', '#dc3545'],
+                borderWidth: 2
+            }] 
+        }, 
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%' } 
+    });
+
+    // 5. ADIM: Gösterge Listesi
+    const gostergeler = [...new Set(gList.map(g => g.gosterge_adi))].sort();
+    const select = document.getElementById('raporGosterge');
+    select.innerHTML = '<option value="">Gösterge Seçin</option>' + 
+                      gostergeler.map(g => `<option value="${g}">${g}</option>`).join('');
+}
     window.gitSayfa = async function(sayfa, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(sayfa).classList.add('active');
