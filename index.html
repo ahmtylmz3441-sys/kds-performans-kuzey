@@ -27,7 +27,7 @@
     
     /* DASHBOARD */
     .dashboard { display: flex; min-height: 100vh; }
-    .sidebar { width: 280px; background: var(--sidebar-bg); color: white; position: fixed; height: 100vh; overflow-y: auto; }
+    .sidebar { width: 280px; background: var(--sidebar-bg); color: white; position: fixed; height: 100vh; overflow-y: auto; z-index: 100; }
     .sidebar-header { padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
     .sidebar-header h1 { font-size: 1.25rem; }
     .sidebar-menu { padding: 1rem 0; }
@@ -68,19 +68,8 @@
     /* CHARTS */
     .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
     .chart-box { background: var(--card); padding: 1.25rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .chart-box h3 { margin-bottom: 1rem; font-size: 1rem; color: var(--text); }
+    .chart-box h3 { margin-bottom: 1rem; font-size: 1rem; }
     canvas { max-height: 320px; }
-    
-    /* ADVANCED ANALYTICS */
-    .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .metric-card { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid var(--success); border-radius: 12px; padding: 1.25rem; }
-    .metric-card.warning { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: var(--warning); }
-    .metric-card.danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: var(--danger); }
-    .metric-label { font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem; }
-    .metric-value { font-size: 1.75rem; font-weight: 700; color: var(--text); }
-    .metric-trend { font-size: 0.8rem; margin-top: 0.5rem; }
-    .trend-up { color: var(--success); }
-    .trend-down { color: var(--danger); }
     
     /* TOP LISTS */
     .top-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
@@ -89,7 +78,15 @@
     .rank-list { list-style: none; }
     .rank-list li { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
     .rank-list li:last-child { border-bottom: none; }
-    .rank-badge { background: var(--primary); color: white; padding: 0.2rem 0.6rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; }
+    .rank-badge { background: var(--primary); color: white; padding: 0.2rem 0.6rem; border-radius: 6px; font-weight: 600; }
+    
+    /* ANALYTICS */
+    .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .metric-card { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid var(--success); border-radius: 12px; padding: 1.25rem; }
+    .metric-card.warning { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: var(--warning); }
+    .metric-card.danger { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: var(--danger); }
+    .metric-label { font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem; }
+    .metric-value { font-size: 1.75rem; font-weight: 700; }
     
     /* LOADING */
     .loading { text-align: center; padding: 2rem; color: #64748b; }
@@ -104,270 +101,192 @@
   </style>
 </head>
 <body>
-
-  <!-- DASHBOARD (LOGIN KALDIRILDI - DİREKT AÇILIYOR) -->
-  <div id="dashboard">
-    <div class="dashboard">
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <h1>🏥 KHHB-2 GÖREN ANALİZ</h1>
+  <div class="dashboard">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>🏥 KHHB-2 GÖREN ANALİZ</h1>
+      </div>
+      <nav class="sidebar-menu">
+        <div class="menu-item active" data-page="genel">
+          <span class="menu-icon">📊</span>
+          <span class="menu-text">Genel Bakış</span>
         </div>
-        <nav class="sidebar-menu">
-          <div class="menu-item active" data-page="genel">
-            <span class="menu-icon">📊</span>
-            <span class="menu-text">Genel Bakış</span>
-          </div>
-          <div class="menu-item" data-page="bolge">
-            <span class="menu-icon">🌍</span>
-            <span class="menu-text">Tüm Bölge</span>
-          </div>
-          <div class="menu-item" data-page="kurum">
-            <span class="menu-icon">🏢</span>
-            <span class="menu-text">Kurum Bazlı</span>
-          </div>
-          <div class="menu-item" data-page="rapor">
-            <span class="menu-icon">📈</span>
-            <span class="menu-text">Raporlar</span>
-          </div>
-          <div class="menu-item" data-page="itiraz">
-            <span class="menu-icon">⚠️</span>
-            <span class="menu-text">İtirazlar</span>
-          </div>
-        </nav>
-      </aside>
+        <div class="menu-item" data-page="bolge">
+          <span class="menu-icon">🌍</span>
+          <span class="menu-text">Tüm Bölge</span>
+        </div>
+        <div class="menu-item" data-page="kurum">
+          <span class="menu-icon">🏢</span>
+          <span class="menu-text">Kurum Bazlı</span>
+        </div>
+        <div class="menu-item" data-page="rapor">
+          <span class="menu-icon">📈</span>
+          <span class="menu-text">Raporlar</span>
+        </div>
+        <div class="menu-item" data-page="itiraz">
+          <span class="menu-icon">⚠️</span>
+          <span class="menu-text">İtirazlar</span>
+        </div>
+      </nav>
+    </aside>
 
-      <main class="main-content">
-        <!-- GENEL BAKIŞ -->
-        <section id="page-genel" class="page">
-          <div class="top-bar">
-            <h1 class="page-title">Genel Bakış</h1>
-            <span class="status-badge">🟢 Canlı</span>
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <!-- GENEL BAKIŞ -->
+      <section id="page-genel" class="page">
+        <div class="top-bar">
+          <h1 class="page-title">Genel Bakış</h1>
+          <span class="status-badge">🟢 Canlı</span>
+        </div>
+        
+        <div class="filters">
+          <div class="filter-group">
+            <label>Yıl</label>
+            <select id="filter-year">
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+            </select>
           </div>
-          
-          <div class="filters">
-            <div class="filter-group">
-              <label>Yıl</label>
-              <select id="filter-year"><option value="2026">2026</option><option value="2025">2025</option></select>
-            </div>
-            <div class="filter-group">
-              <label>Dönem</label>
-              <select id="filter-period">
-                <option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option>
-                <option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option>
-                <option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option>
-                <option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
+          <div class="filter-group">
+            <label>Dönem</label>
+            <select id="filter-period">
+              <option value="1">Ocak</option>
+              <option value="2">Şubat</option>
+              <option value="3">Mart</option>
+              <option value="4">Nisan</option>
+              <option value="5">Mayıs</option>
+              <option value="6">Haziran</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Kurum Türü</label>
+            <select id="filter-type">
+              <option value="Tümü">Tümü</option>
+              <option value="Hastane">Hastane</option>
+              <option value="ADSM">ADSM/ADSH</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Kurum Adı</label>
+            <select id="filter-institution">
+              <option value="">Seçiniz</option>
+            </select>
+          </div>
+          <button class="btn-query" id="btn-query">🔍 Sorgula</button>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Toplam Kurum</div>
+            <div class="kpi-value" id="kpi-total">0</div>
+          </div>
+          <div class="kpi-card" style="border-left-color: var(--success)">
+            <div class="kpi-label">Hastane Ortalaması</div>
+            <div class="kpi-value" id="kpi-hosp">0.0</div>
+          </div>
+          <div class="kpi-card" style="border-left-color: var(--info)">
+            <div class="kpi-label">ADSM Ortalaması</div>
+            <div class="kpi-value" id="kpi-adsm">0.0</div>
+          </div>
+        </div>
+
+        <div class="top-lists">
+          <div class="top-card">
+            <h3>🏆 En İyi 5 Hastane</h3>
+            <ul class="rank-list" id="list-hosp"><li class="loading">Yükleniyor...</li></ul>
+          </div>
+          <div class="top-card">
+            <h3>🏆 En İyi 5 ADSM/ADSH</h3>
+            <ul class="rank-list" id="list-adsm"><li class="loading">Yükleniyor...</li></ul>
+          </div>
+        </div>
+
+        <div class="table-section">
+          <div class="table-tabs">
+            <button class="table-tab active" data-filter="Tümü">Tüm Kurumlar</button>
+            <button class="table-tab" data-filter="Hastane">Hastaneler</button>
+            <button class="table-tab" data-filter="ADSM">ADSM/ADSH</button>
+          </div>
+          <table>
+            <thead><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr></thead>
+            <tbody id="table-body"><tr><td colspan="5" class="empty-state">Kurum seçip sorgulayın.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-box">
+            <h3>📈 Gösterge Bazlı Trend Analizi</h3>
+            <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+              <select id="chart-indicator" style="flex:1;padding:0.5rem;border:1px solid var(--border);border-radius:6px">
+                <option>Gösterge Seçin</option>
               </select>
+              <button class="btn-query" id="btn-render-chart">Grafik Oluştur</button>
             </div>
-            <div class="filter-group">
-              <label>Kurum Türü</label>
-              <select id="filter-type">
-                <option value="Tümü">Tümü</option>
-                <option value="Hastane">Hastane</option>
-                <option value="ADSM">ADSM/ADSH</option>
-              </select>
-            </div>
-            <div class="filter-group">
-              <label>Kurum Adı</label>
-              <select id="filter-institution"><option value="">Seçiniz</option></select>
-            </div>
-            <button class="btn-query" id="btn-query">🔍 Sorgula</button>
+            <canvas id="indicator-chart"></canvas>
           </div>
+          <div class="chart-box">
+            <h3>📉 Dönemsel Trend (Hastane/ADSM)</h3>
+            <canvas id="period-chart"></canvas>
+          </div>
+          <div class="chart-box">
+            <h3>🥧 Başarı Dağılımı</h3>
+            <canvas id="distribution-chart"></canvas>
+          </div>
+        </div>
 
-          <div class="kpi-grid">
-            <div class="kpi-card">
-              <div class="kpi-label">Toplam Kurum</div>
-              <div class="kpi-value" id="kpi-total">0</div>
-            </div>
-            <div class="kpi-card" style="border-left-color: var(--success)">
-              <div class="kpi-label">Hastane Ortalaması</div>
-              <div class="kpi-value" id="kpi-hosp">0.0</div>
-            </div>
-            <div class="kpi-card" style="border-left-color: var(--info)">
-              <div class="kpi-label">ADSM Ortalaması</div>
-              <div class="kpi-value" id="kpi-adsm">0.0</div>
-            </div>
-          </div>
+        <div class="table-section" id="objection-panel" style="display:none">
+          <h3 style="margin-bottom:1rem">⚠️ İtiraz Yönetimi</h3>
+          <div id="objection-list" class="loading">Yükleniyor...</div>
+        </div>
+      </section>
 
-          <div class="top-lists">
-            <div class="top-card">
-              <h3>🏆 En İyi 5 Hastane</h3>
-              <ul class="rank-list" id="list-hosp"><li class="loading">Yükleniyor...</li></ul>
-            </div>
-            <div class="top-card">
-              <h3>🏆 En İyi 5 ADSM/ADSH</h3>
-              <ul class="rank-list" id="list-adsm"><li class="loading">Yükleniyor...</li></ul>
-            </div>
-          </div>
+      <!-- DİĞER SAYFALAR (Bölge, Kurum, Rapor, İtiraz) -->
+      <section id="page-bolge" class="page hidden">
+        <div class="top-bar"><h1 class="page-title">Tüm Bölge</h1></div>
+        <div class="charts-grid">
+          <div class="chart-box"><h3>Bölge Performans Dağılımı</h3><canvas id="bolge-chart"></canvas></div>
+        </div>
+      </section>
 
-          <div class="table-section">
-            <div class="table-tabs">
-              <button class="table-tab active" data-filter="Tümü">Tüm Kurumlar</button>
-              <button class="table-tab" data-filter="Hastane">Hastaneler</button>
-              <button class="table-tab" data-filter="ADSM">ADSM/ADSH</button>
-            </div>
-            <table>
-              <thead><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr></thead>
-              <tbody id="table-body"><tr><td colspan="5" class="empty-state">Kurum seçip sorgulayın.</td></tr></tbody>
-            </table>
-          </div>
+      <section id="page-kurum" class="page hidden">
+        <div class="top-bar"><h1 class="page-title">Kurum Bazlı</h1></div>
+        <div id="kurum-content"></div>
+      </section>
 
-          <div class="charts-grid">
-            <div class="chart-box">
-              <h3>📈 Gösterge Bazlı Trend Analizi</h3>
-              <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
-                <select id="chart-indicator" style="flex:1;padding:0.5rem;border:1px solid var(--border);border-radius:6px">
-                  <option>Gösterge Seçin</option>
-                </select>
-                <button class="btn-query" id="btn-render-chart">Grafik Oluştur</button>
-              </div>
-              <canvas id="indicator-chart"></canvas>
-            </div>
-            <div class="chart-box">
-              <h3>📉 Dönemsel Trend (Hastane/ADSM)</h3>
-              <canvas id="period-chart"></canvas>
-            </div>
-            <div class="chart-box">
-              <h3>🥧 Başarı Dağılımı</h3>
-              <canvas id="distribution-chart"></canvas>
-            </div>
+      <section id="page-rapor" class="page hidden">
+        <div class="top-bar"><h1 class="page-title">📊 Gelişmiş Raporlar</h1></div>
+        <div class="analytics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Ortalama Performans</div>
+            <div class="metric-value" id="metric-avg">0.0</div>
           </div>
+          <div class="metric-card warning">
+            <div class="metric-label">Gelişim Gerektiren</div>
+            <div class="metric-value" id="metric-improve">0</div>
+          </div>
+          <div class="metric-card danger">
+            <div class="metric-label">En Düşük Puan</div>
+            <div class="metric-value" id="metric-min">0</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-box" style="grid-column:span 2">
+            <h3>📈 Gösterge Trend Analizi</h3>
+            <canvas id="rapor-indicator-chart"></canvas>
+          </div>
+          <div class="chart-box">
+            <h3>📊 Performans Dağılımı</h3>
+            <canvas id="rapor-distribution-chart"></canvas>
+          </div>
+        </div>
+      </section>
 
-          <div class="table-section" id="objection-panel" style="display:none">
-            <h3 style="margin-bottom:1rem">⚠️ İtiraz Yönetimi</h3>
-            <div id="objection-list" class="loading">Yükleniyor...</div>
-          </div>
-        </section>
-
-        <!-- TÜM BÖLGE -->
-        <section id="page-bolge" class="page hidden">
-          <div class="top-bar"><h1 class="page-title">Tüm Bölge</h1></div>
-          <div class="filters">
-            <div class="filter-group"><label>Yıl</label><select id="b-yil"><option value="2026">2026</option></select></div>
-            <div class="filter-group"><label>Dönem</label><select id="b-donem"><option value="1">Ocak</option><option value="2">Şubat</option></select></div>
-            <button class="btn-query" onclick="loadBolge()">🔍 Sorgula</button>
-          </div>
-          <div class="charts-grid">
-            <div class="chart-box"><h3>Bölge Performans Dağılımı</h3><canvas id="bolge-chart"></canvas></div>
-          </div>
-        </section>
-
-        <!-- KURUM BAZLI -->
-        <section id="page-kurum" class="page hidden">
-          <div class="top-bar"><h1 class="page-title">Kurum Bazlı</h1></div>
-          <div class="filters">
-            <div class="filter-group"><label>Yıl</label><select id="k-yil"><option value="2026">2026</option></select></div>
-            <div class="filter-group"><label>Dönem</label><select id="k-donem"><option value="1">Ocak</option><option value="2">Şubat</option></select></div>
-            <div class="filter-group"><label>Kurum</label><select id="k-kurum"><option>Kurum Seçin</option></select></div>
-            <button class="btn-query" onclick="loadKurumBazli()">🔍 Sorgula</button>
-          </div>
-          <div id="kurum-content"></div>
-        </section>
-
-        <!-- RAPORLAR - GELİŞMİŞ ANALİZLER -->
-        <section id="page-rapor" class="page hidden">
-          <div class="top-bar"><h1 class="page-title">📊 Gelişmiş Raporlar ve Analizler</h1></div>
-          
-          <div class="filters">
-            <div class="filter-group">
-              <label>Yıl</label>
-              <select id="r-yil"><option value="2026">2026</option><option value="2025">2025</option></select>
-            </div>
-            <div class="filter-group">
-              <label>Kurum Türü</label>
-              <select id="r-tur">
-                <option value="Tümü">Tümü</option>
-                <option value="Hastane">Hastane</option>
-                <option value="ADSM">ADSM/ADSH</option>
-              </select>
-            </div>
-            <div class="filter-group">
-              <label>Gösterge</label>
-              <select id="r-gosterge">
-                <option value="">Tüm Göstergeler</option>
-              </select>
-            </div>
-            <button class="btn-query" onclick="loadRaporlar()">📈 Rapor Oluştur</button>
-          </div>
-
-          <!-- GELİŞMİŞ METRİKLER -->
-          <div class="analytics-grid">
-            <div class="metric-card">
-              <div class="metric-label">Ortalama Performans</div>
-              <div class="metric-value" id="metric-avg">0.0</div>
-              <div class="metric-trend trend-up">↑ %12 önceki döneme göre</div>
-            </div>
-            <div class="metric-card warning">
-              <div class="metric-label">Gelişim Gerektiren</div>
-              <div class="metric-value" id="metric-improve">0</div>
-              <div class="metric-trend trend-down">Kurum</div>
-            </div>
-            <div class="metric-card" style="border-color:var(--info)">
-              <div class="metric-label">En Yüksek Puan</div>
-              <div class="metric-value" id="metric-max">0</div>
-              <div class="metric-trend trend-up">Başarı!</div>
-            </div>
-            <div class="metric-card danger">
-              <div class="metric-label">İyileştirme Gerekli</div>
-              <div class="metric-value" id="metric-min">0</div>
-              <div class="metric-trend trend-down">Düşük Performans</div>
-            </div>
-          </div>
-
-          <!-- GRAFİKLER -->
-          <div class="charts-grid">
-            <div class="chart-box" style="grid-column:span 2">
-              <h3>📈 Gösterge Bazlı Trend Analizi (Tüm Dönemler)</h3>
-              <canvas id="rapor-indicator-chart"></canvas>
-            </div>
-            <div class="chart-box">
-              <h3>📊 Performans Dağılımı</h3>
-              <canvas id="rapor-distribution-chart"></canvas>
-            </div>
-          </div>
-
-          <div class="charts-grid">
-            <div class="chart-box">
-              <h3>🎯 Hedef vs Gerçekleşen Karşılaştırma</h3>
-              <canvas id="target-compare-chart"></canvas>
-            </div>
-            <div class="chart-box">
-              <h3>📉 Aylık Değişim Trendi</h3>
-              <canvas id="monthly-trend-chart"></canvas>
-            </div>
-            <div class="chart-box">
-              <h3>🏆 İlk 10 Kurum</h3>
-              <canvas id="top10-chart"></canvas>
-            </div>
-            <div class="chart-box">
-              <h3>📊 Kurum Türü Karşılaştırması</h3>
-              <canvas id="type-compare-chart"></canvas>
-            </div>
-          </div>
-
-          <!-- DETAYLI TABLO -->
-          <div class="table-section">
-            <h3 style="margin-bottom:1rem">📋 Detaylı Performans Raporu</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Sıra</th><th>Kurum</th><th>Tür</th><th>Puan</th>
-                  <th>Rol Ort.</th><th>Fark</th><th>Değerlendirme</th>
-                </tr>
-              </thead>
-              <tbody id="rapor-table">
-                <tr><td colspan="7" class="empty-state">Rapor oluşturmak için "Rapor Oluştur" butonuna tıklayın</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- İTİRAZLAR -->
-        <section id="page-itiraz" class="page hidden">
-          <div class="top-bar"><h1 class="page-title">⚠️ İtiraz Yönetimi</h1></div>
-          <div id="itiraz-list"></div>
-        </section>
-      </main>
-    </div>
+      <section id="page-itiraz" class="page hidden">
+        <div class="top-bar"><h1 class="page-title">⚠️ İtiraz Yönetimi</h1></div>
+        <div id="itiraz-list"></div>
+      </section>
+    </main>
   </div>
 
   <script type="module">
@@ -379,7 +298,7 @@
     };
 
     const supabase = createClient(CONFIG.URL, CONFIG.KEY);
-    let charts = {}, currentFilter = 'Tümü';
+    let charts = {}, currentFilter = 'Tümü', currentData = [];
 
     // Toast
     function toast(msg, type = 'success') {
@@ -390,16 +309,6 @@
       setTimeout(() => t.remove(), 3000);
     }
 
-    // ✅ DİREKT DASHBOARD AÇILIYOR (LOGIN KALDIRILDI)
-    document.addEventListener('DOMContentLoaded', () => {
-      // Dashboard'ı direkt göster
-      document.getElementById('dashboard').style.display = 'block';
-      
-      // İlk veri yükleme
-      loadInstitutionList();
-      fetchData();
-    });
-
     // Menu Navigation
     document.querySelectorAll('.menu-item').forEach(item => {
       item.addEventListener('click', () => {
@@ -409,8 +318,7 @@
         document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
         document.getElementById(`page-${page}`).classList.remove('hidden');
         
-        if (page === 'kurum') loadKurumListesi();
-        if (page === 'rapor') loadRaporIndicators();
+        if (page === 'rapor') loadRaporlar();
         if (page === 'itiraz') loadItirazlar();
       });
     });
@@ -435,12 +343,12 @@
         document.querySelectorAll('.table-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         currentFilter = tab.dataset.filter;
-        renderTable(window.currentData || []);
+        renderTable(currentData);
       });
     });
 
     // Veri Yükle
-    window.fetchData = async function() {
+    async function fetchData() {
       const yil = document.getElementById('filter-year')?.value || '2026';
       const donem = document.getElementById('filter-period')?.value || '1';
       const tur = document.getElementById('filter-type')?.value || 'Tümü';
@@ -452,15 +360,22 @@
       if (tur !== 'Tümü') q = q.eq('kurum_tipi', tur);
       q = q.order('toplam_puan', { ascending: false }).limit(50);
       
-      const { data } = await q;
-      window.currentData = data || [];
+      const { data, error } = await q;
       
+      if (error) {
+        console.error('Hata:', error);
+        toast('Veri yüklenemedi', 'error');
+        return;
+      }
+      
+      currentData = data || [];
       renderKPIs(data);
       renderTopLists(data);
       renderTable(data);
       renderCharts(data);
       loadIndicators();
-    };
+      loadInstitutionList(data);
+    }
 
     function renderKPIs(data) {
       document.getElementById('kpi-total').textContent = data?.length || 0;
@@ -522,11 +437,10 @@
       });
     }
 
-    function loadInstitutionList() {
-      supabase.from('toplam_puanlar').select('DISTINCT kurum_adi').then(({ data }) => {
-        const select = document.getElementById('filter-institution');
-        select.innerHTML = '<option value="">Seçiniz</option>' + (data||[]).map(d => `<option>${d.kurum_adi}</option>`).join('');
-      });
+    function loadInstitutionList(data) {
+      const institutions = [...new Set(data.map(d => d.kurum_adi))];
+      const select = document.getElementById('filter-institution');
+      select.innerHTML = '<option value="">Seçiniz</option>' + institutions.map(k => `<option>${k}</option>`).join('');
     }
 
     function loadIndicators() {
@@ -542,144 +456,42 @@
       if (!gosterge) { toast('Gösterge seçin', 'warning'); return; }
       
       const { data } = await supabase.from('performans')
-        .select('donem, puan, kurum_tipi')
+        .select('donem, puan')
         .eq('gosterge_kodu', gosterge)
         .eq('yil', 2026)
         .order('donem');
       
       const months = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
       const labels = [...new Set(data?.map(d => months[d.donem-1]) || [])];
+      const values = [...new Set(data?.map(d => d.puan) || [])];
       
       if (charts.indicator) charts.indicator.destroy();
       charts.indicator = new Chart(document.getElementById('indicator-chart'), {
         type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Puan',
-            data: (data||[]).map(d => d.puan),
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16,185,129,0.1)',
-            tension: 0.4,
-            fill: true
-          }]
-        },
+        data: { labels, datasets: [{ label: 'Puan', data: values, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.4, fill: true }] },
         options: { responsive: true, plugins: { legend: { display: false } } }
       });
     });
 
-    // KURUM BAZLI
-    window.loadKurumListesi = async function() {
-      const { data } = await supabase.from('toplam_puanlar').select('DISTINCT kurum_adi');
-      document.getElementById('k-kurum').innerHTML = '<option>Kurum Seçin</option>' + (data||[]).map(d => `<option>${d.kurum_adi}</option>`).join('');
-    };
-
-    window.loadKurumBazli = async function() {
-      const kurum = document.getElementById('k-kurum').value;
-      if (kurum === 'Kurum Seçin') { toast('Kurum seçin', 'warning'); return; }
+    // RAPORLAR
+    async function loadRaporlar() {
+      const { data } = await supabase.from('toplam_puanlar').select('*').eq('yil', 2026);
       
-      const { data: gostergeData } = await supabase.from('performans')
-        .select('*')
-        .eq('kurum_adi', kurum)
-        .eq('yil', 2026);
+      if (!data?.length) return;
       
-      let html = `
-        <div style="background:linear-gradient(135deg,#e0f2fe,#bae6fd);border:2px solid #7dd3fc;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
-          <h3>🏆 ${kurum}</h3>
-          <p>Toplam Gösterge: ${gostergeData?.length || 0}</p>
-        </div>
-        <div class="table-section">
-          <table>
-            <thead><tr><th>Gösterge</th><th>Yön</th><th>GD</th><th>TR Ort</th><th>Puan</th></tr></thead>
-            <tbody>
-      `;
-      
-      (gostergeData||[]).forEach(g => {
-        html += `
-          <tr>
-            <td>${g.gosterge_adi}</td>
-            <td class="${g.gosterge_yonu==='Pozitif'?'pozitif':'negatif'}">${g.gosterge_yonu}</td>
-            <td>${g.gd} ${g.birim}</td>
-            <td>${g.tr_ort}</td>
-            <td>${g.puan}/${g.gp}</td>
-          </tr>
-        `;
-      });
-      
-      html += '</tbody></table></div>';
-      document.getElementById('kurum-content').innerHTML = html;
-    };
-
-    // RAPORLAR - GELİŞMİŞ ANALİZLER
-    window.loadRaporIndicators = async function() {
-      const { data } = await supabase.from('performans').select('DISTINCT gosterge_kodu, gosterge_adi');
-      document.getElementById('r-gosterge').innerHTML = '<option value="">Tüm Göstergeler</option>' + (data||[]).map(g => `<option value="${g.gosterge_kodu}">${g.gosterge_adi}</option>`).join('');
-    };
-
-    window.loadRaporlar = async function() {
-      const yil = document.getElementById('r-yil').value;
-      const tur = document.getElementById('r-tur').value;
-      const gosterge = document.getElementById('r-gosterge').value;
-      
-      let q = supabase.from('toplam_puanlar').select('*').eq('yil', yil);
-      if (tur !== 'Tümü') q = q.eq('kurum_tipi', tur);
-      q = q.order('toplam_puan', { ascending: false });
-      
-      const { data } = await q;
-      
-      if (!data?.length) {
-        document.getElementById('rapor-table').innerHTML = '<tr><td colspan="7" class="empty-state">Veri bulunamadı</td></tr>';
-        return;
-      }
-      
-      // Metrikler
       const avg = data.reduce((s,d) => s + d.toplam_puan, 0) / data.length;
-      const max = Math.max(...data.map(d => d.toplam_puan));
       const min = Math.min(...data.map(d => d.toplam_puan));
       const improve = data.filter(d => d.toplam_puan < 70).length;
       
       document.getElementById('metric-avg').textContent = avg.toFixed(1);
-      document.getElementById('metric-max').textContent = max.toFixed(1);
       document.getElementById('metric-min').textContent = min.toFixed(1);
       document.getElementById('metric-improve').textContent = improve;
       
-      // Tablo
-      document.getElementById('rapor-table').innerHTML = data.map((d,i) => {
-        const diff = d.toplam_puan - d.rol_ortalamasi;
-        const durum = d.toplam_puan >= 85 ? 'Mükemmel' : d.toplam_puan >= 70 ? 'Başarılı' : 'Gelişmeli';
-        const css = d.toplam_puan >= 85 ? 'mukemmel' : d.toplam_puan >= 70 ? 'basarili' : 'gelismeli';
-        
-        return `
-          <tr>
-            <td>${i+1}</td>
-            <td><strong>${d.kurum_adi}</strong></td>
-            <td>${d.kurum_tipi}</td>
-            <td><strong>${d.toplam_puan.toFixed(1)}</strong></td>
-            <td>${d.rol_ortalamasi.toFixed(1)}</td>
-            <td style="color:${diff>=0?'var(--success)':'var(--danger)'}">${diff>=0?'+':''}${diff.toFixed(1)}</td>
-            <td><span class="degerlendirme ${css}" style="padding:0.3rem 0.6rem;border-radius:6px">${durum}</span></td>
-          </tr>
-        `;
-      }).join('');
-      
-      // Grafikler
-      renderRaporCharts(data);
-    };
-
-    function renderRaporCharts(data) {
       // Trend Chart
       if (charts.raporTrend) charts.raporTrend.destroy();
       charts.raporTrend = new Chart(document.getElementById('rapor-indicator-chart'), {
         type: 'line',
-        data: {
-          labels: ['Oca','Şub','Mar','Nis','May','Haz'],
-          datasets: [{
-            label: 'Ortalama Puan',
-            data: [82,85,88,91,89,94],
-            borderColor: '#10b981',
-            tension: 0.4
-          }]
-        },
+        data: { labels: ['Oca','Şub','Mar','Nis','May','Haz'], datasets: [{ label: 'Ortalama Puan', data: [82,85,88,91,89,94], borderColor: '#10b981', tension: 0.4 }] },
         options: { responsive: true }
       });
       
@@ -687,97 +499,19 @@
       if (charts.raporDist) charts.raporDist.destroy();
       charts.raporDist = new Chart(document.getElementById('rapor-distribution-chart'), {
         type: 'doughnut',
-        data: {
-          labels: ['0-50','50-70','70-85','85-100'],
-          datasets: [{
-            data: [2,5,8,12],
-            backgroundColor: ['#ef4444','#f59e0b','#3b82f6','#10b981']
-          }]
-        },
-        options: { responsive: true }
-      });
-      
-      // Target Compare
-      if (charts.target) charts.target.destroy();
-      charts.target = new Chart(document.getElementById('target-compare-chart'), {
-        type: 'bar',
-        data: {
-          labels: ['Hedef','Gerçekleşen'],
-          datasets: [{
-            label: 'Puan',
-            data: [90,85],
-            backgroundColor: ['#10b981','#3b82f6']
-          }]
-        },
-        options: { responsive: true }
-      });
-      
-      // Monthly Trend
-      if (charts.monthly) charts.monthly.destroy();
-      charts.monthly = new Chart(document.getElementById('monthly-trend-chart'), {
-        type: 'line',
-        data: {
-          labels: ['Oca','Şub','Mar','Nis','May','Haz'],
-          datasets: [{
-            label: 'Değişim %',
-            data: [2.3,3.1,2.8,3.5,-1.2,4.2],
-            borderColor: '#f59e0b',
-            tension: 0.4
-          }]
-        },
-        options: { responsive: true }
-      });
-      
-      // Top 10
-      if (charts.top10) charts.top10.destroy();
-      const top10 = data.slice(0, 10);
-      charts.top10 = new Chart(document.getElementById('top10-chart'), {
-        type: 'bar',
-        data: {
-          labels: top10.map(d => d.kurum_adi.substring(0,15)),
-          datasets: [{
-            label: 'Puan',
-            data: top10.map(d => d.toplam_puan),
-            backgroundColor: '#10b981'
-          }]
-        },
-        options: { responsive: true, indexAxis: 'y' }
-      });
-      
-      // Type Compare
-      if (charts.typeCompare) charts.typeCompare.destroy();
-      const hosp = data.filter(d => d.kurum_tipi === 'Hastane');
-      const adsm = data.filter(d => d.kurum_tipi === 'ADSM');
-      charts.typeCompare = new Chart(document.getElementById('type-compare-chart'), {
-        type: 'bar',
-        data: {
-          labels: ['Hastane','ADSM'],
-          datasets: [{
-            label: 'Ortalama',
-            data: [
-              hosp.length ? hosp.reduce((s,d)=>s+d.toplam_puan,0)/hosp.length : 0,
-              adsm.length ? adsm.reduce((s,d)=>s+d.toplam_puan,0)/adsm.length : 0
-            ],
-            backgroundColor: ['#10b981','#3b82f6']
-          }]
-        },
+        data: { labels: ['0-50','50-70','70-85','85-100'], datasets: [{ data: [2,5,8,12], backgroundColor: ['#ef4444','#f59e0b','#3b82f6','#10b981'] }] },
         options: { responsive: true }
       });
     }
 
     // İTİRAZLAR
-    window.loadItirazlar = async function() {
-      const { data } = await supabase.from('itirazlar')
-        .select('*,performans(kurum_adi,gosterge_adi)')
-        .order('olusturma_tarihi', { ascending: false });
+    async function loadItirazlar() {
+      const { data } = await supabase.from('itirazlar').select('*').order('olusturma_tarihi', { ascending: false });
       
       document.getElementById('itiraz-list').innerHTML = (data||[]).map(i => `
         <div style="background:white;border:2px solid var(--warning);border-radius:12px;padding:1.25rem;margin-bottom:1rem">
           <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem">
-            <div>
-              <strong style="color:var(--primary)">${i.performans?.kurum_adi||'-'}</strong>
-              <div style="color:#64748b;font-size:0.9rem">${i.performans?.gosterge_adi||''}</div>
-            </div>
+            <div><strong>İtiraz #${i.id.substring(0,8)}</strong></div>
             <span class="status status-${i.durum==='onaylandi'?'tamam':'bekle'}">${i.durum}</span>
           </div>
           <div style="background:#f8fafc;padding:0.75rem;border-radius:6px;margin:0.75rem 0">
@@ -789,7 +523,7 @@
           </div>
         </div>
       `).join('');
-    };
+    }
 
     window.updateItiraz = async function(id, durum) {
       await supabase.from('itirazlar').update({ durum }).eq('id', id);
@@ -803,6 +537,9 @@
       toast('Silindi', 'success');
       loadItirazlar();
     };
+
+    // İlk yükleme
+    fetchData();
   </script>
 </body>
 </html>
