@@ -128,6 +128,16 @@
         .donem-checkbox-group label { margin-left: 5px; margin-right: 15px; cursor: pointer; }
         .donem-checkbox-group input { cursor: pointer; }
         .secim-uyari { font-size: 12px; color: #dc2626; margin-top: 5px; }
+        
+        /* Kritik Tablo tıklanabilir stil */
+        .kritik-sayi {
+            cursor: pointer;
+            text-decoration: underline;
+            transition: 0.2s;
+        }
+        .kritik-sayi:hover {
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -150,7 +160,7 @@
         <div id="filter-bar" class="filter-bar">
             <div class="filter-group"><label>Yıl</label><select id="f-yil"><option value="2026">2026</option></select></div>
             <div class="filter-group"><label>Dönem</label><select id="f-donem"><option value="1">Ocak</option><option value="2">Şubat</option></select></div>
-            <div class="filter-group"><label>Kurum Türü</label><select id="f-tip" onchange="window.kurumFiltreGuncelle()"><option value="">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select></div>
+            <div class="filter-group"><label>Kurum Türı</label><select id="f-tip" onchange="window.kurumFiltreGuncelle()"><option value="">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select></div>
             <div class="filter-group"><label>Kurum Adı</label><select id="f-kurum"><option value="">Seçiniz</option></select></div>
             <button class="btn-sm-custom" onclick="window.kurumAnaliz()">🔍 Sorgula</button>
         </div>
@@ -182,9 +192,10 @@
                     <div class="table-responsive mt-2">
                         <table class="table table-hover" id="table-bolge">
                             <thead class="table-light"><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr></thead>
-                            <tbody><tr><td colspan="5">Yükleniyor...</td></tr></tbody>
-                        </table>
-                    </div>
+                            <tbody><tr><td colspan="5">Yükleniyor... Nyatakan
+ 
+                        </tbody>
+                    }</div>
                 </div>
             </section>
             
@@ -232,6 +243,7 @@
     </main>
 </div>
 
+<!-- GÖSTERGE DETAY POPUP -->
 <div id="gostergeModal" class="modal-overlay">
     <div class="modal-container">
         <div class="modal-header">
@@ -239,6 +251,19 @@
             <button class="modal-close" onclick="kapatModal()">&times;</button>
         </div>
         <div id="modalIcerik"><p>Yükleniyor...</p></div>
+    </div>
+</div>
+
+<!-- KRİTİK GÖSTERGELER POPUP -->
+<div id="kritikModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container" style="width: 700px; max-width: 95%;">
+        <div class="modal-header">
+            <h4 id="kritikModalBaslik">Kritik Göstergeler</h4>
+            <button class="modal-close" onclick="kapatKritikModal()">&times;</button>
+        </div>
+        <div id="kritikModalIcerik" style="max-height: 500px; overflow-y: auto;">
+            <p>Yükleniyor...</p>
+        </div>
     </div>
 </div>
 
@@ -344,7 +369,7 @@
         if (tip === 'ADSM') query = query.eq('kurum_tipi', 'ADSM');
         const { data, error } = await query.order('toplam_puan', { ascending: false });
         const tbody = document.querySelector('#table-bolge tbody');
-        if (error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Hata: ${error.message}</td></tr>`; return; }
+        if (error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Hata: ${error.message}</td></td>`; return; }
         if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-warning">Veri bulunamadı</td></tr>`; return; }
         tbody.innerHTML = data.map(d => {
             const durum = parseFloat(d.toplam_puan) >= parseFloat(d.rol_ortalamasi);
@@ -396,7 +421,7 @@
                 <td><button class="itiraz-btn" onclick="window.itirazEkle('${r.id}','${kurum}','${r.gosterge_adi}',${r.yil},${r.donem})">📝 İtiraz Et</button></td>
             </tr>`;
         }
-        html += `</tbody></table></div>`;
+        html += `</tbody><table></div>`;
         document.getElementById('kurumAnalizIcerik').innerHTML = html;
     };
 
@@ -683,7 +708,9 @@ async function kritikAnaliziniYukle() {
         <tr>
             <td>${i+1}</td>
             <td><strong>${k.kurum}</strong></td>
-            <td class="text-center fw-bold ${k.kritik > 0 ? 'text-danger' : 'text-success'}">${k.kritik}</td>
+            <td class="text-center fw-bold ${k.kritik > 0 ? 'text-danger' : 'text-success'} kritik-sayi" onclick="window.kritikGoster('${k.kurum.replace(/'/g, "\\'")}')">
+                ${k.kritik}
+            </td>
             <td class="text-center">${k.toplam}</td>
             <td class="text-center">
                 <div class="progress-bar" style="width: 100%;"><div class="progress-fill ${k.kritik > 0 ? 'bg-danger' : 'bg-success'}" style="width: ${k.oran}%"></div></div>
@@ -692,6 +719,77 @@ async function kritikAnaliziniYukle() {
         </tr>
     `).join('');
 }
+
+// ============ KRİTİK GÖSTERGELERİ POPUP'TA GÖSTER ============
+async function kritikGoster(kurumAdi) {
+    const modal = document.getElementById('kritikModal');
+    const baslik = document.getElementById('kritikModalBaslik');
+    const icerik = document.getElementById('kritikModalIcerik');
+    
+    baslik.innerHTML = `❌ ${kurumAdi} - Kritik Göstergeler (2. Dönem)`;
+    icerik.innerHTML = '<div class="text-center py-4">Yükleniyor...</div>';
+    modal.style.display = 'flex';
+    
+    // Kurumun 2. dönem verilerini çek
+    const { data } = await _supabase
+        .from('performans')
+        .select('gosterge_adi, gd, tr_ort, puan, gp, gosterge_yonu')
+        .eq('kurum_adi', kurumAdi)
+        .eq('donem', 2);
+    
+    if (!data || data.length === 0) {
+        icerik.innerHTML = '<div class="alert alert-warning">Veri bulunamadı</div>';
+        return;
+    }
+    
+    // Kritik göstergeleri bul
+    const kritikler = [];
+    for (const r of data) {
+        let kritikMi = false;
+        if (r.gd !== null && r.tr_ort !== null) {
+            const ilOrtBasari = r.gosterge_yonu === 'Pozitif' ? r.gd >= r.tr_ort : r.gd <= r.tr_ort;
+            const puanOrani = (r.puan / r.gp) * 100;
+            if (!ilOrtBasari && puanOrani < 50) {
+                kritikMi = true;
+            }
+        }
+        if (kritikMi) {
+            kritikler.push(r);
+        }
+    }
+    
+    if (kritikler.length === 0) {
+        icerik.innerHTML = '<div class="alert alert-success">🎉 Bu kurumda kritik gösterge bulunmamaktadır.</div>';
+        return;
+    }
+    
+    // Kritik göstergeleri listele
+    let html = `<div class="table-responsive">
+        <table class="table table-sm">
+            <thead class="table-light"><tr><th>Gösterge</th><th>GD</th><th>TR Ort</th><th>Puan</th><th>Durum</th></tr></thead>
+            <tbody>`;
+    
+    for (const r of kritikler) {
+        html += `<tr>
+            <td>${r.gosterge_adi}</td>
+            <td>${r.gd ?? '-'}</td>
+            <td>${r.tr_ort ?? '-'}</td>
+            <td>${r.puan}/${r.gp}</td>
+            <td class="text-danger fw-bold">❌ Kritik</td>
+        </tr>`;
+    }
+    html += `</tbody></table></div>`;
+    icerik.innerHTML = html;
+}
+
+function kapatKritikModal() {
+    document.getElementById('kritikModal').style.display = 'none';
+}
+
+// Modal dışına tıklama ile kapatma
+document.getElementById('kritikModal')?.addEventListener('click', function(e) {
+    if (e.target === this) kapatKritikModal();
+});
 
     // KARŞILAŞTIRMA: Kurum listesini güncelle
     window.karsilastirmaKurumListesiGuncelle = async function() {
@@ -786,12 +884,12 @@ async function kritikAnaliziniYukle() {
         let html = `<div class="karsilastirma-tablo"><table class="table table-bordered">`;
         
         // BAŞLIK SATIRI - Dönemler
-        html += `<thead><tr><th style="width: 250px;">📊 Gösterge</th>`;
+        html += `<thead>乳<th style="width: 250px;">📊 Gösterge</th>`;
         for (const d of seciliDonemler) {
             const donemAdi = AYLAR[d-1] || `${d}. Dönem`;
             html += `<th>${donemAdi}</th>`;
         }
-        html += `</tr></thead><tbody>`;
+        html += `</thead><tbody>`;
         
         // SATIR 1: TOPLAM PUAN
         html += `<tr class="toplam-satir">`;
