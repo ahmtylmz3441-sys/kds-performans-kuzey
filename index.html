@@ -468,23 +468,230 @@
     };
 
     async function raporlar() {
-        const { data: h1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',1);
-        const { data: h2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','Hastane').eq('donem',2);
-        const { data: a1 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',1);
-        const { data: a2 } = await _supabase.from('toplam_puanlar').select('toplam_puan').eq('kurum_tipi','ADSM').eq('donem',2);
-        const hOrt = [(h1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h1?.length||1), (h2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(h2?.length||1)];
-        const aOrt = [(a1||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a1?.length||1), (a2||[]).reduce((s,v)=>s+v.toplam_puan,0)/(a2?.length||1)];
-        if (charts.trend) charts.trend.destroy();
-        charts.trend = new Chart(document.getElementById('trendChart'), { type: 'line', data: { labels: ['Ocak', 'Şubat'], datasets: [{ label: 'Hastane Ort.', data: hOrt, borderColor: '#0d6efd' }, { label: 'ADSM Ort.', data: aOrt, borderColor: '#6610f2' }] }, options: { responsive: true, maintainAspectRatio: false } });
-        const { data: tum } = await _supabase.from('toplam_puanlar').select('*').eq('donem',2);
-        const basarili = (tum||[]).filter(t => t.toplam_puan >= t.rol_ortalamasi).length;
-        if (charts.pie) charts.pie.destroy();
-        charts.pie = new Chart(document.getElementById('pieChart'), { type: 'doughnut', data: { labels: ['Hedef Üstü', 'Hedef Altı'], datasets: [{ data: [basarili, (tum?.length||0)-basarili], backgroundColor: ['#20c997', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false } });
-        const { data: gList } = await _supabase.from('performans').select('gosterge_adi');
-        const gostergeler = [...new Set((gList||[]).map(g=>g.gosterge_adi))];
-        const select = document.getElementById('raporGosterge');
-        select.innerHTML = '<option value="">Gösterge Seçin</option>' + gostergeler.map(g => `<option value="${g}">${g}</option>`).join('');
+    const container = document.getElementById('raporlar');
+    if (!container) return;
+    
+    // Gösterge listesini al
+    const { data: gList } = await _supabase.from('performans').select('gosterge_adi');
+    const gostergeler = [...new Set((gList||[]).map(g=>g.gosterge_adi))].sort();
+    
+    // HTML'i oluştur - Dönemsel Trend kaldırıldı, yerine yeni analizler eklendi
+    container.innerHTML = `
+        <div class="row g-4">
+            <!-- Gösterge Bazlı Trend Analizi (OLDUĞU GİBİ KALDI) -->
+            <div class="col-12">
+                <div class="kds-card">
+                    <h6>📈 Gösterge Bazlı Trend Analizi</h6>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Gösterge Seçin</label>
+                            <select id="raporGosterge" class="form-select">
+                                <option value="">Yükleniyor...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label>&nbsp;</label>
+                            <button class="btn-sm-custom w-100" onclick="window.gostergeAnalizYukle()">Grafik Oluştur</button>
+                        </div>
+                    </div>
+                    <div class="chart-container mt-3"><canvas id="gostergeChart"></canvas></div>
+                </div>
+            </div>
+            
+            <!-- YENİ: En Çok Gelişen / Gerileyen Göstergeler -->
+            <div class="col-md-6">
+                <div class="kds-card">
+                    <h6>📈 En Çok Gelişen Göstergeler</h6>
+                    <p class="text-muted small">Ocak → Şubat döneminde GD'si en çok artan göstergeler</p>
+                    <div id="gelisenGostergeler" class="mt-2" style="max-height: 320px; overflow-y: auto;">
+                        <div class="text-center py-4">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="kds-card">
+                    <h6>📉 En Çok Gerileyen Göstergeler</h6>
+                    <p class="text-muted small">Ocak → Şubat döneminde GD'si en çok azalan göstergeler</p>
+                    <div id="gerileyenGostergeler" class="mt-2" style="max-height: 320px; overflow-y: auto;">
+                        <div class="text-center py-4">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- YENİ: Kurum Bazında Kritik Gösterge Sayısı -->
+            <div class="col-12">
+                <div class="kds-card">
+                    <h6>🏆 Kurum Bazında Kritik Gösterge Sayısı (2. Dönem)</h6>
+                    <p class="text-muted small">Kritik seviyedeki (❌) gösterge sayıları</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm" id="kritikTablo">
+                            <thead class="table-light"><tr><th>#</th><th>Kurum Adı</th><th>Kritik Gösterge Sayısı</th><th>Toplam Gösterge</th><th>Kritik Oranı</th></tr></thead>
+                            <tbody><tr><td colspan="5" class="text-center">Yükleniyor...</tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Gösterge listesini doldur
+    const select = document.getElementById('raporGosterge');
+    select.innerHTML = '<option value="">Gösterge Seçin</option>' + gostergeler.map(g => `<option value="${g}">${g}</option>`).join('');
+    
+    // Yeni analizleri yükle
+    await gelismeAnaliziniYukle();
+    await kritikAnaliziniYukle();
+}
+
+// ============ GELİŞEN/GERİLEYEN GÖSTERGELER ANALİZİ ============
+async function gelismeAnaliziniYukle() {
+    // Ocak ve Şubat verilerini çek
+    const { data: ocak } = await _supabase
+        .from('performans')
+        .select('kurum_adi, gosterge_adi, gd')
+        .eq('donem', 1);
+    
+    const { data: subat } = await _supabase
+        .from('performans')
+        .select('kurum_adi, gosterge_adi, gd')
+        .eq('donem', 2);
+    
+    // Verileri haritala
+    const ocakMap = {};
+    ocak?.forEach(r => {
+        ocakMap[`${r.kurum_adi}|${r.gosterge_adi}`] = parseFloat(r.gd);
+    });
+    
+    // Değişimleri hesapla
+    const degisimler = [];
+    subat?.forEach(r => {
+        const ocakGd = ocakMap[`${r.kurum_adi}|${r.gosterge_adi}`];
+        if (ocakGd !== undefined && ocakGd !== null && r.gd !== null) {
+            const fark = parseFloat(r.gd) - ocakGd;
+            const yuzde = ocakGd !== 0 ? ((fark / ocakGd) * 100).toFixed(1) : 0;
+            degisimler.push({
+                kurum: r.kurum_adi,
+                gosterge: r.gosterge_adi,
+                ocak: ocakGd,
+                subat: parseFloat(r.gd),
+                fark: fark.toFixed(2),
+                yuzde: yuzde
+            });
+        }
+    });
+    
+    // En çok gelişenler (fark > 0)
+    const gelisen = [...degisimler].filter(d => d.fark > 0).sort((a, b) => b.fark - a.fark).slice(0, 10);
+    
+    // En çok gerileyenler (fark < 0)
+    const gerileyen = [...degisimler].filter(d => d.fark < 0).sort((a, b) => a.fark - b.fark).slice(0, 10);
+    
+    // Gelişenleri göster
+    const gelisenDiv = document.getElementById('gelisenGostergeler');
+    if (gelisen.length) {
+        gelisenDiv.innerHTML = gelisen.map(g => `
+            <div class="rank-card d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="rank-number">📈</span>
+                    <strong>${g.kurum.split(' ').slice(0,3).join(' ')}</strong>
+                    <span class="text-muted small"> - ${g.gosterge.substring(0,35)}</span>
+                </div>
+                <div>
+                    <span class="badge-basarili">${g.ocak} → ${g.subat}</span>
+                    <span class="text-success fw-bold ms-2">+${g.fark} (${g.yuzde}%)</span>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        gelisenDiv.innerHTML = '<div class="text-center py-4 text-muted">Veri bulunamadı</div>';
     }
+    
+    // Gerileyenleri göster
+    const gerileyenDiv = document.getElementById('gerileyenGostergeler');
+    if (gerileyen.length) {
+        gerileyenDiv.innerHTML = gerileyen.map(g => `
+            <div class="rank-card d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="rank-number">📉</span>
+                    <strong>${g.kurum.split(' ').slice(0,3).join(' ')}</strong>
+                    <span class="text-muted small"> - ${g.gosterge.substring(0,35)}</span>
+                </div>
+                <div>
+                    <span class="badge-kritik">${g.ocak} → ${g.subat}</span>
+                    <span class="text-danger fw-bold ms-2">${g.fark} (${g.yuzde}%)</span>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        gerileyenDiv.innerHTML = '<div class="text-center py-4 text-muted">Veri bulunamadı</div>';
+    }
+}
+
+// ============ KRİTİK GÖSTERGE ANALİZİ ============
+async function kritikAnaliziniYukle() {
+    const { data } = await _supabase
+        .from('performans')
+        .select('kurum_adi, gd, tr_ort, gosterge_yonu, puan, gp')
+        .eq('donem', 2);
+    
+    if (!data?.length) {
+        document.getElementById('kritikTablo').innerHTML = '<tbody><tr><td colspan="5" class="text-center">Veri bulunamadı</td></tr></tbody>';
+        return;
+    }
+    
+    // Her kurum için kritik gösterge sayısını hesapla
+    const kurumKritik = {};
+    const kurumToplam = {};
+    
+    for (const r of data) {
+        if (!kurumKritik[r.kurum_adi]) {
+            kurumKritik[r.kurum_adi] = 0;
+            kurumToplam[r.kurum_adi] = 0;
+        }
+        kurumToplam[r.kurum_adi]++;
+        
+        // Kritik değerlendirmesi (degerlendir fonksiyonundaki mantık)
+        let kritikMi = false;
+        if (r.gd !== null && r.tr_ort !== null) {
+            const ilOrtBasari = r.gosterge_yonu === 'Pozitif' ? r.gd >= r.tr_ort : r.gd <= r.tr_ort;
+            const puanOrani = (r.puan / r.gp) * 100;
+            if (!ilOrtBasari && puanOrani < 50) {
+                kritikMi = true;
+            }
+        } else if (r.gd === null || r.tr_ort === null) {
+            // Muaf göstergeler kritik sayılmaz
+            kritikMi = false;
+        } else {
+            kritikMi = true;
+        }
+        
+        if (kritikMi) kurumKritik[r.kurum_adi]++;
+    }
+    
+    // Sıralama (kritik sayısına göre azalan)
+    const sirali = Object.entries(kurumKritik)
+        .map(([kurum, kritik]) => ({
+            kurum,
+            kritik,
+            toplam: kurumToplam[kurum],
+            oran: ((kritik / kurumToplam[kurum]) * 100).toFixed(1)
+        }))
+        .sort((a, b) => b.kritik - a.kritik);
+    
+    const tbody = document.querySelector('#kritikTablo tbody');
+    tbody.innerHTML = sirali.map((k, i) => `
+        <tr>
+            <td>${i+1}</td>
+            <td><strong>${k.kurum}</strong></td>
+            <td class="text-center fw-bold ${k.kritik > 0 ? 'text-danger' : 'text-success'}">${k.kritik}</td>
+            <td class="text-center">${k.toplam}</td>
+            <td class="text-center">
+                <div class="progress-bar" style="width: 100%;"><div class="progress-fill ${k.kritik > 0 ? 'bg-danger' : 'bg-success'}" style="width: ${k.oran}%"></div></div>
+                <span class="small">${k.oran}%</span>
+            </td>
+        </tr>
+    `).join('');
+}
 
     // KARŞILAŞTIRMA: Kurum listesini güncelle
     window.karsilastirmaKurumListesiGuncelle = async function() {
