@@ -35,10 +35,6 @@
             min-width: 130px; 
             flex-shrink: 0; 
         }
-        .filter-group:last-of-type { 
-            flex-shrink: 1; 
-            min-width: 200px; 
-        }
         .filter-group select, .filter-group input { 
             padding: 8px 12px; 
             border-radius: 10px; 
@@ -92,9 +88,7 @@
             align-items: center;
             justify-content: center;
         }
-        .modal-overlay.active {
-            display: flex;
-        }
+        .modal-overlay.active { display: flex; }
         .modal-container {
             background: white;
             width: 600px;
@@ -120,13 +114,18 @@
         .gosterge-detay strong { width: 140px; display: inline-block; font-weight: 600; color: #4b5563; }
         .pdf-iframe { width: 100%; height: 400px; border: none; border-radius: 12px; margin-top: 12px; }
         .pdf-link { display: inline-block; margin-top: 8px; font-size: 12px; color: #0d6efd; text-decoration: none; }
-        .pdf-link:hover { text-decoration: underline; }
-        .karsilastirma-tablo { overflow-x: auto; }
-        .karsilastirma-tablo table { width: 100%; border-collapse: collapse; }
-        .karsilastirma-tablo th, .karsilastirma-tablo td { padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-        .karsilastirma-tablo th { background: #f1f5f9; font-weight: 600; }
-        .donem-kart { background: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-        .donem-baslik { font-size: 18px; font-weight: 700; color: #0d2137; margin-bottom: 8px; }
+        .karsilastirma-tablo { overflow-x: auto; margin-top: 15px; }
+        .karsilastirma-tablo table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .karsilastirma-tablo th, .karsilastirma-tablo td { padding: 10px 8px; border: 1px solid #dee2e6; vertical-align: middle; }
+        .karsilastirma-tablo th { background: #f1f5f9; font-weight: 600; text-align: center; }
+        .karsilastirma-tablo td { text-align: center; }
+        .donem-baslik { background: #e9ecef; font-size: 14px; }
+        .alt-baslik { background: #f8f9fa; font-size: 12px; color: #6c757d; }
+        .gosterge-ad { text-align: left !important; font-weight: 500; background-color: #fefce8; }
+        .toplam-satir { background-color: #e6f7ec; font-weight: 600; }
+        .puan-ort-hucre { font-weight: 600; color: #0d6efd; }
+        .gd-tr-hucre { font-family: monospace; font-size: 12px; }
+        .bos-hucre { color: #adb5bd; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -181,7 +180,7 @@
                     <div class="table-responsive mt-2">
                         <table class="table table-hover" id="table-bolge">
                             <thead class="table-light"><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr></thead>
-                            <tbody><tr><td colspan="5">Yükleniyor......</td></tr></tbody>
+                            <tbody><tr><td colspan="5">Yükleniyor...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -189,7 +188,7 @@
             
             <section id="kurum-bazli" class="page"><div id="kurumAnalizIcerik" class="kds-card">Kurum seçip sorgulayın.</div></section>
             
-            <!-- DÖNEMSEL KARŞILAŞTIRMA SAYFASI -->
+            <!-- DÖNEMSEL KARŞILAŞTIRMA SAYFASI - YENİ TABLO YAPISI -->
             <section id="karsilastirma" class="page">
                 <div class="kds-card">
                     <h6><i class="bi bi-calendar-range"></i> Dönemsel Karşılaştırma</h6>
@@ -243,7 +242,6 @@
     let charts = {};
     let itirazPerformansMap = {};
     
-    // AYLAR dizisi tanımlandı (hata çözüldü)
     const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
     async function itirazDurumlariniYukle() {
@@ -271,7 +269,6 @@
 
     function pdfUrlGetir(gostergeKodu, kurumTipi) {
         if (!gostergeKodu) return null;
-        const commitHash = "315506e2151d6cd5483f9f159cbf79e44a3f1423";
         if (gostergeKodu.startsWith('SYPG-BH-')) {
             const numara = gostergeKodu.split('-')[2];
             return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/pendikismdenetim/dokumanlar/h${numara}.pdf`;
@@ -481,7 +478,7 @@
         select.innerHTML = '<option value="">Gösterge Seçin</option>' + gostergeler.map(g => `<option value="${g}">${g}</option>`).join('');
     }
 
-    // KARŞILAŞTIRMA: Kurum listesini türe göre güncelle
+    // KARŞILAŞTIRMA: Kurum listesini güncelle
     window.karsilastirmaKurumListesiGuncelle = async function() {
         const tip = document.getElementById('karsKurumTip').value;
         let query = _supabase.from('toplam_puanlar').select('kurum_adi');
@@ -492,53 +489,107 @@
         document.getElementById('karsKurumAdi').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k => `<option value="${k}">${k}</option>`).join('');
     };
 
-    // KARŞILAŞTIRMA: Ana fonksiyon
+    // KARŞILAŞTIRMA: Yeni tablo yapısı - Gösterge bazlı, yatayda dönemler
     window.donemselKarsilastir = async function() {
         const kurumAdi = document.getElementById('karsKurumAdi').value;
-        if (!kurumAdi) {
-            alert('Lütfen bir kurum seçin.');
-            return;
-        }
+        if (!kurumAdi) { alert('Lütfen bir kurum seçin.'); return; }
         
-        // Tüm dönemleri getir (1,2,... mevcut tüm dönemler)
-        const { data: donemler } = await _supabase.from('toplam_puanlar').select('donem').eq('kurum_adi', kurumAdi).order('donem', { ascending: true });
-        if (!donemler || donemler.length === 0) {
+        await itirazDurumlariniYukle();
+        
+        // 1. Tüm dönemleri bul
+        const { data: donemlerData } = await _supabase.from('toplam_puanlar').select('donem').eq('kurum_adi', kurumAdi).order('donem', { ascending: true });
+        if (!donemlerData || donemlerData.length === 0) {
             document.getElementById('karsilastirmaSonuc').innerHTML = '<div class="alert alert-warning">Bu kurum için dönem verisi bulunamadı.</div>';
             return;
         }
+        const donemler = [...new Set(donemlerData.map(d => d.donem))].sort((a,b)=>a-b);
         
-        const mevcutDonemler = [...new Set(donemler.map(d => d.donem))];
-        let html = `<div class="karsilastirma-tablo"><table class="table table-bordered">
-            <thead><tr><th>Dönem</th><th>Toplam Puan</th><th>Rol Ortalaması</th><th>Durum</th></tr></thead><tbody>`;
-        
-        for (const donemNo of mevcutDonemler) {
-            const { data: toplam } = await _supabase.from('toplam_puanlar')
-                .select('toplam_puan, rol_ortalamasi')
-                .eq('kurum_adi', kurumAdi)
-                .eq('donem', donemNo)
-                .maybeSingle();
-            
-            const donemAdi = AYLAR[donemNo-1] || `${donemNo}. Dönem`;
-            const puan = toplam?.toplam_puan ?? 'Veri yok';
-            const rolOrt = toplam?.rol_ortalamasi ?? 'Veri yok';
-            let durumHtml = '';
-            if (toplam && toplam.toplam_puan !== null && toplam.rol_ortalamasi !== null) {
-                const basarili = toplam.toplam_puan >= toplam.rol_ortalamasi;
-                durumHtml = basarili ? '<span class="badge-basarili">✅ Başarılı</span>' : '<span class="badge-kritik">❌ Kritik</span>';
-            } else {
-                durumHtml = '<span class="badge-muaf">🔘 Değerlendirme yok</span>';
-            }
-            html += `<tr>
-                <td><strong>${donemAdi}</strong></td>
-                <td class="fw-bold text-primary">${puan}</td>
-                <td>${rolOrt}</td>
-                <td>${durumHtml}</td>
-            </tr>`;
+        // 2. Her dönem için toplam puan ve rol ortalamasını al
+        const toplamlar = {};
+        for (const d of donemler) {
+            const { data } = await _supabase.from('toplam_puanlar').select('toplam_puan, rol_ortalamasi').eq('kurum_adi', kurumAdi).eq('donem', d).maybeSingle();
+            toplamlar[d] = data || { toplam_puan: '-', rol_ortalamasi: '-' };
         }
-        html += `</tbody></table></div>`;
         
-        // Ayrıca mini bir özet kartı ekleyelim
-        html += `<div class="alert alert-light mt-3"><i class="bi bi-info-circle"></i> Not: Karşılaştırma, seçilen kurumun tüm dönemlerini yan yana gösterir.</div>`;
+        // 3. Tüm göstergeleri al (tüm dönemlerden, sıralı)
+        const { data: tumGostergeler } = await _supabase.from('performans').select('gosterge_kodu, gosterge_adi, gosterge_yonu, donem, gd, tr_ort').eq('kurum_adi', kurumAdi).in('donem', donemler);
+        if (!tumGostergeler) { document.getElementById('karsilastirmaSonuc').innerHTML = '<div class="alert alert-danger">Gösterge verisi alınamadı.</div>'; return; }
+        
+        // Gösterge koduna göre sıralama için benzersiz göstergeleri bul
+        const gostergeMap = new Map();
+        for (const g of tumGostergeler) {
+            if (!gostergeMap.has(g.gosterge_kodu)) {
+                gostergeMap.set(g.gosterge_kodu, { kod: g.gosterge_kodu, ad: g.gosterge_adi, yon: g.gosterge_yonu });
+            }
+        }
+        const gostergeler = Array.from(gostergeMap.values()).sort((a,b) => {
+            const numA = parseInt(a.kod.split('-')[2]);
+            const numB = parseInt(b.kod.split('-')[2]);
+            return numA - numB;
+        });
+        
+        // Dönem bazında göstergelerin değerlerini tut
+        const gostergeDegerler = {};
+        for (const g of tumGostergeler) {
+            const key = `${g.gosterge_kodu}_${g.donem}`;
+            gostergeDegerler[key] = { gd: g.gd, tr_ort: g.tr_ort };
+        }
+        
+        // 4. Tabloyu oluştur
+        let html = `<div class="karsilastirma-tablo"><table class="table table-bordered">`;
+        
+        // BAŞLIK SATIRI 1: Dönemler
+        html += `<thead>`;
+        html += `<tr><th rowspan="2" style="vertical-align: middle; width: 250px;">📊 Gösterge</th>`;
+        for (const d of donemler) {
+            const donemAdi = AYLAR[d-1] || `${d}. Dönem`;
+            html += `<th colspan="2" class="donem-baslik">${donemAdi}</th>`;
+        }
+        html += `</tr>`;
+        
+        // BAŞLIK SATIRI 2: Alt başlıklar (Puan/Ortalama | GD/TR Ort)
+        html += `<tr>`;
+        for (const d of donemler) {
+            html += `<th class="alt-baslik">📈 Puan / Ortalama</th>`;
+            html += `<th class="alt-baslik">🎯 GD / TR Ort</th>`;
+        }
+        html += `</tr></thead><tbody>`;
+        
+        // TOPLAM SATIRI (Puan/Rol Ortalaması)
+        html += `<tr class="toplam-satir">`;
+        html += `<td class="gosterge-ad"><strong>🏆 TOPLAM PUAN / ROL ORTALAMASI</strong></td>`;
+        for (const d of donemler) {
+            const t = toplamlar[d];
+            const puanOrt = (t.toplam_puan !== null && t.toplam_puan !== undefined) ? t.toplam_puan : '-';
+            const rolOrt = (t.rol_ortalamasi !== null && t.rol_ortalamasi !== undefined) ? t.rol_ortalamasi : '-';
+            html += `<td class="puan-ort-hucre">${puanOrt} / ${rolOrt}</td>`;
+            html += `<td class="bos-hucre">-</td>`;
+        }
+        html += `</tr>`;
+        
+        // GÖSTERGE SATIRLARI
+        for (const g of gostergeler) {
+            const yonIcon = g.yon === 'Pozitif' ? '📈' : '📉';
+            html += `<tr>`;
+            html += `<td class="gosterge-ad"><a href="#" onclick="return false;" style="color:#0d6efd; text-decoration:none; font-weight:500;">${yonIcon} ${g.kod}: ${g.ad.substring(0, 50)}</a></td>`;
+            for (const d of donemler) {
+                // Puan/Ortalama sütunu boş (sadece göstergeler için)
+                html += `<td class="bos-hucre">-</td>`;
+                // GD/TR Ort sütunu
+                const key = `${g.kod}_${d}`;
+                const deger = gostergeDegerler[key];
+                if (deger && deger.gd !== null && deger.tr_ort !== null) {
+                    html += `<td class="gd-tr-hucre"><span class="fw-bold">${deger.gd}</span> / ${deger.tr_ort}</td>`;
+                } else {
+                    html += `<td class="bos-hucre">- / -</td>`;
+                }
+            }
+            html += `</tr>`;
+        }
+        
+        html += `</tbody></table></div>`;
+        html += `<div class="alert alert-light mt-3"><i class="bi bi-info-circle"></i> Not: "Puan / Ortalama" sütununda toplam puan / rol ortalaması, "GD / TR Ort" sütununda her bir göstergenin gerçekleşen değeri ve Türkiye ortalaması gösterilir.</div>`;
+        
         document.getElementById('karsilastirmaSonuc').innerHTML = html;
     };
 
@@ -548,9 +599,7 @@
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         if (el) el.classList.add('active');
         
-        // Karşılaştırma sayfası için filtre çubuğu gösterilmez
         if (sayfa === 'kurum-bazli') document.getElementById('filter-bar').style.display = 'flex';
-        else if (sayfa === 'karsilastirma') document.getElementById('filter-bar').style.display = 'none';
         else document.getElementById('filter-bar').style.display = 'none';
         
         if (sayfa === 'genel-bakis') await dashboard();
