@@ -114,18 +114,20 @@
         .gosterge-detay strong { width: 140px; display: inline-block; font-weight: 600; color: #4b5563; }
         .pdf-iframe { width: 100%; height: 400px; border: none; border-radius: 12px; margin-top: 12px; }
         .pdf-link { display: inline-block; margin-top: 8px; font-size: 12px; color: #0d6efd; text-decoration: none; }
-        .karsilastirma-tablo { overflow-x: auto; margin-top: 15px; }
+        
+        .karsilastirma-tablo { overflow-x: auto; margin-top: 20px; }
         .karsilastirma-tablo table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .karsilastirma-tablo th, .karsilastirma-tablo td { padding: 10px 8px; border: 1px solid #dee2e6; vertical-align: middle; }
         .karsilastirma-tablo th { background: #f1f5f9; font-weight: 600; text-align: center; }
         .karsilastirma-tablo td { text-align: center; }
-        .donem-baslik { background: #e9ecef; font-size: 14px; }
-        .alt-baslik { background: #f8f9fa; font-size: 12px; color: #6c757d; }
-        .gosterge-ad { text-align: left !important; font-weight: 500; background-color: #fefce8; }
+        .gosterge-ad { text-align: left !important; font-weight: 500; }
         .toplam-satir { background-color: #e6f7ec; font-weight: 600; }
-        .puan-ort-hucre { font-weight: 600; color: #0d6efd; }
-        .gd-tr-hucre { font-family: monospace; font-size: 12px; }
-        .bos-hucre { color: #adb5bd; font-size: 11px; }
+        .rol-satir { background-color: #e8f0fe; font-weight: 600; }
+        .gd-tr-hucre { font-family: monospace; font-size: 12px; font-weight: 500; }
+        .donem-checkbox-group { display: flex; flex-wrap: wrap; gap: 15px; margin: 15px 0; padding: 12px; background: #f8f9fa; border-radius: 12px; }
+        .donem-checkbox-group label { margin-left: 5px; margin-right: 15px; cursor: pointer; }
+        .donem-checkbox-group input { cursor: pointer; }
+        .secim-uyari { font-size: 12px; color: #dc2626; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -188,12 +190,12 @@
             
             <section id="kurum-bazli" class="page"><div id="kurumAnalizIcerik" class="kds-card">Kurum seçip sorgulayın.</div></section>
             
-            <!-- DÖNEMSEL KARŞILAŞTIRMA SAYFASI - YENİ TABLO YAPISI -->
+            <!-- DÖNEMSEL KARŞILAŞTIRMA - YENİ ÇOKTAN SEÇMELİ VERSİYON -->
             <section id="karsilastirma" class="page">
                 <div class="kds-card">
                     <h6><i class="bi bi-calendar-range"></i> Dönemsel Karşılaştırma</h6>
-                    <p class="text-muted small">Seçilen kurumun tüm dönemlerini yan yana karşılaştırın</p>
-                    <div class="row g-3 mb-4">
+                    <p class="text-muted small">Seçilen kurumun dönemlerini yan yana karşılaştırın (en fazla 4 dönem)</p>
+                    <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Kurum Türü</label>
                             <select id="karsKurumTip" class="form-select" onchange="window.karsilastirmaKurumListesiGuncelle()">
@@ -204,16 +206,22 @@
                         </div>
                         <div class="col-md-5">
                             <label class="form-label fw-semibold">Kurum Adı</label>
-                            <select id="karsKurumAdi" class="form-select">
+                            <select id="karsKurumAdi" class="form-select" onchange="window.karsilastirmaDonemListesiGuncelle()">
                                 <option value="">Önce tür seçin</option>
                             </select>
                         </div>
-                        <div class="col-md-3 d-flex align-items-end">
-                            <button class="btn-sm-custom w-100" onclick="window.donemselKarsilastir()">📊 Karşılaştır</button>
-                        </div>
                     </div>
-                    <div id="karsilastirmaSonuc">
-                        <div class="alert alert-secondary">Bir kurum seçip "Karşılaştır" butonuna tıklayın.</div>
+                    
+                    <!-- Dinamik Dönem Checkbox'ları buraya gelecek -->
+                    <div id="karsDonemCheckboxlar" class="donem-checkbox-group"></div>
+                    <div id="karsUyari" class="secim-uyari"></div>
+                    
+                    <div class="mt-3">
+                        <button class="btn-sm-custom" onclick="window.donemselKarsilastir()">📊 KARŞILAŞTIR</button>
+                    </div>
+                    
+                    <div id="karsilastirmaSonuc" class="mt-3">
+                        <div class="alert alert-secondary">Bir kurum seçip dönemleri işaretleyin ve "Karşılaştır" butonuna tıklayın.</div>
                     </div>
                 </div>
             </section>
@@ -487,35 +495,67 @@
         const { data } = await query;
         const tekil = [...new Set((data||[]).map(d => d.kurum_adi))].sort();
         document.getElementById('karsKurumAdi').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k => `<option value="${k}">${k}</option>`).join('');
+        document.getElementById('karsDonemCheckboxlar').innerHTML = '';
+        document.getElementById('karsilastirmaSonuc').innerHTML = '<div class="alert alert-secondary">Bir kurum seçip dönemleri işaretleyin.</div>';
+    };
+    
+    // KARŞILAŞTIRMA: Kurum seçilince dönem checkboxlarını oluştur
+    window.karsilastirmaDonemListesiGuncelle = async function() {
+        const kurumAdi = document.getElementById('karsKurumAdi').value;
+        if (!kurumAdi) {
+            document.getElementById('karsDonemCheckboxlar').innerHTML = '';
+            return;
+        }
+        
+        // Kurumun verisi olan dönemleri bul
+        const { data: donemler } = await _supabase.from('toplam_puanlar').select('donem').eq('kurum_adi', kurumAdi).order('donem', { ascending: true });
+        if (!donemler || donemler.length === 0) {
+            document.getElementById('karsDonemCheckboxlar').innerHTML = '<div class="alert alert-warning">Bu kurum için dönem verisi bulunamadı.</div>';
+            return;
+        }
+        
+        const mevcutDonemler = [...new Set(donemler.map(d => d.donem))].sort((a,b)=>a-b);
+        
+        let html = `<div class="fw-semibold mb-2">📅 Karşılaştırılacak Dönemler (en fazla 4):</div>`;
+        html += `<div style="display: flex; flex-wrap: wrap; gap: 12px;">`;
+        for (const d of mevcutDonemler) {
+            const donemAdi = AYLAR[d-1] || `${d}. Dönem`;
+            html += `<label><input type="checkbox" class="donem-checkbox" value="${d}"> ${donemAdi}</label>`;
+        }
+        html += `</div>`;
+        document.getElementById('karsDonemCheckboxlar').innerHTML = html;
+        document.getElementById('karsUyari').innerHTML = '';
     };
 
-    // KARŞILAŞTIRMA: Yeni tablo yapısı - Gösterge bazlı, yatayda dönemler
+    // KARŞILAŞTIRMA: Ana fonksiyon (yeni tablo yapısı)
     window.donemselKarsilastir = async function() {
         const kurumAdi = document.getElementById('karsKurumAdi').value;
         if (!kurumAdi) { alert('Lütfen bir kurum seçin.'); return; }
         
+        // Seçili dönemleri al
+        const seciliCheckboxlar = document.querySelectorAll('.donem-checkbox:checked');
+        const seciliDonemler = Array.from(seciliCheckboxlar).map(cb => parseInt(cb.value)).sort((a,b)=>a-b);
+        
+        if (seciliDonemler.length === 0) { alert('Lütfen karşılaştırmak istediğiniz dönemleri seçin.'); return; }
+        if (seciliDonemler.length > 4) { alert('En fazla 4 dönem seçebilirsiniz.'); return; }
+        
         await itirazDurumlariniYukle();
         
-        // 1. Tüm dönemleri bul
-        const { data: donemlerData } = await _supabase.from('toplam_puanlar').select('donem').eq('kurum_adi', kurumAdi).order('donem', { ascending: true });
-        if (!donemlerData || donemlerData.length === 0) {
-            document.getElementById('karsilastirmaSonuc').innerHTML = '<div class="alert alert-warning">Bu kurum için dönem verisi bulunamadı.</div>';
-            return;
-        }
-        const donemler = [...new Set(donemlerData.map(d => d.donem))].sort((a,b)=>a-b);
-        
-        // 2. Her dönem için toplam puan ve rol ortalamasını al
+        // 1. Seçili dönemler için toplam puan ve rol ortalamasını al
         const toplamlar = {};
-        for (const d of donemler) {
+        for (const d of seciliDonemler) {
             const { data } = await _supabase.from('toplam_puanlar').select('toplam_puan, rol_ortalamasi').eq('kurum_adi', kurumAdi).eq('donem', d).maybeSingle();
             toplamlar[d] = data || { toplam_puan: '-', rol_ortalamasi: '-' };
         }
         
-        // 3. Tüm göstergeleri al (tüm dönemlerden, sıralı)
-        const { data: tumGostergeler } = await _supabase.from('performans').select('gosterge_kodu, gosterge_adi, gosterge_yonu, donem, gd, tr_ort').eq('kurum_adi', kurumAdi).in('donem', donemler);
-        if (!tumGostergeler) { document.getElementById('karsilastirmaSonuc').innerHTML = '<div class="alert alert-danger">Gösterge verisi alınamadı.</div>'; return; }
+        // 2. Tüm göstergeleri al (seçili dönemler için)
+        const { data: tumGostergeler } = await _supabase.from('performans').select('gosterge_kodu, gosterge_adi, gosterge_yonu, donem, gd, tr_ort').eq('kurum_adi', kurumAdi).in('donem', seciliDonemler);
+        if (!tumGostergeler || tumGostergeler.length === 0) {
+            document.getElementById('karsilastirmaSonuc').innerHTML = '<div class="alert alert-warning">Seçili dönemler için gösterge verisi bulunamadı.</div>';
+            return;
+        }
         
-        // Gösterge koduna göre sıralama için benzersiz göstergeleri bul
+        // Benzersiz göstergeleri bul ve sırala
         const gostergeMap = new Map();
         for (const g of tumGostergeler) {
             if (!gostergeMap.has(g.gosterge_kodu)) {
@@ -528,67 +568,61 @@
             return numA - numB;
         });
         
-        // Dönem bazında göstergelerin değerlerini tut
+        // Dönem-gösterge bazlı değerleri tut
         const gostergeDegerler = {};
         for (const g of tumGostergeler) {
             const key = `${g.gosterge_kodu}_${g.donem}`;
             gostergeDegerler[key] = { gd: g.gd, tr_ort: g.tr_ort };
         }
         
-        // 4. Tabloyu oluştur
+        // 3. YENİ TABLO: Toplam Puan ayrı satır, Rol Ortalaması ayrı satır
         let html = `<div class="karsilastirma-tablo"><table class="table table-bordered">`;
         
-        // BAŞLIK SATIRI 1: Dönemler
-        html += `<thead>`;
-        html += `<tr><th rowspan="2" style="vertical-align: middle; width: 250px;">📊 Gösterge</th>`;
-        for (const d of donemler) {
+        // BAŞLIK SATIRI - Dönemler
+        html += `<thead><tr><th style="width: 250px;">📊 Gösterge</th>`;
+        for (const d of seciliDonemler) {
             const donemAdi = AYLAR[d-1] || `${d}. Dönem`;
-            html += `<th colspan="2" class="donem-baslik">${donemAdi}</th>`;
-        }
-        html += `</tr>`;
-        
-        // BAŞLIK SATIRI 2: Alt başlıklar (Puan/Ortalama | GD/TR Ort)
-        html += `<tr>`;
-        for (const d of donemler) {
-            html += `<th class="alt-baslik">📈 Puan / Ortalama</th>`;
-            html += `<th class="alt-baslik">🎯 GD / TR Ort</th>`;
+            html += `<th>${donemAdi}</th>`;
         }
         html += `</tr></thead><tbody>`;
         
-        // TOPLAM SATIRI (Puan/Rol Ortalaması)
+        // SATIR 1: TOPLAM PUAN
         html += `<tr class="toplam-satir">`;
-        html += `<td class="gosterge-ad"><strong>🏆 TOPLAM PUAN / ROL ORTALAMASI</strong></td>`;
-        for (const d of donemler) {
-            const t = toplamlar[d];
-            const puanOrt = (t.toplam_puan !== null && t.toplam_puan !== undefined) ? t.toplam_puan : '-';
-            const rolOrt = (t.rol_ortalamasi !== null && t.rol_ortalamasi !== undefined) ? t.rol_ortalamasi : '-';
-            html += `<td class="puan-ort-hucre">${puanOrt} / ${rolOrt}</td>`;
-            html += `<td class="bos-hucre">-</td>`;
+        html += `<td class="gosterge-ad"><strong>🏆 TOPLAM PUAN</strong></td>`;
+        for (const d of seciliDonemler) {
+            const puan = toplamlar[d].toplam_puan !== '-' ? toplamlar[d].toplam_puan : '-';
+            html += `<td class="fw-bold text-primary">${puan}</td>`;
         }
         html += `</tr>`;
         
-        // GÖSTERGE SATIRLARI
+        // SATIR 2: ROL ORTALAMASI
+        html += `<tr class="rol-satir">`;
+        html += `<td class="gosterge-ad"><strong>📊 ROL ORTALAMASI</strong></td>`;
+        for (const d of seciliDonemler) {
+            const rol = toplamlar[d].rol_ortalamasi !== '-' ? toplamlar[d].rol_ortalamasi : '-';
+            html += `<td>${rol}</td>`;
+        }
+        html += `</tr>`;
+        
+        // GÖSTERGE SATIRLARI (GD / TR Ort)
         for (const g of gostergeler) {
             const yonIcon = g.yon === 'Pozitif' ? '📈' : '📉';
             html += `<tr>`;
-            html += `<td class="gosterge-ad"><a href="#" onclick="return false;" style="color:#0d6efd; text-decoration:none; font-weight:500;">${yonIcon} ${g.kod}: ${g.ad.substring(0, 50)}</a></td>`;
-            for (const d of donemler) {
-                // Puan/Ortalama sütunu boş (sadece göstergeler için)
-                html += `<td class="bos-hucre">-</td>`;
-                // GD/TR Ort sütunu
+            html += `<td class="gosterge-ad"><a href="#" onclick="return false;" style="color:#0d6efd; text-decoration:none;">${yonIcon} ${g.kod}: ${g.ad.substring(0, 55)}</a></td>`;
+            for (const d of seciliDonemler) {
                 const key = `${g.kod}_${d}`;
                 const deger = gostergeDegerler[key];
-                if (deger && deger.gd !== null && deger.tr_ort !== null) {
+                if (deger && deger.gd !== null && deger.gd !== undefined && deger.tr_ort !== null && deger.tr_ort !== undefined) {
                     html += `<td class="gd-tr-hucre"><span class="fw-bold">${deger.gd}</span> / ${deger.tr_ort}</td>`;
                 } else {
-                    html += `<td class="bos-hucre">- / -</td>`;
+                    html += `<td class="text-muted">- / -</td>`;
                 }
             }
             html += `</tr>`;
         }
         
         html += `</tbody></table></div>`;
-        html += `<div class="alert alert-light mt-3"><i class="bi bi-info-circle"></i> Not: "Puan / Ortalama" sütununda toplam puan / rol ortalaması, "GD / TR Ort" sütununda her bir göstergenin gerçekleşen değeri ve Türkiye ortalaması gösterilir.</div>`;
+        html += `<div class="alert alert-light mt-3"><i class="bi bi-info-circle"></i> Not: Her gösterge için "GD (Gerçekleşen Değer) / TR Ort (Türkiye Ortalaması)" gösterilmektedir.</div>`;
         
         document.getElementById('karsilastirmaSonuc').innerHTML = html;
     };
