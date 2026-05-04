@@ -612,85 +612,118 @@ async function karsilastirmaYukle() {
     const div = document.getElementById('karsilastirmaIcerik');
     div.innerHTML = '<div class="text-center py-5">Yükleniyor...</div>';
     
-    // Kurumun tüm dönemlerini çek
-    const { data } = await _supabase
-        .from('performans')
-        .select('*')
-        .eq('kurum_adi', kurum)
-        .order('yil', { ascending: true })
-        .order('donem', { ascending: true });
-    
-    if (!data || data.length === 0) {
-        div.innerHTML = '<div class="alert alert-warning">Bu kurum için veri bulunamadı.</div>';
-        return;
-    }
-    
-    // Dönemleri ve göstergeleri organize et
-    const donemler = [...new Map(data.map(r => [`${r.yil}|${r.donem}`, { yil: r.yil, donem: r.donem, label: `${AYLAR[r.donem]} ${r.yil}` }])).values()].sort((a,b) => {
-        if (a.yil !== b.yil) return a.yil - b.yil;
-        return a.donem - b.donem;
-    });
-    
-    const gostergeler = [...new Map(data.map(r => [r.gosterge_adi, { ad: r.gosterge_adi, kod: r.gosterge_kodu, yon: r.gosterge_yonu }])).values()];
-    
-    // Tablo oluştur
-    let html = `<h6 class="mb-3">📊 ${kurum} - Dönemsel Karşılaştırma</h6>`;
-    html += `<div class="table-responsive" style="max-height: 600px; overflow-x: auto;">`;
-    html += `<table class="table table-sm table-bordered">`;
-    
-    // Başlık satırı
-    html += `<thead class="table-light"><tr><th style="position: sticky; left: 0; background: white; z-index: 1;">Gösterge</th><th>Yön</th>`;
-    for (const d of donemler) {
-        html += `<th class="text-center">${d.label}<br><small class="text-muted">GD / Puan</small></th>`;
-    }
-    html += `</tr></thead><tbody>`;
-    
-    // Her gösterge için satır
-    for (const g of gostergeler) {
-        const yonClass = g.yon === 'Pozitif' ? 'yon-ok-pozitif' : 'yon-ok-negatif';
-        const yonText = g.yon === 'Pozitif' ? '↑' : '↓';
-        html += `<tr>
-            <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500;">${g.ad}</td>
-            <td class="${yonClass} text-center">${yonText} ${g.yon === 'Pozitif' ? 'Pozitif' : 'Negatif'}</td>`;
+    try {
+        // Kurumun tüm dönemlerini çek
+        const { data, error } = await _supabase
+            .from('performans')
+            .select('*')
+            .eq('kurum_adi', kurum)
+            .order('yil', { ascending: true })
+            .order('donem', { ascending: true });
         
-        for (const d of donemler) {
-            const row = data.find(r => r.gosterge_adi === g.ad && r.yil === d.yil && r.donem === d.donem);
-            const gd = row?.gd !== null && row?.gd !== undefined ? row.gd : '-';
-            const puan = row?.puan !== null && row?.puan !== undefined ? `${row.puan}/${row.gp}` : '-';
-            const puanClass = row?.puan && row?.gp && row.puan >= row.gp/2 ? 'text-success' : (row?.puan ? 'text-danger' : '');
-            html += `<td class="text-center">
-                        <div><strong>${gd}</strong></div>
-                        <small class="${puanClass}">${puan}</small>
-                     </td>`;
+        if (error) {
+            div.innerHTML = `<div class="alert alert-danger">Hata: ${error.message}</div>`;
+            return;
         }
-        html += `</tr>`;
+        
+        if (!data || data.length === 0) {
+            div.innerHTML = '<div class="alert alert-warning">Bu kurum için veri bulunamadı.</div>';
+            return;
+        }
+        
+        console.log("Veri geldi:", data.length, "satır");
+        
+        // Dönemleri bul (benzersiz)
+        const donemMap = new Map();
+        for (const r of data) {
+            const key = `${r.yil}|${r.donem}`;
+            if (!donemMap.has(key)) {
+                donemMap.set(key, { yil: r.yil, donem: r.donem, label: `${AYLAR[r.donem]} ${r.yil}` });
+            }
+        }
+        const donemler = Array.from(donemMap.values()).sort((a,b) => {
+            if (a.yil !== b.yil) return a.yil - b.yil;
+            return a.donem - b.donem;
+        });
+        
+        // Göstergeleri bul (benzersiz)
+        const gostergeMap = new Map();
+        for (const r of data) {
+            if (!gostergeMap.has(r.gosterge_adi)) {
+                gostergeMap.set(r.gosterge_adi, {
+                    ad: r.gosterge_adi,
+                    kod: r.gosterge_kodu,
+                    yon: r.gosterge_yonu
+                });
+            }
+        }
+        const gostergeler = Array.from(gostergeMap.values());
+        
+        // Tablo oluştur
+        let html = `<h6 class="mb-3">📊 ${kurum} - Dönemsel Karşılaştırma</h6>`;
+        html += `<div class="table-responsive" style="max-height: 600px; overflow-x: auto;">`;
+        html += `<table class="table table-sm table-bordered" style="font-size: 12px;">`;
+        
+        // Başlık satırı
+        html += `<thead class="table-light">`;
+        html += `<tr><th style="position: sticky; left: 0; background: white; z-index: 1; min-width: 200px;">Gösterge</th>`;
+        html += `<th style="min-width: 80px;">Yön</th>`;
+        for (const d of donemler) {
+            html += `<th class="text-center" style="min-width: 100px;">${d.label}<br><small class="text-muted">GD / Puan</small></th>`;
+        }
+        html += `</tr></thead><tbody>`;
+        
+        // Her gösterge için satır
+        for (const g of gostergeler) {
+            const yonClass = g.yon === 'Pozitif' ? 'yon-ok-pozitif' : 'yon-ok-negatif';
+            const yonText = g.yon === 'Pozitif' ? '↑' : '↓';
+            html += `<tr>
+                <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500;">${g.ad}</td>
+                <td class="${yonClass} text-center">${yonText} ${g.yon === 'Pozitif' ? 'Poz' : 'Neg'}</td>`;
+            
+            for (const d of donemler) {
+                const row = data.find(r => r.gosterge_adi === g.ad && r.yil === d.yil && r.donem === d.donem);
+                const gd = (row?.gd !== null && row?.gd !== undefined) ? row.gd : '-';
+                const puan = (row?.puan !== null && row?.puan !== undefined) ? `${row.puan}/${row.gp}` : '-';
+                const puanClass = (row?.puan && row?.gp && row.puan >= row.gp/2) ? 'text-success' : (row?.puan ? 'text-danger' : '');
+                html += `<td class="text-center">
+                            <div><strong>${gd}</strong></div>
+                            <small class="${puanClass}">${puan}</small>
+                          </td>`;
+            }
+            html += `</tr>`;
+        }
+        
+        // Toplam puan satırı
+        const { data: toplamlar } = await _supabase
+            .from('toplam_puanlar')
+            .select('toplam_puan, rol_ortalamasi, yil, donem')
+            .eq('kurum_adi', kurum)
+            .order('yil', { ascending: true })
+            .order('donem', { ascending: true });
+        
+        if (toplamlar && toplamlar.length > 0) {
+            html += `<tr class="table-secondary">
+                <td style="position: sticky; left: 0; background: #e9ecef; z-index: 1; font-weight: bold;">🏆 TOPLAM PUAN</td>
+                <td class="text-center">-</td>`;
+            for (const d of donemler) {
+                const t = toplamlar.find(t => t.yil === d.yil && t.donem === d.donem);
+                const puan = t?.toplam_puan ? t.toplam_puan : '-';
+                const rol = t?.rol_ortalamasi ? t.rol_ortalamasi : '-';
+                html += `<td class="text-center fw-bold">
+                            ${puan}<br>
+                            <small class="text-muted">(Rol: ${rol})</small>
+                          </td>`;
+            }
+            html += `</tr>`;
+        }
+        
+        html += `</tbody></table></div>`;
+        div.innerHTML = html;
+        
+    } catch (err) {
+        div.innerHTML = `<div class="alert alert-danger">Beklenmeyen hata: ${err.message}</div>`;
     }
-    
-    // Toplam puan satırı
-    const { data: toplamlar } = await _supabase
-        .from('toplam_puanlar')
-        .select('toplam_puan, rol_ortalamasi, yil, donem')
-        .eq('kurum_adi', kurum)
-        .order('yil', { ascending: true })
-        .order('donem', { ascending: true });
-    
-    html += `<tr class="table-secondary">
-        <td style="position: sticky; left: 0; background: #e9ecef; z-index: 1; font-weight: bold;">🏆 TOPLAM PUAN</td>
-        <td class="text-center">-</td>`;
-    
-    for (const d of donemler) {
-        const t = toplamlar?.find(t => t.yil === d.yil && t.donem === d.donem);
-        const puan = t?.toplam_puan ? t.toplam_puan : '-';
-        const rol = t?.rol_ortalamasi ? t.rol_ortalamasi : '-';
-        html += `<td class="text-center fw-bold">
-                    ${puan}<br>
-                    <small class="text-muted">(Rol: ${rol})</small>
-                 </td>`;
-    }
-    html += `</tr>`;
-    
-    html += `</tbody></table></div>`;
-    div.innerHTML = html;
 }
 
 // ============ GELİŞEN/GERİLEYEN GÖSTERGELER ANALİZİ ============
