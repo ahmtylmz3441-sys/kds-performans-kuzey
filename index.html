@@ -167,15 +167,16 @@
 
 <div class="app-wrapper">
     <aside class="sidebar">
-        <div class="p-4 text-center border-bottom border-secondary"><h5 class="fw-bold mb-0">🏥 KHHB-2 GÖREN ANALİZ</h5></div>
-        <nav class="mt-2">
-            <div class="nav-item" onclick="window.gitSayfa('genel-bakis', this)"><i class="bi bi-speedometer2"></i> Genel Bakış</div>
-            <div class="nav-item" onclick="window.gitSayfa('tum-bolge', this)"><i class="bi bi-grid-3x3-gap"></i> Tüm Bölge</div>
-            <div class="nav-item" onclick="window.gitSayfa('kurum-bazli', this)"><i class="bi bi-hospital"></i> Kurum Bazlı</div>
-            <div class="nav-item" onclick="window.gitSayfa('raporlar', this)"><i class="bi bi-graph-up"></i> Raporlar</div>
-            <div class="nav-item" onclick="window.gitSayfa('itirazlar', this)"><i class="bi bi-chat-dots"></i> İtirazlar</div>
-        </nav>
-    </aside>
+    <div class="p-4 text-center border-bottom border-secondary"><h5 class="fw-bold mb-0">🏥 KHHB-2 GÖREN ANALİZ</h5></div>
+    <nav class="mt-2">
+        <div class="nav-item" onclick="window.gitSayfa('genel-bakis', this)"><i class="bi bi-speedometer2"></i> Genel Bakış</div>
+        <div class="nav-item" onclick="window.gitSayfa('tum-bolge', this)"><i class="bi bi-grid-3x3-gap"></i> Tüm Bölge</div>
+        <div class="nav-item" onclick="window.gitSayfa('kurum-bazli', this)"><i class="bi bi-hospital"></i> Kurum Bazlı</div>
+        <div class="nav-item" onclick="window.gitSayfa('raporlar', this)"><i class="bi bi-graph-up"></i> Raporlar</div>
+        <div class="nav-item" onclick="window.gitSayfa('itirazlar', this)"><i class="bi bi-chat-dots"></i> İtirazlar</div>
+        <div class="nav-item" onclick="window.gitSayfa('karsilastirma', this)"><i class="bi bi-arrow-left-right"></i> Karşılaştırma</div>
+    </nav>
+</aside>
 
     <main class="main-content">
         <header class="top-header"><h5 id="page-title" class="mb-0 fw-bold">Genel Bakış</h5><div class="badge bg-success px-3">🟢 Canlı</div></header>
@@ -568,6 +569,105 @@ if (pdfUrl) {
     await kritikAnaliziniYukle();
 }
 
+    // ============ KARŞILAŞTIRMA FONKSİYONLARI ============
+async function karsilastirmaKurumListesiGuncelle() {
+    const tip = document.getElementById('karsTip').value;
+    let q = _supabase.from('performans').select('kurum_adi');
+    if (tip) q = q.eq('kurum_tipi', tip);
+    const { data } = await q;
+    const kurumlar = [...new Set((data||[]).map(k => k.kurum_adi))].sort();
+    const kurumSelect = document.getElementById('karsKurum');
+    kurumSelect.innerHTML = '<option value="">Seçiniz</option>' + kurumlar.map(k => `<option value="${k}">${k}</option>`).join('');
+}
+
+async function karsilastirmaYukle() {
+    const kurum = document.getElementById('karsKurum').value;
+    if (!kurum) { alert('Lütfen bir kurum seçin'); return; }
+    
+    const div = document.getElementById('karsilastirmaIcerik');
+    div.innerHTML = '<div class="text-center py-5">Yükleniyor...</div>';
+    
+    // Kurumun tüm dönemlerini çek
+    const { data } = await _supabase
+        .from('performans')
+        .select('*')
+        .eq('kurum_adi', kurum)
+        .order('yil', { ascending: true })
+        .order('donem', { ascending: true });
+    
+    if (!data || data.length === 0) {
+        div.innerHTML = '<div class="alert alert-warning">Bu kurum için veri bulunamadı.</div>';
+        return;
+    }
+    
+    // Dönemleri ve göstergeleri organize et
+    const donemler = [...new Map(data.map(r => [`${r.yil}|${r.donem}`, { yil: r.yil, donem: r.donem, label: `${AYLAR[r.donem]} ${r.yil}` }])).values()].sort((a,b) => {
+        if (a.yil !== b.yil) return a.yil - b.yil;
+        return a.donem - b.donem;
+    });
+    
+    const gostergeler = [...new Map(data.map(r => [r.gosterge_adi, { ad: r.gosterge_adi, kod: r.gosterge_kodu, yon: r.gosterge_yonu }])).values()];
+    
+    // Tablo oluştur
+    let html = `<h6 class="mb-3">📊 ${kurum} - Dönemsel Karşılaştırma</h6>`;
+    html += `<div class="table-responsive" style="max-height: 600px; overflow-x: auto;">`;
+    html += `<table class="table table-sm table-bordered">`;
+    
+    // Başlık satırı
+    html += `<thead class="table-light"><tr><th style="position: sticky; left: 0; background: white; z-index: 1;">Gösterge</th><th>Yön</th>`;
+    for (const d of donemler) {
+        html += `<th class="text-center">${d.label}<br><small class="text-muted">GD / Puan</small></th>`;
+    }
+    html += `</tr></thead><tbody>`;
+    
+    // Her gösterge için satır
+    for (const g of gostergeler) {
+        const yonClass = g.yon === 'Pozitif' ? 'yon-ok-pozitif' : 'yon-ok-negatif';
+        const yonText = g.yon === 'Pozitif' ? '↑' : '↓';
+        html += `<tr>
+            <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500;">${g.ad}</td>
+            <td class="${yonClass} text-center">${yonText} ${g.yon === 'Pozitif' ? 'Pozitif' : 'Negatif'}</td>`;
+        
+        for (const d of donemler) {
+            const row = data.find(r => r.gosterge_adi === g.ad && r.yil === d.yil && r.donem === d.donem);
+            const gd = row?.gd !== null && row?.gd !== undefined ? row.gd : '-';
+            const puan = row?.puan !== null && row?.puan !== undefined ? `${row.puan}/${row.gp}` : '-';
+            const puanClass = row?.puan && row?.gp && row.puan >= row.gp/2 ? 'text-success' : (row?.puan ? 'text-danger' : '');
+            html += `<td class="text-center">
+                        <div><strong>${gd}</strong></div>
+                        <small class="${puanClass}">${puan}</small>
+                     </td>`;
+        }
+        html += `</tr>`;
+    }
+    
+    // Toplam puan satırı
+    const { data: toplamlar } = await _supabase
+        .from('toplam_puanlar')
+        .select('toplam_puan, rol_ortalamasi, yil, donem')
+        .eq('kurum_adi', kurum)
+        .order('yil', { ascending: true })
+        .order('donem', { ascending: true });
+    
+    html += `<tr class="table-secondary">
+        <td style="position: sticky; left: 0; background: #e9ecef; z-index: 1; font-weight: bold;">🏆 TOPLAM PUAN</td>
+        <td class="text-center">-</td>`;
+    
+    for (const d of donemler) {
+        const t = toplamlar?.find(t => t.yil === d.yil && t.donem === d.donem);
+        const puan = t?.toplam_puan ? t.toplam_puan : '-';
+        const rol = t?.rol_ortalamasi ? t.rol_ortalamasi : '-';
+        html += `<td class="text-center fw-bold">
+                    ${puan}<br>
+                    <small class="text-muted">(Rol: ${rol})</small>
+                 </td>`;
+    }
+    html += `</tr>`;
+    
+    html += `</tbody></table></div>`;
+    div.innerHTML = html;
+}
+
 // ============ GELİŞEN/GERİLEYEN GÖSTERGELER ANALİZİ ============
 async function gelismeAnaliziniYukle() {
     // Ocak ve Şubat verilerini çek
@@ -729,6 +829,7 @@ async function kritikAnaliziniYukle() {
         if (sayfa === 'raporlar') await raporlar();
         if (sayfa === 'itirazlar') await window.itirazlariGoster();
         if (sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
+        if (sayfa === 'karsilastirma') await karsilastirmaYukle();
     };
 
     window.gitSayfa('genel-bakis');
