@@ -603,7 +603,7 @@
                     ] 
                 }, 
                 options: { 
-                    indexAxis: 'y', // Soldan sağa çubuk grafik tasarımı
+                    indexAxis: 'y', // Yatay Görünüm
                     responsive: true, 
                     maintainAspectRatio: false,
                     plugins: {
@@ -794,7 +794,6 @@
         const raporUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=Rapor`;
         
         try {
-            // İki sekmeyi de aynı anda asenkron çekiyoruz
             const [dataRes, raporRes] = await Promise.all([
                 fetch(dataUrl),
                 fetch(raporUrl)
@@ -848,7 +847,7 @@
     function renderRaporView() {
         const rows = googleSheetsData.rawRapor;
         if(!rows || rows.length === 0) {
-            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Rapor sekmesinde veri yok.</div>';
+            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Rapor sekmesinde veri bulunamadı.</div>';
             return;
         }
         
@@ -863,11 +862,11 @@
         `;
         
         cleanRows.forEach((row, rIdx) => {
-            let isHeader = rIdx === 0 || row.some(c => c && (c.includes('KUZEY') || c.includes('RAPOR') || c.includes('Kurum')));
+            let isHeader = rIdx === 0 || row.some(c => c && (c.includes('KUZEY') || c.includes('RAPOR') || c.includes('Kurum') || c.includes('AYLIK')));
             let trClass = isHeader ? 'table-dark text-white fw-bold' : '';
             
             // Eğer toplam/ortalama satırıysa vurgula
-            let isSummary = row.some(c => c && (c.toLowerCase().includes('toplam') || c.toLowerCase().includes('ortalama')));
+            let isSummary = row.some(c => c && (c.toLowerCase().includes('toplam') || c.toLowerCase().includes('ortalama') || c.toLowerCase().includes('genel')));
             if(isSummary && !isHeader) trClass = 'table-secondary fw-bold text-dark';
             
             html += `<tr class="${trClass}">`;
@@ -1156,28 +1155,52 @@
         document.getElementById('eTabloDashboardContent').innerHTML = html;
     }
 
-    // Quoted-Comma duyarlı CSV ayrıştırıcı
+    // Gelişmiş Dinamik CSV Ayrıştırıcı (Bölgesel virgül/noktalı virgül/tab ayarlarını otomatik algılar)
     function parseCSV(text) {
-        let p = '', c = '', r = [];
-        let q = false;
-        let row = [''];
-        for (let i = 0; i < text.length; i++) {
-            c = text[i];
-            let next = text[i+1];
-            if (c === '"') {
-                if (q && next === '"') { row[row.length - 1] += '"'; i++; }
-                else { q = !q; }
-            } else if (c === ',' && !q) {
-                row.push('');
-            } else if ((c === '\r' || c === '\n') && !q) {
-                if (c === '\r' && next === '\n') { i++; }
-                r.push(row);
-                row = [''];
-            } else {
-                row[row.length - 1] += c;
+        if (!text) return [];
+        
+        const lines = text.split(/\r?\n/);
+        if (lines.length === 0) return [];
+        
+        // İlk satırdaki noktalı virgül, virgül ve tab karakterlerini sayarak delimiterı (ayırıcıyı) otomatik tespit ediyoruz
+        const firstLine = lines[0];
+        const commaCount = (firstLine.match(/,/g) || []).length;
+        const semiCount = (firstLine.match(/;/g) || []).length;
+        const tabCount = (firstLine.match(/\t/g) || []).length;
+        
+        let delimiter = ',';
+        if (semiCount > commaCount) delimiter = ';';
+        if (tabCount > semiCount && tabCount > commaCount) delimiter = '\t';
+        
+        let r = [];
+        lines.forEach(line => {
+            if (!line.trim()) return;
+            
+            let row = [];
+            let inQuotes = false;
+            let currentCell = '';
+            
+            for (let i = 0; i < line.length; i++) {
+                let c = line[i];
+                let next = line[i+1];
+                
+                if (c === '"') {
+                    if (inQuotes && next === '"') { 
+                        currentCell += '"'; 
+                        i++; 
+                    } else { 
+                        inQuotes = !inQuotes; 
+                    }
+                } else if (c === delimiter && !inQuotes) {
+                    row.push(currentCell.replace(/^"(.*)"$/, '$1').trim());
+                    currentCell = '';
+                } else {
+                    currentCell += c;
+                }
             }
-        }
-        if (row.length > 1 || row[0] !== '') { r.push(row); }
+            row.push(currentCell.replace(/^"(.*)"$/, '$1').trim());
+            r.push(row);
+        });
         return r;
     }
 
