@@ -59,6 +59,7 @@
             <div class="nav-item" data-page="karsilastirma"><i class="bi bi-arrow-left-right"></i> Dönemsel Karşılaştırma</div>
             <div class="nav-item" data-page="raporlar"><i class="bi bi-graph-up"></i> Raporlar</div>
             <div class="nav-item" data-page="itirazlar"><i class="bi bi-chat-dots"></i> İtirazlar</div>
+            <div class="nav-item" data-page="e-tablo"><i class="bi bi-file-earmark-spreadsheet text-success"></i> Canlı E-Tablo</div>
         </nav>
     </aside>
 
@@ -88,6 +89,7 @@
             <section id="karsilastirma" class="page"></section>
             <section id="raporlar" class="page"></section>
             <section id="itirazlar" class="page"></section>
+            <section id="e-tablo" class="page"><div id="eTabloIcerik" class="kds-card">Canlı veriler yükleniyor...</div></section>
         </div>
     </main>
 </div>
@@ -621,6 +623,7 @@
                 let kritikDurum = false;
                 if(r.gosterge_yonu === 'Pozitif' && r.gd < r.tr_ort) {
                     sapmaMiktari = ((r.tr_ort - r.gd) / r.tr_ort) * 100;
+                    criticStatus = true;
                     kritikDurum = true;
                 } else if(r.gosterge_yonu === 'Negatif' && r.gd > r.tr_ort) {
                     sapmaMiktari = ((r.gd - r.tr_ort) / r.tr_ort) * 100;
@@ -744,6 +747,90 @@
         }, 100);
     };
 
+    // ---------- GOOGLE E-TABLO VERI CEKME ----------
+    async function fetchGoogleSheetData() {
+        showLoading('eTabloIcerik', 'Google E-Tablo verileri canlı olarak çekiliyor, lütfen bekleyiniz...');
+        try {
+            const spreadsheetId = '1bK5aWZH-dQt3ej8kD548KXlu_owvHMomildqmdu6JwI';
+            const sheetName = 'DATA';
+            const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+            
+            const response = await fetch(url);
+            if(!response.ok) throw new Error('Ağ yanıtı başarıyla alınamadı.');
+            const csvText = await response.text();
+            
+            const rows = parseCSV(csvText);
+            
+            if (rows.length === 0) {
+                document.getElementById('eTabloIcerik').innerHTML = '<div class="alert alert-warning">Google E-Tabloda veri bulunamadı.</div>';
+                return;
+            }
+            
+            const headers = rows[0];
+            const dataRows = rows.slice(1);
+            
+            let html = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-file-earmark-spreadsheet text-success"></i> Google Sheets Canlı Data Görünümü (${dataRows.length} Kayıt)</h6>
+                    <button class="btn btn-sm btn-outline-success" onclick="fetchGoogleSheetData()"><i class="bi bi-arrow-clockwise"></i> Yenile</button>
+                </div>
+                <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                    <table class="table table-sm table-striped table-hover align-middle table-bordered" style="font-size: 11.5px;">
+                        <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
+                            <tr>
+                                ${headers.map(h => `<th>${h}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${dataRows.map(row => `
+                                <tr>
+                                    ${row.map(cell => `<td>${cell !== null && cell !== undefined ? cell : ''}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('eTabloIcerik').innerHTML = html;
+            
+        } catch(err) {
+            console.error('Google E-Tablo verisi alınamadı:', err);
+            document.getElementById('eTabloIcerik').innerHTML = `
+                <div class="alert alert-danger py-4">
+                    <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> Canlı Veri Bağlantısı Kurulamadı</h5>
+                    <p class="small mb-3">Google E-Tablo'dan canlı veri çekilirken bir hata ile karşılaşıldı. Lütfen Google E-Tablonuzun paylaşım ayarlarını kontrol edin.</p>
+                    <div class="p-2 bg-light rounded text-monospace small text-danger mb-3" style="font-size:11px;">Hata Detayı: ${err.message}</div>
+                    <button class="btn btn-sm btn-primary px-3" onclick="fetchGoogleSheetData()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
+                </div>
+            `;
+        }
+    }
+
+    // Quoted-Comma duyarlı CSV ayrıştırıcı
+    function parseCSV(text) {
+        let p = '', c = '', r = [];
+        let q = false;
+        let row = [''];
+        for (let i = 0; i < text.length; i++) {
+            c = text[i];
+            let next = text[i+1];
+            if (c === '"') {
+                if (q && next === '"') { row[row.length - 1] += '"'; i++; }
+                else { q = !q; }
+            } else if (c === ',' && !q) {
+                row.push('');
+            } else if ((c === '\r' || c === '\n') && !q) {
+                if (c === '\r' && next === '\n') { i++; }
+                r.push(row);
+                row = [''];
+            } else {
+                row[row.length - 1] += c;
+            }
+        }
+        if (row.length > 1 || row[0] !== '') { r.push(row); }
+        return r;
+    }
+
     // ---------- SAYFA GEÇIŞLERI ----------
     window.gitSayfa = async function(sayfa, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -836,6 +923,7 @@
             await window.karsilastirmaKurumListesiGuncelle();
         }
         if(sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
+        if(sayfa === 'e-tablo') await fetchGoogleSheetData();
     };
 
     // ---------- BAŞLATMA ----------
@@ -849,7 +937,6 @@
                 const tip = fTipSelect.value;
                 let q = _supabase.from('toplam_puanlar').select('kurum_adi');
                 
-                // ADSM filtrelemesinde ADSH kurumlarını da (Ataşehir vb.) kapsayacak şekilde güncellendi
                 if(tip === 'ADSM') q = q.in('kurum_tipi', ['ADSM', 'ADSH']);
                 else if(tip) q = q.eq('kurum_tipi', tip);
                 
