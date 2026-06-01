@@ -34,7 +34,7 @@
         .badge-itiraz-var { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-left: 8px; }
         .rank-card { background: #f8f9fa; border-radius: 12px; padding: 12px; margin-bottom: 8px; transition: 0.2s; display: flex; align-items: center; justify-content: space-between; }
         .rank-number { width: 28px; height: 28px; background: var(--accent); color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px; }
-        .chart-container { position: relative; height: 320px; margin-top: 15px; }
+        .chart-container { position: relative; height: 400px; margin-top: 15px; }
         .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
         .modal-overlay.active { display: flex; }
         .modal-container { background: white; width: 600px; max-width:90%; max-height:80vh; overflow-y:auto; border-radius:20px; padding:24px; position: relative; }
@@ -244,13 +244,11 @@
         let seciliYil = document.getElementById('f-yil')?.value;
         let seciliDonem = document.getElementById('f-donem')?.value;
         
-        // 1. GENEL BAKIŞ SEKMEDEKİ VERİ SORUNUNUN ÇÖZÜLMESİ
         if(!seciliYil || !seciliDonem) {
             const { data: enSon } = await _supabase.from('toplam_puanlar').select('yil, donem').order('yil', {ascending:false}).order('donem', {ascending:false}).limit(1).maybeSingle();
             seciliYil = enSon?.yil || '2026';
             seciliDonem = enSon?.donem || '2';
             
-            // Küresel filtrelerin değerlerini de güncelle
             if(document.getElementById('f-yil')) document.getElementById('f-yil').value = seciliYil;
             if(document.getElementById('f-donem')) document.getElementById('f-donem').value = seciliDonem;
         }
@@ -394,6 +392,37 @@
         }).join('');
     };
 
+    // ---------- GÖSTERGE LİSTESİNİ DİNAMİK YÜKLE ----------
+    async function gostergeListesiniYukle(kurumTipi) {
+        let q = _supabase.from('performans').select('gosterge_adi, gosterge_kodu');
+        if(kurumTipi === 'Hastane') {
+            q = q.eq('kurum_tipi', 'Hastane');
+        } else if(kurumTipi === 'ADSM') {
+            q = q.in('kurum_tipi', ['ADSM', 'ADSH']);
+        }
+        const { data } = await q;
+        const unique = [];
+        const seen = new Set();
+        data?.forEach(item => {
+            const label = item.gosterge_kodu ? `${item.gosterge_kodu} - ${item.gosterge_adi}` : item.gosterge_adi;
+            if(!seen.has(item.gosterge_adi)) {
+                seen.add(item.gosterge_adi);
+                unique.push({ adi: item.gosterge_adi, kodu: item.gosterge_kodu, label: label });
+            }
+        });
+        unique.sort((a,b) => {
+            const numA = parseInt(a.kodu?.split('-')[2]) || 0;
+            const numB = parseInt(b.kodu?.split('-')[2]) || 0;
+            return numA - numB;
+        });
+        
+        const selectEl = document.getElementById('raporGosterge');
+        if (selectEl) {
+            selectEl.innerHTML = '<option value="">Analiz Edilecek Gösterge Seçin</option>' + 
+                unique.map(g => `<option value="${g.adi}">${g.label}</option>`).join('');
+        }
+    }
+
     // ---------- RAPORLAR SAYFASI ----------
     async function raporlar() {
         const container = document.getElementById('raporlar');
@@ -405,20 +434,20 @@
             <div class="row g-4">
                 <div class="col-12">
                     <div class="kds-card">
-                        <h6>📈 Gösterge Bazlı Kurumsal Trend Grafiği</h6>
+                        <h6>📈 Gösterge Bazlı Kurumsal Trend Grafiği (Yatay Görünüm)</h6>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-5">
-                                <label class="form-label small fw-bold text-secondary">Analiz Edilecek Gösterge</label>
-                                <select id="raporGosterge" class="form-select form-select-sm">
-                                    <option value="">Gösterge Seçiniz</option>
-                                </select>
-                            </div>
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
                                 <select id="raporKurumTipi" class="form-select form-select-sm">
                                     <option value="">Tümü (Hastane & ADSM)</option>
                                     <option value="Hastane">Hastane</option>
                                     <option value="ADSM">ADSM / ADSH</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold text-secondary">Analiz Edilecek Gösterge</label>
+                                <select id="raporGosterge" class="form-select form-select-sm">
+                                    <option value="">Gösterge Seçiniz</option>
                                 </select>
                             </div>
                             <div class="col-md-3 d-flex align-items-end">
@@ -469,9 +498,13 @@
                 </div>
             </div>`;
         
-        const { data: gList } = await _supabase.from('performans').select('gosterge_adi');
-        const gostergeler = [...new Set((gList||[]).map(g=>g.gosterge_adi))].sort();
-        document.getElementById('raporGosterge').innerHTML = '<option value="">Analiz Edilecek Gösterge Seçin</option>' + gostergeler.map(g=>`<option value="${g}">${g}</option>`).join('');
+        // İlk açılışta tüm göstergeleri yükle
+        await gostergeListesiniYukle('');
+        
+        // Kurum türü değiştiğinde ilgili göstergeleri dinamik olarak getir
+        document.getElementById('raporKurumTipi').onchange = async (e) => {
+            await gostergeListesiniYukle(e.target.value);
+        };
         
         document.getElementById('trendGosterBtn').onclick = async () => {
             const gosterge = document.getElementById('raporGosterge').value;
@@ -529,6 +562,7 @@
                     ] 
                 }, 
                 options: { 
+                    indexAxis: 'y', // Soldan sağa çubuk grafik tasarımı
                     responsive: true, 
                     maintainAspectRatio: false,
                     plugins: {
@@ -544,24 +578,19 @@
                     scales: {
                         x: {
                             grid: {
-                                display: false
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                borderDash: [5, 5]
                             }
                         },
                         y: {
                             grid: {
-                                color: 'rgba(0, 0, 0, 0.05)',
-                                borderDash: [5, 5]
+                                display: false
                             }
                         }
                     },
                     animation: {
-                        x: {
-                            duration: 1000,
-                            from: 0
-                        },
-                        y: {
-                            duration: 800
-                        }
+                        duration: 1000,
+                        easing: 'easeOutQuart'
                     }
                 } 
             });
@@ -819,8 +848,11 @@
             fTipSelect.onchange = async () => {
                 const tip = fTipSelect.value;
                 let q = _supabase.from('toplam_puanlar').select('kurum_adi');
-                if(tip === 'ADSM') q = q.eq('kurum_tipi', 'ADSM');
+                
+                // ADSM filtrelemesinde ADSH kurumlarını da (Ataşehir vb.) kapsayacak şekilde güncellendi
+                if(tip === 'ADSM') q = q.in('kurum_tipi', ['ADSM', 'ADSH']);
                 else if(tip) q = q.eq('kurum_tipi', tip);
+                
                 const { data } = await q;
                 const tekil = [...new Set((data||[]).map(d=>d.kurum_adi))].sort();
                 document.getElementById('f-kurum').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k=>`<option value="${k}">${k}</option>`).join('');
