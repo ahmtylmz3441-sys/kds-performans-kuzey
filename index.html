@@ -98,8 +98,8 @@
                 <div class="kds-card">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
                         <div>
-                            <h5 class="fw-bold mb-0 text-success"><i class="bi bi-file-earmark-spreadsheet"></i> E-Tablo Canlı Entegrasyon & Analiz Paneli</h5>
-                            <p class="text-muted small mb-0">Google Sheets üzerinden canlı olarak çekilen DATA ve Rapor sekmelerinin eş zamanlı analizidir.</p>
+                            <h5 class="fw-bold mb-0 text-success"><i class="bi bi-file-earmark-spreadsheet"></i> E-Tablo Canlı Hesaplama & Analiz Paneli</h5>
+                            <p class="text-muted small mb-0">E-Tablonuzdaki DATA sekmesini formüllerle dinamik işleyerek özet ve trend grafikleri oluşturur.</p>
                         </div>
                         <button class="btn btn-sm btn-success" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
                     </div>
@@ -107,10 +107,10 @@
                     <!-- İç Sekmeler -->
                     <ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
                         <li style="flex:1;">
-                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-rapor-btn" onclick="window.switchETabloSubTab('rapor')">📋 Hazır Rapor Görünümü</button>
+                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-rapor-btn" onclick="window.switchETabloSubTab('rapor')">📋 Günlük Durum Raporu (Son Gün)</button>
                         </li>
                         <li style="flex:1;">
-                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analiz-btn" onclick="window.switchETabloSubTab('analiz')">📊 DATA Analiz Dashboard</button>
+                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analiz-btn" onclick="window.switchETabloSubTab('analiz')">📊 İnteraktif Trend Analizi</button>
                         </li>
                         <li style="flex:1;">
                             <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-raw-btn" onclick="window.switchETabloSubTab('raw')">🔍 Ham DATA Tablosu</button>
@@ -171,6 +171,34 @@
             tarih: 'olusturma_tarihi'
         }
     };
+
+    // ---------- ANALİZ SABİTLERİ (KULLANICIDAN ALINAN TANIMLAR) ----------
+    const HOSPITALS = [
+        "Beykoz DH",
+        "Çekmeköy DH",
+        "Dr. Siyami Ersek GKDC EAH",
+        "Fatih Sultan Mehmet EAH",
+        "Göztepe ŞH",
+        "Haydarpaşa Numune EAH",
+        "Prof. Dr. Feriha Öz ADH",
+        "Sancaktepe EAH",
+        "Sultan 2. Abdulhamid Han EAH",
+        "Ümraniye EAH",
+        "Üsküdar DH"
+    ];
+
+    const VARIABLES = [
+        "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)",
+        "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)",
+        "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)",
+        "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)",
+        "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)",
+        "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)",
+        "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)",
+        "SERVİS YATAK SAYISI TOPLAMI (AKTİF)",
+        "SERVİS BOŞ YATAK SAYISI TOPLAMI (24:00'DE ANLIK)",
+        "ACİLDE SERVİS YATIŞ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"
+    ];
 
     // ---------- GLOBAL DEĞİŞKENLER ----------
     let charts = {};
@@ -787,7 +815,7 @@
 
     // ---------- GOOGLE E-TABLO CANLI VERI VE ANALIZ ENTEGRASYONU ----------
     async function initETabloDashboard() {
-        showLoading('eTabloDashboardContent', 'Google E-Tablo verileri (DATA ve Rapor sekmeleri) canlı olarak çekiliyor, lütfen bekleyiniz...');
+        showLoading('eTabloDashboardContent', 'Google E-Tablo verileri canlı olarak çekiliyor ve formüllerle işleniyor, lütfen bekleyiniz...');
         
         const spreadsheetId = '1bK5aWZH-dQt3ej8kD548KXlu_owvHMomildqmdu6JwI';
         const dataUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=DATA`;
@@ -800,7 +828,7 @@
             ]);
             
             if(!dataRes.ok || !raporRes.ok) {
-                throw new Error("E-Tablo sekmelerinden biri veya her ikisi başarıyla alınamadı.");
+                throw new Error("E-Tablo DATA sekmesi başarıyla alınamadı.");
             }
             
             const dataText = await dataRes.text();
@@ -843,50 +871,153 @@
         }
     }
 
-    // Google Sheets "Rapor" Sekmesini Çizdir
+    // E-Tablo Tarihlerini Doğru Algılayan Helper (Görsel 2'deki sıralamayı garanti eder)
+    function parseSheetDate(dateStr) {
+        if(!dateStr) return null;
+        dateStr = dateStr.trim();
+        const parts = dateStr.split('.');
+        if(parts.length === 3 && parts[2].length === 4) {
+            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`); // YYYY-MM-DD
+        }
+        return new Date(dateStr);
+    }
+
+    // Veritabanındaki tüm benzersiz tarihleri sıralı dizi olarak çeker
+    function getSortedDates(rows) {
+        const dates = new Set();
+        for(let i = 1; i < rows.length; i++) {
+            const dStr = rows[i][1]; // B Sütunu (Tarih)
+            if(dStr && dStr.trim()) {
+                dates.add(dStr.trim());
+            }
+        }
+        return Array.from(dates).sort((a,b) => {
+            const da = parseSheetDate(a);
+            const db = parseSheetDate(b);
+            return da - db;
+        });
+    }
+
+    // JavaScript SUMIFS (ÇOKETOPLA) Taklit Fonksiyonu
+    function sumifs(rows, sumColIdx, criteriaPairs) {
+        let total = 0;
+        for(let i = 1; i < rows.length; i++) {
+            const r = rows[i];
+            let matches = true;
+            for(let pair of criteriaPairs) {
+                const colIdx = pair.colIdx;
+                const val = pair.val;
+                if(r[colIdx] === undefined || r[colIdx].toString().trim().toLowerCase() !== val.toString().trim().toLowerCase()) {
+                    matches = false;
+                    break;
+                }
+            }
+            if(matches && r[sumColIdx]) {
+                const num = parseFloat(r[sumColIdx].toString().replace(',', '.').trim());
+                if(!isNaN(num)) {
+                    total += num;
+                }
+            }
+        }
+        return total;
+    }
+
+    // ÇOKETOPLA Formülleri ile Yoğun Bakım Durum Raporunu Çizdir (Görsel 1'deki Tablonun Birebir Canlı JavaScript Karşılığı)
     function renderRaporView() {
-        const rows = googleSheetsData.rawRapor;
-        if(!rows || rows.length === 0) {
-            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Rapor sekmesinde veri bulunamadı.</div>';
+        const rows = googleSheetsData.rawDATA;
+        if(!rows || rows.length <= 1) {
+            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Analiz edilecek ham DATA bulunamadı.</div>';
             return;
         }
         
-        // Boş satırları temizle
-        const cleanRows = rows.filter(r => r.some(cell => cell && cell.trim() !== ''));
+        const sortedDates = getSortedDates(rows);
+        if(sortedDates.length === 0) {
+            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Verilerde geçerli tarih bulunamadı.</div>';
+            return;
+        }
         
-        let html = `
-            <div class="alert alert-info py-2 small mb-3"><i class="bi bi-info-circle"></i> Aşağıdaki veriler Google E-Tablonuzdaki formüllerle işlenmiş güncel <b>Rapor</b> sekmesini yansıtmaktadır.</div>
-            <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+        // Formüldeki MAK(DATA!B:B) tarih karşılığı
+        const maxDate = sortedDates[sortedDates.length - 1];
+        
+        let tableHtml = `
+            <div class="alert alert-success py-2 small mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calendar-check"></i> Canlı Rapor Tarihi (Son Gün / MAK): <b>${maxDate}</b></span>
+                <span class="badge bg-dark">${HOSPITALS.length} Hastane Canlı Hesaplanıyor</span>
+            </div>
+            <div class="table-responsive">
                 <table class="table table-sm table-hover table-bordered bg-white align-middle" style="font-size: 11.5px;">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>HASTANE</th>
+                            <th class="text-center">🏥 3. Seviye YB Yatak</th>
+                            <th class="text-center">🛏️ Dolu Yatak</th>
+                            <th class="text-center">🚪 Boş Yatak</th>
+                            <th class="text-center">📊 Dolu Yatak Oranı</th>
+                            <th class="text-center">🚨 YB Bekleyen Hasta</th>
+                            <th class="text-center">📥 Yatırılan Hasta (Kendi)</th>
+                            <th class="text-center">🚚 Dış Kurumdan Gelen</th>
+                        </tr>
+                    </thead>
                     <tbody>
         `;
         
-        cleanRows.forEach((row, rIdx) => {
-            let isHeader = rIdx === 0 || row.some(c => c && (c.includes('KUZEY') || c.includes('RAPOR') || c.includes('Kurum') || c.includes('AYLIK')));
-            let trClass = isHeader ? 'table-dark text-white fw-bold' : '';
+        let totals = { yatak: 0, dolu: 0, bos: 0, bekleyen: 0, yatirilan: 0, disKurum: 0 };
+        
+        HOSPITALS.forEach(h => {
+            // ÇOKETOPLA(DATA!E:E; DATA!C:C; $A12; DATA!D:D; "Değişken"; DATA!B:B; MAK(DATA!B:B))
+            const yatak = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)"}]);
+            const bos = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)"}]);
             
-            // Eğer toplam/ortalama satırıysa vurgula
-            let isSummary = row.some(c => c && (c.toLowerCase().includes('toplam') || c.toLowerCase().includes('ortalama') || c.toLowerCase().includes('genel')));
-            if(isSummary && !isHeader) trClass = 'table-secondary fw-bold text-dark';
+            // Dolu Yatak = Yatak - Boş Yatak
+            const dolu = yatak - bos;
+            const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(2).replace('.', ',') : "0,00";
             
-            html += `<tr class="${trClass}">`;
-            row.forEach((cell, cIdx) => {
-                let cellText = cell !== null && cell !== undefined ? cell : "";
-                
-                // Sayısal değerleri sağa yasla
-                let isNumeric = !isNaN(cellText.trim().replace('%', '').replace(',', '.')) && cellText.trim() !== '';
-                let alignment = isNumeric ? 'text-end' : 'text-start';
-                
-                html += `<td class="${alignment}">${cellText}</td>`;
-            });
-            html += `</tr>`;
+            const bekleyen = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"}]);
+            const yatirilan = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)"}]);
+            const disKurum = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)"}]);
+            
+            // Toplam Satırı Değerlerini Kümülatif Ekle
+            totals.yatak += yatak;
+            totals.dolu += dolu;
+            totals.bos += bos;
+            totals.bekleyen += bekleyen;
+            totals.yatirilan += yatirilan;
+            totals.disKurum += disKurum;
+            
+            tableHtml += `
+                <tr>
+                    <td class="fw-bold text-dark bg-light">${h}</td>
+                    <td class="text-center">${yatak}</td>
+                    <td class="text-center">${dolu}</td>
+                    <td class="text-center">${bos}</td>
+                    <td class="text-center fw-bold text-primary">${oranStr}%</td>
+                    <td class="text-center">${bekleyen}</td>
+                    <td class="text-center">${yatirilan}</td>
+                    <td class="text-center">${disKurum}</td>
+                </tr>
+            `;
         });
         
-        html += `</tbody></table></div>`;
-        document.getElementById('eTabloDashboardContent').innerHTML = html;
+        // Excel Toplam Satırı (Görsel 1'deki "TOPLAM")
+        const totalOranStr = totals.yatak > 0 ? (totals.dolu / totals.yatak * 100).toFixed(2).replace('.', ',') : "0,00";
+        tableHtml += `
+            <tr class="table-secondary fw-bold text-dark">
+                <td>TOPLAM</td>
+                <td class="text-center">${totals.yatak}</td>
+                <td class="text-center">${totals.dolu}</td>
+                <td class="text-center">${totals.bos}</td>
+                <td class="text-center text-primary">${totalOranStr}%</td>
+                <td class="text-center">${totals.bekleyen}</td>
+                <td class="text-center">${totals.yatirilan}</td>
+                <td class="text-center">${totals.disKurum}</td>
+            </tr>
+        `;
+        
+        tableHtml += `</tbody></table></div>`;
+        document.getElementById('eTabloDashboardContent').innerHTML = tableHtml;
     }
 
-    // Google Sheets "DATA" Sekmesini Akıllı Analiz Et ve Görselleştir
+    // Seçilen Hastane ve Değişkene Göre Canlı Trend Analiz Modülü (Görsel 2'deki Grafiğin Birebir Web Sürümü)
     function renderDATAAnalizView() {
         const rows = googleSheetsData.rawDATA;
         if(!rows || rows.length <= 1) {
@@ -894,232 +1025,129 @@
             return;
         }
         
-        const headers = rows[0];
-        const dataRows = rows.slice(1);
+        const hospOptions = HOSPITALS.map(h => `<option value="${h}">${h}</option>`).join('');
+        const varOptions = VARIABLES.map(v => `<option value="${v}">${v}</option>`).join('');
         
-        // Kolonları dinamik / akıllı olarak tespit et
-        let kurumColIdx = -1;
-        let puanColIdx = -1;
-        let kategoriColIdx = -1;
-        
-        headers.forEach((h, idx) => {
-            let hLower = h.toLowerCase().trim();
-            if(hLower.includes('kurum') || hLower.includes('hastane') || hLower.includes('adsm')) {
-                if(kurumColIdx === -1) kurumColIdx = idx;
-            }
-            if(hLower.includes('puan') || hLower.includes('skor') || hLower.includes('değer') || hLower.includes('gd')) {
-                if(puanColIdx === -1) puanColIdx = idx;
-            }
-            if(hLower.includes('durum') || hLower.includes('kategori') || hLower.includes('tip') || hLower.includes('grup') || hLower.includes('yön')) {
-                if(kategoriColIdx === -1) kategoriColIdx = idx;
-            }
-        });
-        
-        // Metrik Hesaplamaları
-        let totalRecords = dataRows.length;
-        let uniqueKurumlar = new Set();
-        let totalPuanSum = 0;
-        let numericPuanCount = 0;
-        let categoryCounts = {};
-        let institutionCounts = {};
-        let institutionPuanSums = {};
-        
-        dataRows.forEach(row => {
-            // Kurum Sayacı
-            if(kurumColIdx !== -1 && row[kurumColIdx]) {
-                let kName = row[kurumColIdx].trim();
-                uniqueKurumlar.add(kName);
-                institutionCounts[kName] = (institutionCounts[kName] || 0) + 1;
-            }
-            // Puan Sayacı
-            if(puanColIdx !== -1 && row[puanColIdx]) {
-                let valStr = row[puanColIdx].toString().replace(',', '.').replace('%', '').trim();
-                let val = parseFloat(valStr);
-                if(!isNaN(val)) {
-                    totalPuanSum += val;
-                    numericPuanCount++;
-                    if(kurumColIdx !== -1 && row[kurumColIdx]) {
-                        let kName = row[kurumColIdx].trim();
-                        institutionPuanSums[kName] = (institutionPuanSums[kName] || 0) + val;
-                    }
-                }
-            }
-            // Kategori Sayacı
-            if(kategoriColIdx !== -1 && row[kategoriColIdx]) {
-                let catName = row[kategoriColIdx].trim();
-                categoryCounts[catName] = (categoryCounts[catName] || 0) + 1;
-            }
-        });
-        
-        let avgPuan = numericPuanCount > 0 ? (totalPuanSum / numericPuanCount).toFixed(1) : null;
-        
-        // Dashboard Görünümü
         let html = `
-            <div class="row g-3 mb-4">
-                <div class="col-md-3">
-                    <div class="p-3 bg-light rounded border text-center shadow-sm">
-                        <div class="small fw-bold text-secondary text-uppercase">Toplam DATA Kaydı</div>
-                        <div class="fs-3 fw-bold text-primary">${totalRecords}</div>
-                        <div class="text-muted small" style="font-size:11px;">Canlı Giriş Sayısı</div>
-                    </div>
+            <div class="row g-3 mb-4 p-3 bg-light rounded border">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-secondary">Hastane Seçin</label>
+                    <select id="trendFilterHospital" class="form-select form-select-sm">${hospOptions}</select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-secondary">Değişken Seçin</label>
+                    <select id="trendFilterVariable" class="form-select form-select-sm">${varOptions}</select>
                 </div>
                 <div class="col-md-3">
-                    <div class="p-3 bg-light rounded border text-center shadow-sm">
-                        <div class="small fw-bold text-secondary text-uppercase">Aktif Kurum Sayısı</div>
-                        <div class="fs-3 fw-bold text-success">${uniqueKurumlar.size}</div>
-                        <div class="text-muted small" style="font-size:11px;">DATA'da Geçen</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="p-3 bg-light rounded border text-center shadow-sm">
-                        <div class="small fw-bold text-secondary text-uppercase">Ortalama Veri Puanı</div>
-                        <div class="fs-3 fw-bold text-warning">${avgPuan !== null ? avgPuan : '-'}</div>
-                        <div class="text-muted small" style="font-size:11px;">Sayısal Hücre Ort.</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="p-3 bg-light rounded border text-center shadow-sm">
-                        <div class="small fw-bold text-secondary text-uppercase">Analiz Edilen Kolonlar</div>
-                        <div class="small text-truncate mt-2 fw-semibold text-info" style="font-size:11px;">
-                            ${kurumColIdx !== -1 ? '🟢 Kurum ' : '🔴 Kurum '}
-                            ${puanColIdx !== -1 ? '🟢 Puan ' : '🔴 Puan '}
-                            ${kategoriColIdx !== -1 ? '🟢 Kategori' : '🔴 Kategori'}
-                        </div>
-                        <div class="text-muted small" style="font-size: 10px;">Otomatik Yapılandırma</div>
-                    </div>
+                    <label class="form-label small fw-bold text-secondary">Tarih Aralığı</label>
+                    <select id="trendFilterRange" class="form-select form-select-sm">
+                        <option value="7">Son 7 Gün (Görsel 2)</option>
+                        <option value="14">Son 14 Gün</option>
+                        <option value="30">Son 30 Gün</option>
+                        <option value="all">Tüm Zamanlar</option>
+                    </select>
                 </div>
             </div>
             
-            <div class="row g-4">
-        `;
-        
-        // Grafik 1: Kategori Dağılımı (Halka Grafik)
-        if(Object.keys(categoryCounts).length > 0) {
-            html += `
-                <div class="col-md-6">
-                    <div class="border rounded p-3 bg-white shadow-sm">
-                        <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart-fill text-info"></i> Girdilerin Kategori/Durum Dağılımı</h6>
-                        <div style="height:250px; position:relative;">
-                            <canvas id="eTabloCatChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Grafik 2: Kurum Dağılımı (Yatay Grafik)
-        if(Object.keys(institutionCounts).length > 0) {
-            html += `
-                <div class="col-md-6">
-                    <div class="border rounded p-3 bg-white shadow-sm">
-                        <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart-line-fill text-success"></i> Kurum Girdi Dağılımı (Canlı Veri)</h6>
-                        <div style="height:250px; position:relative;">
-                            <canvas id="eTabloInstChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        html += `
-            </div>
-            
-            <!-- Detaylı Analiz Metrikleri Tablosu -->
-            <div class="mt-4">
-                <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="bi bi-activity text-primary"></i> Canlı DATA - Kurumsal Metrik Özetleri</h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped table-hover align-middle table-bordered" style="font-size:11.5px;">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Kurum Adı</th>
-                                <th class="text-center">Canlı Kayıt Adedi</th>
-                                <th class="text-end">Kümülatif Skor Toplamı</th>
-                                <th class="text-end">Kurum DATA Ortalaması</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${Array.from(uniqueKurumlar).map(kName => {
-                                let count = institutionCounts[kName] || 0;
-                                let sum = institutionPuanSums[kName] || 0;
-                                let avg = count > 0 && institutionPuanSums[kName] !== undefined ? (sum / count).toFixed(2) : '-';
-                                return `
-                                    <tr>
-                                        <td><b>${kName}</b></td>
-                                        <td class="text-center">${count}</td>
-                                        <td class="text-end">${sum.toFixed(1)}</td>
-                                        <td class="text-end fw-bold text-primary">${avg}</td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
+            <div class="border rounded p-3 bg-white shadow-sm mb-4">
+                <h6 id="trendChartTitle" class="fw-bold mb-3 text-secondary"><i class="bi bi-graph-up-arrow"></i> Canlı Trend Çizgisi</h6>
+                <div style="height:320px; position:relative;">
+                    <canvas id="trendAnalysisCanvas"></canvas>
                 </div>
             </div>
         `;
         
         document.getElementById('eTabloDashboardContent').innerHTML = html;
         
-        // Grafiklerin Kurulması (Gecikmeli tetikleme)
-        setTimeout(() => {
-            // Halka Kategori Grafiği
-            if(Object.keys(categoryCounts).length > 0) {
-                const ctxCat = document.getElementById('eTabloCatChart')?.getContext('2d');
-                if(ctxCat) {
-                    if(charts.eTabloCat) charts.eTabloCat.destroy();
-                    charts.eTabloCat = new Chart(ctxCat, {
-                        type: 'doughnut',
-                        data: {
-                            labels: Object.keys(categoryCounts),
-                            datasets: [{
-                                data: Object.values(categoryCounts),
-                                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
-                            }]
+        // Elementlerin tetikleyicilerini bağla
+        document.getElementById('trendFilterHospital').onchange = () => updateTrendChart();
+        document.getElementById('trendFilterVariable').onchange = () => updateTrendChart();
+        document.getElementById('trendFilterRange').onchange = () => updateTrendChart();
+        
+        // Görsel 2'deki varsayılan seçimi ata
+        const defaultH = "Prof. Dr. Feriha Öz ADH";
+        const defaultV = "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)";
+        
+        if (HOSPITALS.includes(defaultH)) {
+            document.getElementById('trendFilterHospital').value = defaultH;
+        }
+        if (VARIABLES.includes(defaultV)) {
+            document.getElementById('trendFilterVariable').value = defaultV;
+        }
+        
+        updateTrendChart();
+    }
+    
+    function updateTrendChart() {
+        const rows = googleSheetsData.rawDATA;
+        const hospital = document.getElementById('trendFilterHospital').value;
+        const variable = document.getElementById('trendFilterVariable').value;
+        const range = document.getElementById('trendFilterRange').value;
+        
+        const sortedDates = getSortedDates(rows);
+        let chartDates = [...sortedDates];
+        
+        if (range !== 'all') {
+            const limit = parseInt(range);
+            chartDates = chartDates.slice(-limit);
+        }
+        
+        // Her bir sıralı tarih için ÇOKETOPLA (SUMIFS) çalıştır
+        const dataPoints = chartDates.map(date => {
+            return sumifs(rows, 4, [
+                { colIdx: 1, val: date },
+                { colIdx: 2, val: hospital },
+                { colIdx: 3, val: variable }
+            ]);
+        });
+        
+        document.getElementById('trendChartTitle').innerHTML = `<i class="bi bi-graph-up-arrow"></i> ${hospital} - <span class="text-primary small fw-semibold">${variable}</span> (Trend)`;
+        
+        const ctx = document.getElementById('trendAnalysisCanvas')?.getContext('2d');
+        if (ctx) {
+            if (charts.eTabloTrend) charts.eTabloTrend.destroy();
+            charts.eTabloTrend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartDates,
+                    datasets: [{
+                        label: variable,
+                        data: dataPoints,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.15,
+                        fill: true,
+                        pointBackgroundColor: '#2563eb',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false }
                         },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } }
-                            }
-                        }
-                    });
-                }
-            }
-            
-            // Kurum Dağılım Yatay Çubuk Grafiği
-            if(Object.keys(institutionCounts).length > 0) {
-                const ctxInst = document.getElementById('eTabloInstChart')?.getContext('2d');
-                if(ctxInst) {
-                    if(charts.eTabloInst) charts.eTabloInst.destroy();
-                    charts.eTabloInst = new Chart(ctxInst, {
-                        type: 'bar',
-                        data: {
-                            labels: Object.keys(institutionCounts),
-                            datasets: [{
-                                label: 'Kayıt Sayısı',
-                                data: Object.values(institutionCounts),
-                                backgroundColor: 'rgba(32, 201, 151, 0.75)',
-                                borderColor: '#20c997',
-                                borderWidth: 1.5,
-                                borderRadius: 4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            indexAxis: 'y', // Soldan sağa premium çubuk grafik görünümü
-                            plugins: {
-                                legend: { display: false }
+                        y: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                borderDash: [5, 5]
                             },
-                            scales: {
-                                x: { grid: { borderDash: [4,4] } },
-                                y: { grid: { display: false } }
+                            ticks: {
+                                precision: 0
                             }
                         }
-                    });
+                    }
                 }
-            }
-        }, 100);
+            });
+        }
     }
 
     // Google Sheets "DATA" Sekmesini Çizdir (Ham Liste)
