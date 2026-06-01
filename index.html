@@ -45,6 +45,11 @@
         .loading { text-align: center; padding: 30px; color: #6c757d; }
         .gosterge-detay { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
         .fs-7 { font-size: 0.85rem; }
+        
+        /* Canlı E-Tablo Alt Menü Butonları */
+        .sub-tab-btn { background: #f8f9fa; color: #495057; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; outline: none; }
+        .sub-tab-btn:hover { background: #e9ecef; }
+        .sub-tab-btn.active { background: var(--accent); color: white; }
     </style>
 </head>
 <body>
@@ -89,7 +94,34 @@
             <section id="karsilastirma" class="page"></section>
             <section id="raporlar" class="page"></section>
             <section id="itirazlar" class="page"></section>
-            <section id="e-tablo" class="page"><div id="eTabloIcerik" class="kds-card">Canlı veriler yükleniyor...</div></section>
+            <section id="e-tablo" class="page">
+                <div class="kds-card">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
+                        <div>
+                            <h5 class="fw-bold mb-0 text-success"><i class="bi bi-file-earmark-spreadsheet"></i> E-Tablo Canlı Entegrasyon & Analiz Paneli</h5>
+                            <p class="text-muted small mb-0">Google Sheets üzerinden canlı olarak çekilen DATA ve Rapor sekmelerinin eş zamanlı analizidir.</p>
+                        </div>
+                        <button class="btn btn-sm btn-success" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
+                    </div>
+                    
+                    <!-- İç Sekmeler -->
+                    <ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
+                        <li style="flex:1;">
+                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-rapor-btn" onclick="window.switchETabloSubTab('rapor')">📋 Hazır Rapor Görünümü</button>
+                        </li>
+                        <li style="flex:1;">
+                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analiz-btn" onclick="window.switchETabloSubTab('analiz')">📊 DATA Analiz Dashboard</button>
+                        </li>
+                        <li style="flex:1;">
+                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-raw-btn" onclick="window.switchETabloSubTab('raw')">🔍 Ham DATA Tablosu</button>
+                        </li>
+                    </ul>
+                    
+                    <div id="eTabloDashboardContent">
+                        <!-- Veriler Dinamik Olarak Buraya Yüklenecektir -->
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
 </div>
@@ -145,6 +177,13 @@
     let itirazPerformansMap = {};
     let mevcutYillarDonemler = { yillar: [], donemler: [] };
     const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+    
+    // Google Sheets Veri Deposu
+    let googleSheetsData = {
+        rawDATA: [],
+        rawRapor: []
+    };
+    let currentETabloSubTab = 'rapor';
 
     // ---------- YARDIMCI FONKSİYONLAR ----------
     const formatDonemAdi = (donem) => AYLAR[donem-1] || `${donem}. Dönem`;
@@ -623,7 +662,6 @@
                 let kritikDurum = false;
                 if(r.gosterge_yonu === 'Pozitif' && r.gd < r.tr_ort) {
                     sapmaMiktari = ((r.tr_ort - r.gd) / r.tr_ort) * 100;
-                    criticStatus = true;
                     kritikDurum = true;
                 } else if(r.gosterge_yonu === 'Negatif' && r.gd > r.tr_ort) {
                     sapmaMiktari = ((r.gd - r.tr_ort) / r.tr_ort) * 100;
@@ -747,63 +785,375 @@
         }, 100);
     };
 
-    // ---------- GOOGLE E-TABLO VERI CEKME ----------
-    async function fetchGoogleSheetData() {
-        showLoading('eTabloIcerik', 'Google E-Tablo verileri canlı olarak çekiliyor, lütfen bekleyiniz...');
+    // ---------- GOOGLE E-TABLO CANLI VERI VE ANALIZ ENTEGRASYONU ----------
+    async function initETabloDashboard() {
+        showLoading('eTabloDashboardContent', 'Google E-Tablo verileri (DATA ve Rapor sekmeleri) canlı olarak çekiliyor, lütfen bekleyiniz...');
+        
+        const spreadsheetId = '1bK5aWZH-dQt3ej8kD548KXlu_owvHMomildqmdu6JwI';
+        const dataUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=DATA`;
+        const raporUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=Rapor`;
+        
         try {
-            const spreadsheetId = '1bK5aWZH-dQt3ej8kD548KXlu_owvHMomildqmdu6JwI';
-            const sheetName = 'DATA';
-            const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+            // İki sekmeyi de aynı anda asenkron çekiyoruz
+            const [dataRes, raporRes] = await Promise.all([
+                fetch(dataUrl),
+                fetch(raporUrl)
+            ]);
             
-            const response = await fetch(url);
-            if(!response.ok) throw new Error('Ağ yanıtı başarıyla alınamadı.');
-            const csvText = await response.text();
-            
-            const rows = parseCSV(csvText);
-            
-            if (rows.length === 0) {
-                document.getElementById('eTabloIcerik').innerHTML = '<div class="alert alert-warning">Google E-Tabloda veri bulunamadı.</div>';
-                return;
+            if(!dataRes.ok || !raporRes.ok) {
+                throw new Error("E-Tablo sekmelerinden biri veya her ikisi başarıyla alınamadı.");
             }
             
-            const headers = rows[0];
-            const dataRows = rows.slice(1);
+            const dataText = await dataRes.text();
+            const raporText = await raporRes.text();
             
-            let html = `
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-file-earmark-spreadsheet text-success"></i> Google Sheets Canlı Data Görünümü (${dataRows.length} Kayıt)</h6>
-                    <button class="btn btn-sm btn-outline-success" onclick="fetchGoogleSheetData()"><i class="bi bi-arrow-clockwise"></i> Yenile</button>
-                </div>
-                <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
-                    <table class="table table-sm table-striped table-hover align-middle table-bordered" style="font-size: 11.5px;">
-                        <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
-                            <tr>
-                                ${headers.map(h => `<th>${h}</th>`).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${dataRows.map(row => `
-                                <tr>
-                                    ${row.map(cell => `<td>${cell !== null && cell !== undefined ? cell : ''}</td>`).join('')}
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            document.getElementById('eTabloIcerik').innerHTML = html;
+            googleSheetsData.rawDATA = parseCSV(dataText);
+            googleSheetsData.rawRapor = parseCSV(raporText);
+            
+            // Aktif alt sekmeyi çizdir
+            renderETabloActiveView();
             
         } catch(err) {
-            console.error('Google E-Tablo verisi alınamadı:', err);
-            document.getElementById('eTabloIcerik').innerHTML = `
+            console.error('Google E-Tablo verisi okunamadı:', err);
+            document.getElementById('eTabloDashboardContent').innerHTML = `
                 <div class="alert alert-danger py-4">
-                    <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> Canlı Veri Bağlantısı Kurulamadı</h5>
-                    <p class="small mb-3">Google E-Tablo'dan canlı veri çekilirken bir hata ile karşılaşıldı. Lütfen Google E-Tablonuzun paylaşım ayarlarını kontrol edin.</p>
+                    <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> Canlı Entegrasyon Hatası</h5>
+                    <p class="small mb-3">Google Sheets üzerinden veriler çekilemedi. Lütfen bağlantı izinlerini ve e-tablo adını kontrol edin.</p>
                     <div class="p-2 bg-light rounded text-monospace small text-danger mb-3" style="font-size:11px;">Hata Detayı: ${err.message}</div>
-                    <button class="btn btn-sm btn-primary px-3" onclick="fetchGoogleSheetData()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
+                    <button class="btn btn-sm btn-primary px-3" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
                 </div>
             `;
         }
+    }
+
+    // Alt sekmeler arası geçiş
+    window.switchETabloSubTab = function(tabName) {
+        currentETabloSubTab = tabName;
+        document.querySelectorAll('.sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`subtab-${tabName}-btn`).classList.add('active');
+        renderETabloActiveView();
+    };
+
+    function renderETabloActiveView() {
+        if(currentETabloSubTab === 'rapor') {
+            renderRaporView();
+        } else if(currentETabloSubTab === 'analiz') {
+            renderDATAAnalizView();
+        } else if(currentETabloSubTab === 'raw') {
+            renderHamDATAView();
+        }
+    }
+
+    // Google Sheets "Rapor" Sekmesini Çizdir
+    function renderRaporView() {
+        const rows = googleSheetsData.rawRapor;
+        if(!rows || rows.length === 0) {
+            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Rapor sekmesinde veri yok.</div>';
+            return;
+        }
+        
+        // Boş satırları temizle
+        const cleanRows = rows.filter(r => r.some(cell => cell && cell.trim() !== ''));
+        
+        let html = `
+            <div class="alert alert-info py-2 small mb-3"><i class="bi bi-info-circle"></i> Aşağıdaki veriler Google E-Tablonuzdaki formüllerle işlenmiş güncel <b>Rapor</b> sekmesini yansıtmaktadır.</div>
+            <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                <table class="table table-sm table-hover table-bordered bg-white align-middle" style="font-size: 11.5px;">
+                    <tbody>
+        `;
+        
+        cleanRows.forEach((row, rIdx) => {
+            let isHeader = rIdx === 0 || row.some(c => c && (c.includes('KUZEY') || c.includes('RAPOR') || c.includes('Kurum')));
+            let trClass = isHeader ? 'table-dark text-white fw-bold' : '';
+            
+            // Eğer toplam/ortalama satırıysa vurgula
+            let isSummary = row.some(c => c && (c.toLowerCase().includes('toplam') || c.toLowerCase().includes('ortalama')));
+            if(isSummary && !isHeader) trClass = 'table-secondary fw-bold text-dark';
+            
+            html += `<tr class="${trClass}">`;
+            row.forEach((cell, cIdx) => {
+                let cellText = cell !== null && cell !== undefined ? cell : "";
+                
+                // Sayısal değerleri sağa yasla
+                let isNumeric = !isNaN(cellText.trim().replace('%', '').replace(',', '.')) && cellText.trim() !== '';
+                let alignment = isNumeric ? 'text-end' : 'text-start';
+                
+                html += `<td class="${alignment}">${cellText}</td>`;
+            });
+            html += `</tr>`;
+        });
+        
+        html += `</tbody></table></div>`;
+        document.getElementById('eTabloDashboardContent').innerHTML = html;
+    }
+
+    // Google Sheets "DATA" Sekmesini Akıllı Analiz Et ve Görselleştir
+    function renderDATAAnalizView() {
+        const rows = googleSheetsData.rawDATA;
+        if(!rows || rows.length <= 1) {
+            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Analiz edilecek ham DATA bulunamadı.</div>';
+            return;
+        }
+        
+        const headers = rows[0];
+        const dataRows = rows.slice(1);
+        
+        // Kolonları dinamik / akıllı olarak tespit et
+        let kurumColIdx = -1;
+        let puanColIdx = -1;
+        let kategoriColIdx = -1;
+        
+        headers.forEach((h, idx) => {
+            let hLower = h.toLowerCase().trim();
+            if(hLower.includes('kurum') || hLower.includes('hastane') || hLower.includes('adsm')) {
+                if(kurumColIdx === -1) kurumColIdx = idx;
+            }
+            if(hLower.includes('puan') || hLower.includes('skor') || hLower.includes('değer') || hLower.includes('gd')) {
+                if(puanColIdx === -1) puanColIdx = idx;
+            }
+            if(hLower.includes('durum') || hLower.includes('kategori') || hLower.includes('tip') || hLower.includes('grup') || hLower.includes('yön')) {
+                if(kategoriColIdx === -1) kategoriColIdx = idx;
+            }
+        });
+        
+        // Metrik Hesaplamaları
+        let totalRecords = dataRows.length;
+        let uniqueKurumlar = new Set();
+        let totalPuanSum = 0;
+        let numericPuanCount = 0;
+        let categoryCounts = {};
+        let institutionCounts = {};
+        let institutionPuanSums = {};
+        
+        dataRows.forEach(row => {
+            // Kurum Sayacı
+            if(kurumColIdx !== -1 && row[kurumColIdx]) {
+                let kName = row[kurumColIdx].trim();
+                uniqueKurumlar.add(kName);
+                institutionCounts[kName] = (institutionCounts[kName] || 0) + 1;
+            }
+            // Puan Sayacı
+            if(puanColIdx !== -1 && row[puanColIdx]) {
+                let valStr = row[puanColIdx].toString().replace(',', '.').replace('%', '').trim();
+                let val = parseFloat(valStr);
+                if(!isNaN(val)) {
+                    totalPuanSum += val;
+                    numericPuanCount++;
+                    if(kurumColIdx !== -1 && row[kurumColIdx]) {
+                        let kName = row[kurumColIdx].trim();
+                        institutionPuanSums[kName] = (institutionPuanSums[kName] || 0) + val;
+                    }
+                }
+            }
+            // Kategori Sayacı
+            if(kategoriColIdx !== -1 && row[kategoriColIdx]) {
+                let catName = row[kategoriColIdx].trim();
+                categoryCounts[catName] = (categoryCounts[catName] || 0) + 1;
+            }
+        });
+        
+        let avgPuan = numericPuanCount > 0 ? (totalPuanSum / numericPuanCount).toFixed(1) : null;
+        
+        // Dashboard Görünümü
+        let html = `
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded border text-center shadow-sm">
+                        <div class="small fw-bold text-secondary text-uppercase">Toplam DATA Kaydı</div>
+                        <div class="fs-3 fw-bold text-primary">${totalRecords}</div>
+                        <div class="text-muted small" style="font-size:11px;">Canlı Giriş Sayısı</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded border text-center shadow-sm">
+                        <div class="small fw-bold text-secondary text-uppercase">Aktif Kurum Sayısı</div>
+                        <div class="fs-3 fw-bold text-success">${uniqueKurumlar.size}</div>
+                        <div class="text-muted small" style="font-size:11px;">DATA'da Geçen</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded border text-center shadow-sm">
+                        <div class="small fw-bold text-secondary text-uppercase">Ortalama Veri Puanı</div>
+                        <div class="fs-3 fw-bold text-warning">${avgPuan !== null ? avgPuan : '-'}</div>
+                        <div class="text-muted small" style="font-size:11px;">Sayısal Hücre Ort.</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded border text-center shadow-sm">
+                        <div class="small fw-bold text-secondary text-uppercase">Analiz Edilen Kolonlar</div>
+                        <div class="small text-truncate mt-2 fw-semibold text-info" style="font-size:11px;">
+                            ${kurumColIdx !== -1 ? '🟢 Kurum ' : '🔴 Kurum '}
+                            ${puanColIdx !== -1 ? '🟢 Puan ' : '🔴 Puan '}
+                            ${kategoriColIdx !== -1 ? '🟢 Kategori' : '🔴 Kategori'}
+                        </div>
+                        <div class="text-muted small" style="font-size: 10px;">Otomatik Yapılandırma</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+        `;
+        
+        // Grafik 1: Kategori Dağılımı (Halka Grafik)
+        if(Object.keys(categoryCounts).length > 0) {
+            html += `
+                <div class="col-md-6">
+                    <div class="border rounded p-3 bg-white shadow-sm">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart-fill text-info"></i> Girdilerin Kategori/Durum Dağılımı</h6>
+                        <div style="height:250px; position:relative;">
+                            <canvas id="eTabloCatChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Grafik 2: Kurum Dağılımı (Yatay Grafik)
+        if(Object.keys(institutionCounts).length > 0) {
+            html += `
+                <div class="col-md-6">
+                    <div class="border rounded p-3 bg-white shadow-sm">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart-line-fill text-success"></i> Kurum Girdi Dağılımı (Canlı Veri)</h6>
+                        <div style="height:250px; position:relative;">
+                            <canvas id="eTabloInstChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `
+            </div>
+            
+            <!-- Detaylı Analiz Metrikleri Tablosu -->
+            <div class="mt-4">
+                <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="bi bi-activity text-primary"></i> Canlı DATA - Kurumsal Metrik Özetleri</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped table-hover align-middle table-bordered" style="font-size:11.5px;">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Kurum Adı</th>
+                                <th class="text-center">Canlı Kayıt Adedi</th>
+                                <th class="text-end">Kümülatif Skor Toplamı</th>
+                                <th class="text-end">Kurum DATA Ortalaması</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Array.from(uniqueKurumlar).map(kName => {
+                                let count = institutionCounts[kName] || 0;
+                                let sum = institutionPuanSums[kName] || 0;
+                                let avg = count > 0 && institutionPuanSums[kName] !== undefined ? (sum / count).toFixed(2) : '-';
+                                return `
+                                    <tr>
+                                        <td><b>${kName}</b></td>
+                                        <td class="text-center">${count}</td>
+                                        <td class="text-end">${sum.toFixed(1)}</td>
+                                        <td class="text-end fw-bold text-primary">${avg}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('eTabloDashboardContent').innerHTML = html;
+        
+        // Grafiklerin Kurulması (Gecikmeli tetikleme)
+        setTimeout(() => {
+            // Halka Kategori Grafiği
+            if(Object.keys(categoryCounts).length > 0) {
+                const ctxCat = document.getElementById('eTabloCatChart')?.getContext('2d');
+                if(ctxCat) {
+                    if(charts.eTabloCat) charts.eTabloCat.destroy();
+                    charts.eTabloCat = new Chart(ctxCat, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(categoryCounts),
+                            datasets: [{
+                                data: Object.values(categoryCounts),
+                                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } }
+                            }
+                        }
+                    });
+                }
+            }
+            
+            // Kurum Dağılım Yatay Çubuk Grafiği
+            if(Object.keys(institutionCounts).length > 0) {
+                const ctxInst = document.getElementById('eTabloInstChart')?.getContext('2d');
+                if(ctxInst) {
+                    if(charts.eTabloInst) charts.eTabloInst.destroy();
+                    charts.eTabloInst = new Chart(ctxInst, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(institutionCounts),
+                            datasets: [{
+                                label: 'Kayıt Sayısı',
+                                data: Object.values(institutionCounts),
+                                backgroundColor: 'rgba(32, 201, 151, 0.75)',
+                                borderColor: '#20c997',
+                                borderWidth: 1.5,
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y', // Soldan sağa premium çubuk grafik görünümü
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                x: { grid: { borderDash: [4,4] } },
+                                y: { grid: { display: false } }
+                            }
+                        }
+                    });
+                }
+            }
+        }, 100);
+    }
+
+    // Google Sheets "DATA" Sekmesini Çizdir (Ham Liste)
+    function renderHamDATAView() {
+        const rows = googleSheetsData.rawDATA;
+        if(!rows || rows.length === 0) {
+            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Ham DATA bulunamadı.</div>';
+            return;
+        }
+        
+        const headers = rows[0];
+        const dataRows = rows.slice(1);
+        
+        let html = `
+            <div class="alert alert-light border py-2 small mb-3"><i class="bi bi-info-circle"></i> DATA sekmesindeki tüm ham kayıtlar aşağıda listelenmiştir.</div>
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-sm table-striped table-hover align-middle table-bordered" style="font-size: 11.5px;">
+                    <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
+                        <tr>
+                            ${headers.map(h => `<th>${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${dataRows.map(row => `
+                            <tr>
+                                ${row.map(cell => `<td>${cell !== null && cell !== undefined ? cell : ''}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        document.getElementById('eTabloDashboardContent').innerHTML = html;
     }
 
     // Quoted-Comma duyarlı CSV ayrıştırıcı
@@ -923,7 +1273,7 @@
             await window.karsilastirmaKurumListesiGuncelle();
         }
         if(sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
-        if(sayfa === 'e-tablo') await fetchGoogleSheetData();
+        if(sayfa === 'e-tablo') await initETabloDashboard();
     };
 
     // ---------- BAŞLATMA ----------
