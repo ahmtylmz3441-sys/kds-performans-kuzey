@@ -20,6 +20,7 @@
         .filter-group { display: flex; flex-direction: column; min-width: 130px; flex-shrink: 0; }
         .filter-group select, .filter-group input { padding: 8px 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 13px; background: white; width: 100%; }
         .btn-sm-custom { padding: 8px 20px; font-size: 12px; border-radius: 10px; background: var(--accent); border: none; color: white; cursor: pointer; transition: 0.2s; white-space: nowrap; flex-shrink: 0; }
+        .btn-sm-custom:hover { background: #1aa179; }
         .page-padding { padding: 25px; }
         .page { display: none; }
         .page.active { display: block; }
@@ -38,11 +39,12 @@
         .modal-overlay.active { display: flex; }
         .modal-container { background: white; width: 600px; max-width:90%; max-height:80vh; overflow-y:auto; border-radius:20px; padding:24px; position: relative; }
         .modal-close { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #6c757d; }
-        .donem-checkbox-group { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 12px; border: 1px dashed #ddd; }
+        .donem-checkbox-group { display: block; margin: 15px 0; padding: 18px; background: #ffffff; border-radius: 12px; border: 1px dashed #ced4da; min-height: 100px; }
         .progress-bar { width: 100%; background: #e9ecef; border-radius: 10px; height: 8px; overflow: hidden; }
         .progress-fill { height: 100%; border-radius: 10px; }
         .loading { text-align: center; padding: 30px; color: #6c757d; }
         .gosterge-detay { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .fs-7 { font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -90,8 +92,8 @@
     </main>
 </div>
 
-<div id="gostergeModal" class="modal-overlay" onclick="window.modalDisKlikKapat(event)">
-    <div class="modal-container" onclick="event.stopPropagation()">
+<div id="gostergeModal" class="modal-overlay">
+    <div class="modal-container">
         <button class="modal-close" onclick="kapatModal()">&times;</button>
         <h4 id="modalBaslik" class="fw-bold mb-3">Gösterge Detayı</h4>
         <div id="modalIcerik"></div>
@@ -212,7 +214,13 @@
     };
     
     window.kapatModal = () => document.getElementById('gostergeModal').classList.remove('active');
-    window.modalDisKlikKapat = function(e) { if(e.target.id === 'gostergeModal') kapatModal(); };
+    
+    // Modal dışındaki overlay alanına tıklandığında kapanma işlevselliği
+    document.getElementById('gostergeModal').addEventListener('click', function(e) {
+        if(e.target === this) {
+            kapatModal();
+        }
+    });
 
     // ---------- DİNAMİK YIL/DÖNEM FİLTRELERİNİ DOLDUR ----------
     async function dinamikFiltreleriDoldur() {
@@ -237,10 +245,18 @@
         let seciliYil = document.getElementById('f-yil')?.value;
         let seciliDonem = document.getElementById('f-donem')?.value;
         
+        // İlk açılışta veya filtre seçili değilse en güncel dönemi dinamik olarak bulup ayarla
         if(!seciliYil || !seciliDonem) {
             const { data: enSon } = await _supabase.from('toplam_puanlar').select('yil, donem').order('yil', {ascending:false}).order('donem', {ascending:false}).limit(1).maybeSingle();
-            seciliYil = enSon?.yil || '2026';
-            seciliDonem = enSon?.donem || '2';
+            if (enSon) {
+                seciliYil = enSon.yil;
+                seciliDonem = enSon.donem;
+                if(document.getElementById('f-yil')) document.getElementById('f-yil').value = seciliYil;
+                if(document.getElementById('f-donem')) document.getElementById('f-donem').value = seciliDonem;
+            } else {
+                seciliYil = '2026';
+                seciliDonem = '2';
+            }
         }
 
         const data = await fetchData('toplam_puanlar', '*', { yil: seciliYil, donem: seciliDonem });
@@ -269,9 +285,11 @@
 
     // ---------- TÜM BÖLGE ----------
     window.bolgeListesi = async function() {
-        const seciliYil = document.getElementById('bolgeFiltreYil').value;
-        const seciliDonem = document.getElementById('bolgeFiltreDonem').value;
-        let tip = document.getElementById('bolgeFiltreTip').value;
+        const seciliYil = document.getElementById('bolgeFiltreYil')?.value;
+        const seciliDonem = document.getElementById('bolgeFiltreDonem')?.value;
+        let tip = document.getElementById('bolgeFiltreTip')?.value;
+        
+        if(!seciliYil || !seciliDonem) return;
         
         let query = _supabase.from('toplam_puanlar').select('*').eq('yil', seciliYil).eq('donem', seciliDonem);
         if(tip === 'Hastane') query = query.eq('kurum_tipi', 'Hastane');
@@ -279,7 +297,12 @@
         
         const { data, error } = await query.order('toplam_puan', { ascending: false });
         const tbody = document.querySelector('#table-bolge tbody');
-        if(error || !data?.length) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Seçilen dönem ve filtrelere uygun veri bulunamadı.</td></tr>`; return; }
+        if(!tbody) return;
+        
+        if(error || !data?.length) { 
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Seçilen dönem ve filtrelere uygun veri bulunamadı.</td></tr>`; 
+            return; 
+        }
         
         tbody.innerHTML = data.map(d => `<tr><td><b>${d.kurum_adi}</b></td><td>${d.kurum_tipi}</td><td class="fw-bold text-primary">${d.toplam_puan}</td><td>${d.rol_ortalamasi}</td><td>${parseFloat(d.toplam_puan) >= parseFloat(d.rol_ortalamasi) ? '<span class="badge-basarili">✅ Başarılı</span>' : '<span class="badge-kritik">❌ Altında</span>'}</td></tr>`).join('');
     };
@@ -463,18 +486,68 @@
                 data: { 
                     labels, 
                     datasets: [
-                        { label: 'Ocak GD', data: d1Data, backgroundColor: '#3b82f6' }, 
-                        { label: 'Şubat GD', data: d2Data, backgroundColor: '#f59e0b' },
-                        { label: 'Mart GD', data: d3Data, backgroundColor: '#10b981' }
+                        { 
+                            label: 'Ocak GD', 
+                            data: d1Data, 
+                            backgroundColor: 'rgba(59, 130, 246, 0.75)', 
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                            hoverBackgroundColor: 'rgba(59, 130, 246, 0.95)'
+                        }, 
+                        { 
+                            label: 'Şubat GD', 
+                            data: d2Data, 
+                            backgroundColor: 'rgba(245, 158, 11, 0.75)', 
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                            hoverBackgroundColor: 'rgba(245, 158, 11, 0.95)'
+                        },
+                        { 
+                            label: 'Mart GD', 
+                            data: d3Data, 
+                            backgroundColor: 'rgba(16, 185, 129, 0.75)', 
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                            hoverBackgroundColor: 'rgba(16, 185, 129, 0.95)'
+                        }
                     ] 
                 }, 
                 options: { 
                     responsive: true, 
                     maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                font: {
+                                    family: "'Segoe UI', sans-serif",
+                                    size: 11
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(220, 224, 230, 0.5)',
+                                borderDash: [4, 4]
+                            }
+                        }
+                    },
                     animation: {
                         x: {
                             duration: 1000,
                             from: 0
+                        },
+                        y: {
+                            duration: 800
                         }
                     }
                 } 
@@ -492,6 +565,8 @@
         const d = document.getElementById('sapmaFiltreDonem').value;
         
         const tbody = document.querySelector('#sapmaTablo tbody');
+        if(!tbody) return;
+        
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Veriler analiz ediliyor...</td></tr>';
 
         const { data } = await _supabase.from('performans').select('kurum_adi, gosterge_adi, gd, tr_ort, gosterge_yonu').eq('yil', y).eq('donem', d);
@@ -542,24 +617,30 @@
         const tekil = [...new Set((data||[]).map(d=>d.kurum_adi))].sort();
         document.getElementById('karsKurumAdi').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k=>`<option value="${k}">${k}</option>`).join('');
         
-        document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-muted small">Lütfen önce yukarıdan bir kurum seçiniz.</div>';
+        document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-muted small text-center py-3">Lütfen önce yukarıdan bir kurum seçiniz.</div>';
     };
 
     window.karsilastirmaDonemListesiGuncelle = async function() {
         const kurum = document.getElementById('karsKurumAdi').value;
-        if(!kurum) { document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-muted small">Lütfen önce yukarıdan bir kurum seçiniz.</div>'; return; }
+        if(!kurum) { 
+            document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-muted small text-center py-3">Lütfen önce yukarıdan bir kurum seçiniz.</div>'; 
+            return; 
+        }
         
         const { data } = await _supabase.from('toplam_puanlar').select('donem').eq('kurum_adi', kurum).order('donem');
         const donemler = [...new Set((data||[]).map(d=>d.donem))].sort((a,b)=>a-b);
         
         if(donemler.length === 0) {
-            document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-danger small">Bu kuruma ait aktif dönem bulunamadı.</div>';
+            document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-danger small text-center py-3">Bu kuruma ait aktif dönem bulunamadı.</div>';
             return;
         }
 
-        let html = `<div class="d-flex flex-wrap gap-3">`;
+        let html = `<div class="d-flex flex-wrap gap-2 mt-1">`;
         donemler.forEach(d => {
-            html += `<label class="bg-white px-3 py-1 border rounded" style="cursor:pointer;"><input type="checkbox" class="donem-checkbox me-1" value="${d}" checked> ${formatDonemAdi(d)}</label>`;
+            html += `<label class="bg-light px-3 py-2 border rounded d-flex align-items-center gap-2" style="cursor:pointer; transition: 0.2s;">
+                <input type="checkbox" class="donem-checkbox form-check-input m-0" value="${d}" checked> 
+                <span class="fs-7 fw-semibold text-dark">${formatDonemAdi(d)}</span>
+            </label>`;
         });
         html += `</div>`;
         document.getElementById('karsDonemCheckboxlarInner').innerHTML = html;
@@ -640,11 +721,11 @@
                 <div class="kds-card">
                     <h6>🌍 Tüm Kurumlar Bölge Sıralaması</h6>
                     <div class="row g-2 mt-2 mb-3">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="small text-muted fw-bold">Yıl</label>
                             <select id="bolgeFiltreYil" class="form-select form-select-sm">${yilOptions}</select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="small text-muted fw-bold">Dönem</label>
                             <select id="bolgeFiltreDonem" class="form-select form-select-sm">${donemOptions}</select>
                         </div>
@@ -700,7 +781,7 @@
                     <div id="karsDonemCheckboxlar" class="donem-checkbox-group">
                         <div class="fw-semibold mb-2 text-secondary"><i class="bi bi-check2-square"></i> Karşılaştırılacak Dönemleri Seçin (Dinamik):</div>
                         <div id="karsDonemCheckboxlarInner">
-                            <div class="text-muted small">Lütfen önce yukarıdan bir kurum seçiniz.</div>
+                            <div class="text-muted small text-center py-3">Lütfen önce yukarıdan bir kurum seçiniz.</div>
                         </div>
                     </div>
                     <button class="btn-sm-custom px-4" id="karsilastirBtn">📊 SEÇİLİ DÖNEMLERİ KARŞILAŞTIR</button>
