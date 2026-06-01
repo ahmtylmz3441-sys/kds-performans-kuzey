@@ -34,12 +34,12 @@
         .badge-itiraz-var { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-left: 8px; }
         .rank-card { background: #f8f9fa; border-radius: 12px; padding: 12px; margin-bottom: 8px; transition: 0.2s; display: flex; align-items: center; justify-content: space-between; }
         .rank-number { width: 28px; height: 28px; background: var(--accent); color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px; }
-        .chart-container { position: relative; height: 300px; margin-top: 15px; }
+        .chart-container { position: relative; height: 320px; margin-top: 15px; }
         .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
         .modal-overlay.active { display: flex; }
         .modal-container { background: white; width: 600px; max-width:90%; max-height:80vh; overflow-y:auto; border-radius:20px; padding:24px; position: relative; }
         .modal-close { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #6c757d; }
-        .donem-checkbox-group { display: block; margin: 15px 0; padding: 18px; background: #ffffff; border-radius: 12px; border: 1px dashed #ced4da; min-height: 100px; }
+        .donem-checkbox-group { display: block; margin: 15px 0; padding: 18px; background: #ffffff; border-radius: 12px; border: 1px dashed #ced4da; min-height: 110px; transition: all 0.3s ease; }
         .progress-bar { width: 100%; background: #e9ecef; border-radius: 10px; height: 8px; overflow: hidden; }
         .progress-fill { height: 100%; border-radius: 10px; }
         .loading { text-align: center; padding: 30px; color: #6c757d; }
@@ -92,8 +92,8 @@
     </main>
 </div>
 
-<div id="gostergeModal" class="modal-overlay">
-    <div class="modal-container">
+<div id="gostergeModal" class="modal-overlay" onclick="window.modalDisKlikKapat(event)">
+    <div class="modal-container" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="kapatModal()">&times;</button>
         <h4 id="modalBaslik" class="fw-bold mb-3">Gösterge Detayı</h4>
         <div id="modalIcerik"></div>
@@ -215,12 +215,11 @@
     
     window.kapatModal = () => document.getElementById('gostergeModal').classList.remove('active');
     
-    // Modal dışındaki overlay alanına tıklandığında kapanma işlevselliği
-    document.getElementById('gostergeModal').addEventListener('click', function(e) {
-        if(e.target === this) {
-            kapatModal();
+    window.modalDisKlikKapat = function(e) { 
+        if(e.target.id === 'gostergeModal') {
+            kapatModal(); 
         }
-    });
+    };
 
     // ---------- DİNAMİK YIL/DÖNEM FİLTRELERİNİ DOLDUR ----------
     async function dinamikFiltreleriDoldur() {
@@ -245,18 +244,15 @@
         let seciliYil = document.getElementById('f-yil')?.value;
         let seciliDonem = document.getElementById('f-donem')?.value;
         
-        // İlk açılışta veya filtre seçili değilse en güncel dönemi dinamik olarak bulup ayarla
+        // 1. GENEL BAKIŞ SEKMEDEKİ VERİ SORUNUNUN ÇÖZÜLMESİ
         if(!seciliYil || !seciliDonem) {
             const { data: enSon } = await _supabase.from('toplam_puanlar').select('yil, donem').order('yil', {ascending:false}).order('donem', {ascending:false}).limit(1).maybeSingle();
-            if (enSon) {
-                seciliYil = enSon.yil;
-                seciliDonem = enSon.donem;
-                if(document.getElementById('f-yil')) document.getElementById('f-yil').value = seciliYil;
-                if(document.getElementById('f-donem')) document.getElementById('f-donem').value = seciliDonem;
-            } else {
-                seciliYil = '2026';
-                seciliDonem = '2';
-            }
+            seciliYil = enSon?.yil || '2026';
+            seciliDonem = enSon?.donem || '2';
+            
+            // Küresel filtrelerin değerlerini de güncelle
+            if(document.getElementById('f-yil')) document.getElementById('f-yil').value = seciliYil;
+            if(document.getElementById('f-donem')) document.getElementById('f-donem').value = seciliDonem;
         }
 
         const data = await fetchData('toplam_puanlar', '*', { yil: seciliYil, donem: seciliDonem });
@@ -410,13 +406,22 @@
                 <div class="col-12">
                     <div class="kds-card">
                         <h6>📈 Gösterge Bazlı Kurumsal Trend Grafiği</h6>
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-8">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold text-secondary">Analiz Edilecek Gösterge</label>
                                 <select id="raporGosterge" class="form-select form-select-sm">
-                                    <option value="">Analiz Edilecek Göstergeyi Seçiniz</option>
+                                    <option value="">Gösterge Seçiniz</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
+                                <select id="raporKurumTipi" class="form-select form-select-sm">
+                                    <option value="">Tümü (Hastane & ADSM)</option>
+                                    <option value="Hastane">Hastane</option>
+                                    <option value="ADSM">ADSM / ADSH</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
                                 <button class="btn-sm-custom w-100" id="trendGosterBtn">📊 Grafiği Çiz (Soldan Sağa)</button>
                             </div>
                         </div>
@@ -470,15 +475,23 @@
         
         document.getElementById('trendGosterBtn').onclick = async () => {
             const gosterge = document.getElementById('raporGosterge').value;
+            const kurumTipi = document.getElementById('raporKurumTipi').value;
             if(!gosterge) return;
-            const { data } = await _supabase.from('performans').select('kurum_adi, gd, donem').eq('gosterge_adi', gosterge);
+            
+            let query = _supabase.from('performans').select('kurum_adi, gd, donem, kurum_tipi').eq('gosterge_adi', gosterge);
+            if(kurumTipi === 'Hastane') {
+                query = query.eq('kurum_tipi', 'Hastane');
+            } else if(kurumTipi === 'ADSM') {
+                query = query.in('kurum_tipi', ['ADSM', 'ADSH']);
+            }
+            const { data } = await query;
             
             const sonuc = {};
             data?.forEach(r => { if(!sonuc[r.kurum_adi]) sonuc[r.kurum_adi] = {}; sonuc[r.kurum_adi][`d${r.donem}`] = r.gd; });
-            const labels = Object.keys(sonuc).slice(0,8);
-            const d1Data = labels.map(l=>sonuc[l]?.d1 || null);
-            const d2Data = labels.map(l=>sonuc[l]?.d2 || null);
-            const d3Data = labels.map(l=>sonuc[l]?.d3 || null);
+            const labels = Object.keys(sonuc).slice(0,10);
+            const d1Data = labels.map(l=>sonuc[l]?.d1 !== undefined ? sonuc[l].d1 : null);
+            const d2Data = labels.map(l=>sonuc[l]?.d2 !== undefined ? sonuc[l].d2 : null);
+            const d3Data = labels.map(l=>sonuc[l]?.d3 !== undefined ? sonuc[l].d3 : null);
             
             if(charts.gosterge) charts.gosterge.destroy();
             charts.gosterge = new Chart(document.getElementById('gostergeChart'), { 
@@ -489,11 +502,11 @@
                         { 
                             label: 'Ocak GD', 
                             data: d1Data, 
-                            backgroundColor: 'rgba(59, 130, 246, 0.75)', 
-                            borderColor: 'rgba(59, 130, 246, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.75)', 
+                            borderColor: 'rgba(54, 162, 235, 1)',
                             borderWidth: 1.5,
                             borderRadius: 6,
-                            hoverBackgroundColor: 'rgba(59, 130, 246, 0.95)'
+                            hoverBackgroundColor: 'rgba(54, 162, 235, 0.95)'
                         }, 
                         { 
                             label: 'Şubat GD', 
@@ -536,8 +549,8 @@
                         },
                         y: {
                             grid: {
-                                color: 'rgba(220, 224, 230, 0.5)',
-                                borderDash: [4, 4]
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                borderDash: [5, 5]
                             }
                         }
                     },
@@ -617,13 +630,13 @@
         const tekil = [...new Set((data||[]).map(d=>d.kurum_adi))].sort();
         document.getElementById('karsKurumAdi').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k=>`<option value="${k}">${k}</option>`).join('');
         
-        document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-muted small text-center py-3">Lütfen önce yukarıdan bir kurum seçiniz.</div>';
+        document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-muted small text-center py-3"><i class="bi bi-info-circle"></i> Lütfen önce yukarıdan bir kurum seçiniz.</div>';
     };
 
     window.karsilastirmaDonemListesiGuncelle = async function() {
         const kurum = document.getElementById('karsKurumAdi').value;
         if(!kurum) { 
-            document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-muted small text-center py-3">Lütfen önce yukarıdan bir kurum seçiniz.</div>'; 
+            document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-muted small text-center py-3"><i class="bi bi-info-circle"></i> Lütfen önce yukarıdan bir kurum seçiniz.</div>'; 
             return; 
         }
         
@@ -631,13 +644,14 @@
         const donemler = [...new Set((data||[]).map(d=>d.donem))].sort((a,b)=>a-b);
         
         if(donemler.length === 0) {
-            document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-danger small text-center py-3">Bu kuruma ait aktif dönem bulunamadı.</div>';
+            document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-danger small text-center py-3"><i class="bi bi-exclamation-triangle"></i> Bu kuruma ait aktif dönem bulunamadı.</div>';
             return;
         }
 
-        let html = `<div class="d-flex flex-wrap gap-2 mt-1">`;
+        let html = `<div class="d-flex flex-wrap gap-2">`;
         donemler.forEach(d => {
-            html += `<label class="bg-light px-3 py-2 border rounded d-flex align-items-center gap-2" style="cursor:pointer; transition: 0.2s;">
+            html += `
+            <label class="bg-white px-3 py-2 border rounded d-flex align-items-center gap-2 shadow-sm" style="cursor:pointer; user-select:none; transition:0.2s;">
                 <input type="checkbox" class="donem-checkbox form-check-input m-0" value="${d}" checked> 
                 <span class="fs-7 fw-semibold text-dark">${formatDonemAdi(d)}</span>
             </label>`;
@@ -720,21 +734,21 @@
             document.getElementById('tum-bolge').innerHTML = `
                 <div class="kds-card">
                     <h6>🌍 Tüm Kurumlar Bölge Sıralaması</h6>
-                    <div class="row g-2 mt-2 mb-3">
+                    <div class="row g-3 mt-1 mb-4">
                         <div class="col-md-4">
-                            <label class="small text-muted fw-bold">Yıl</label>
+                            <label class="form-label small fw-bold text-secondary">Yıl</label>
                             <select id="bolgeFiltreYil" class="form-select form-select-sm">${yilOptions}</select>
                         </div>
                         <div class="col-md-4">
-                            <label class="small text-muted fw-bold">Dönem</label>
+                            <label class="form-label small fw-bold text-secondary">Dönem</label>
                             <select id="bolgeFiltreDonem" class="form-select form-select-sm">${donemOptions}</select>
                         </div>
                         <div class="col-md-4">
-                            <label class="small text-muted fw-bold">Kurum Türü</label>
+                            <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
                             <select id="bolgeFiltreTip" class="form-select form-select-sm">
-                                <option value="">Tüm Kurumlar (Hastaneler & ADSM)</option>
-                                <option value="Hastane">Yalnızca Hastaneler</option>
-                                <option value="ADSM">Yalnızca ADSM / ADSH</option>
+                                <option value="">Tümü (Hastane & ADSM)</option>
+                                <option value="Hastane">Hastane</option>
+                                <option value="ADSM">ADSM/ADSH</option>
                             </select>
                         </div>
                     </div>
@@ -781,7 +795,7 @@
                     <div id="karsDonemCheckboxlar" class="donem-checkbox-group">
                         <div class="fw-semibold mb-2 text-secondary"><i class="bi bi-check2-square"></i> Karşılaştırılacak Dönemleri Seçin (Dinamik):</div>
                         <div id="karsDonemCheckboxlarInner">
-                            <div class="text-muted small text-center py-3">Lütfen önce yukarıdan bir kurum seçiniz.</div>
+                            <div class="text-muted small text-center py-3"><i class="bi bi-info-circle"></i> Lütfen önce yukarıdan bir kurum seçiniz.</div>
                         </div>
                     </div>
                     <button class="btn-sm-custom px-4" id="karsilastirBtn">📊 SEÇİLİ DÖNEMLERİ KARŞILAŞTIR</button>
