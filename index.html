@@ -612,7 +612,7 @@
 
     // ---------- YARDIMCI FONKSİYONLAR ----------
     const formatDonemAdi = (donem) => AYLAR[donem-1] || `${donem}. Dönem`;
-    const showLoading = (elementId, mesaj = "Yükleniyor...") => { const el = document.getElementById(elementId); if(el) el.innerHTML = `<div class="loading">${mesaj}</div>`; };
+    const showLoading = (elementId, mesaj = "Yükleniyor...") => { const el = document.getElementById(elId); if(el) el.innerHTML = `<div class="loading">${mesaj}</div>`; };
     
     async function fetchData(table, select, filters = {}) {
         try {
@@ -870,7 +870,7 @@
         const unique = [];
         const seen = new Set();
         data?.forEach(item => {
-            const label = item.gosterge_kodu ? `${item.gosterge_kodu} - ${item.gosterge_adi}$` : item.gosterge_adi;
+            const label = item.gosterge_kodu ? `${item.gosterge_kodu} - ${item.gosterge_adi}` : item.gosterge_adi;
             if(!seen.has(item.gosterge_adi)) {
                 seen.add(item.gosterge_adi);
                 unique.push({ adi: item.gosterge_adi, kodu: item.gosterge_kodu, label: label });
@@ -1167,9 +1167,32 @@
             toplamlar[d] = data || { toplam_puan: '-', rol_ortalamasi: '-' };
         }
         
-        const { data: tumGostergeler } = await _supabase.from('performans').select('gosterge_kodu, gosterge_adi, gosterge_yonu, donem, gd, tr_ort').eq('kurum_adi', kurum).in('donem', seciliDonemler);
+        // Gösterge detay pencereleri için id, puan, gp ve kurum_tipi gibi ilişkili sütunlar da sorguya dahil edildi.
+        const { data: tumGostergeler } = await _supabase.from('performans').select('id, gosterge_kodu, gosterge_adi, gosterge_yonu, donem, gd, tr_ort, puan, gp, kurum_tipi').eq('kurum_adi', kurum).in('donem', seciliDonemler);
         const gostergeMap = new Map();
-        tumGostergeler?.forEach(g => { if(!gostergeMap.has(g.gosterge_kodu)) gostergeMap.set(g.gosterge_kodu, { kod: g.gosterge_kodu, ad: g.gosterge_adi, yon: g.gosterge_yonu }); });
+        tumGostergeler?.forEach(g => { 
+            if(!gostergeMap.has(g.gosterge_kodu)) {
+                gostergeMap.set(g.gosterge_kodu, { 
+                    id: g.id,
+                    kod: g.gosterge_kodu, 
+                    ad: g.gosterge_adi, 
+                    yon: g.gosterge_yonu,
+                    gp: g.gp,
+                    puan: g.puan,
+                    kurum_tipi: g.kurum_tipi,
+                    gd: g.gd,          // En güncel dönemin verisini varsayılan değer olarak alır
+                    tr_ort: g.tr_ort
+                }); 
+            } else {
+                const existing = gostergeMap.get(g.gosterge_kodu);
+                existing.id = g.id;
+                existing.gp = g.gp;
+                existing.puan = g.puan;
+                existing.gd = g.gd;
+                existing.tr_ort = g.tr_ort;
+                existing.kurum_tipi = g.kurum_tipi;
+            }
+        });
         const gostergeler = Array.from(gostergeMap.values()).sort((a,b)=> (parseInt(a.kod.split('-')[2]) || 0) - (parseInt(b.kod.split('-')[2]) || 0));
         
         const gostergeDegerler = {};
@@ -1180,7 +1203,13 @@
         <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td>${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
         
         for(let g of gostergeler) {
-            html += `<tr><td><small class="text-muted font-monospace">${g.kod}</small> - ${g.ad.substring(0,60)}...</td>`;
+            // Gösterge listesindeki isme tıklandığında pop-up penceresinin açılmasını sağlayan "window.gostergeDetayGoster" bağlantısı eklendi.
+            html += `<tr>
+                <td>
+                    <a href="#" class="text-decoration-none fw-semibold text-dark" onclick="window.gostergeDetayGoster('${g.id}','${g.ad.replace(/'/g, "\\'")}', '${g.gd ?? ''}', '${g.tr_ort ?? ''}', '${g.puan ?? ''}', '${g.gp ?? ''}', '${g.yon}', '${g.kod}', '${g.kurum_tipi}'); return false;">
+                        <small class="text-muted font-monospace">${g.kod}</small> - ${g.ad.substring(0,60)}...
+                    </a>
+                </td>`;
             for(let d of seciliDonemler) {
                 const val = gostergeDegerler[`${g.kod}_${d}`];
                 html += `<td>${val && val.gd!==null ? `<b>${val.gd}</b> <span class="text-muted">/ ${val.tr_ort}</span>` : '- / -'}</td>`;
