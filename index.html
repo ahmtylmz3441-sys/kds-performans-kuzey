@@ -84,7 +84,7 @@
             <label class="form-label small fw-bold text-secondary">Şifre</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-key"></i></span>
-                <input type="password" id="loginPassword" class="form-control" placeholder="••••••">
+                <input type="password" id="loginPassword" class="form-control" placeholder="•••••">
             </div>
         </div>
         <div id="loginError" class="alert alert-danger py-2 small mb-3" style="display: none;"></div>
@@ -350,6 +350,27 @@
         }
     }
 
+    // ---------- EXCEL DIŞA AKTARMA (TÜRKÇE KARAKTER DUYARLI) ----------
+    window.exportTableToExcel = function(tableId, filename = 'rapor') {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        
+        let html = table.outerHTML;
+        const uri = 'data:application/vnd.ms-excel;base64,';
+        const template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>{table}</table></body></html>';
+        
+        const base64 = function(s) { return window.btoa(unescape(encodeURIComponent(s))) };
+        const format = function(s, c) { return s.replace(/{(\w+)}/g, function(m, p) { return c[p]; }) };
+        
+        const ctx = { worksheet: 'Rapor', table: html };
+        const link = document.createElement("a");
+        link.download = `${filename}.xls`;
+        link.href = uri + base64(format(template, ctx));
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     // ---------- SUPABASE GÜVENLİ GİRİŞ İŞLEMLERİ (PROFILES TABLOSU İLE) ----------
     async function handleLogin() {
         const name = document.getElementById('loginName').value.trim();
@@ -612,7 +633,7 @@
 
     // ---------- YARDIMCI FONKSİYONLAR ----------
     const formatDonemAdi = (donem) => AYLAR[donem-1] || `${donem}. Dönem`;
-    const showLoading = (elementId, mesaj = "Yükleniyor...") => { const el = document.getElementById(elId); if(el) el.innerHTML = `<div class="loading">${mesaj}</div>`; };
+    const showLoading = (elementId, mesaj = "Yükleniyor...") => { const el = document.getElementById(elementId); if(el) el.innerHTML = `<div class="loading">${mesaj}</div>`; };
     
     async function fetchData(table, select, filters = {}) {
         try {
@@ -786,10 +807,16 @@
         
         const { data: toplam = null } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('yil', yil).eq('donem', donem).maybeSingle() || {};
         
-        let html = `<div class="fw-bold fs-5 mb-3">📊 ${kurum} - ${formatDonemAdi(donem)} ${yil} Analiz Raporu</div>`;
+        // "Excel'e Aktar" butonu tablonun hemen üstüne eklendi
+        let html = `
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div class="fw-bold fs-5">📊 ${kurum} - ${formatDonemAdi(donem)} ${yil} Analiz Raporu</div>
+                <button class="btn btn-sm btn-outline-success" onclick="window.exportTableToExcel('kurumAnalizTablo', '${kurum.replace(/\\s+/g, '_')}_Analiz_Raporu')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
+            </div>
+        `;
         if(toplam) html += `<div class="alert alert-info py-2 mb-3">🏆 <b>Toplam Puanı:</b> <span class="fs-5 fw-bold text-primary">${toplam.toplam_puan}</span> | <b>Rol Ortalaması:</b> ${toplam.rol_ortalamasi}</div>`;
         
-        html += `<div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Gösterge Adı</th><th>Yön</th><th>GD</th><th>TR Ort</th><th>Puan / GP</th><th>Değerlendirme</th><th>İşlem</th></tr></thead><tbody>`;
+        html += `<div class="table-responsive"><table id="kurumAnalizTablo" class="table table-hover align-middle"><thead><tr><th>Gösterge Adı</th><th>Yön</th><th>GD</th><th>TR Ort</th><th>Puan / GP</th><th>Değerlendirme</th><th>İşlem</th></tr></thead><tbody>`;
         
         for(const r of perf) {
             const durum = degerlendir(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp, r.id);
@@ -1198,9 +1225,15 @@
         const gostergeDegerler = {};
         tumGostergeler?.forEach(g => { gostergeDegerler[`${g.gosterge_kodu}_${g.donem}`] = { gd: g.gd, tr_ort: g.tr_ort }; });
         
-        let html = `<div class="table-responsive"><table class="table table-bordered bg-white align-middle"><thead><tr class="table-light"><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th>${formatDonemAdi(d)} <br><small class="text-muted">(GD / TR Ort)</small></th>`).join('')}</tr></thead><tbody>
-        <tr class="table-info fw-bold text-dark"><td>🏆 TOPLAM PUAN</td>${seciliDonemler.map(d=>`<td class="text-primary fs-5">${toplamlar[d].toplam_puan}</td>`).join('')}</tr>
-        <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td>${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
+        // "Excel'e Aktar" butonu tablonun hemen üstüne eklendi
+        let html = `
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-table"></i> Karşılaştırma Sonuç Matrisi</h6>
+                <button class="btn btn-sm btn-outline-success" onclick="window.exportTableToExcel('karsilastirmaTablo', '${kurum.replace(/\\s+/g, '_')}_Donemsel_Karsilastirma')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
+            </div>
+            <div class="table-responsive"><table id="karsilastirmaTablo" class="table table-bordered bg-white align-middle"><thead><tr class="table-light"><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th>${formatDonemAdi(d)} <br><small class="text-muted">(GD / TR Ort)</small></th>`).join('')}</tr></thead><tbody>
+            <tr class="table-info fw-bold text-dark"><td>🏆 TOPLAM PUAN</td>${seciliDonemler.map(d=>`<td class="text-primary fs-5">${toplamlar[d].toplam_puan}</td>`).join('')}</tr>
+            <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td>${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
         
         for(let g of gostergeler) {
             // Gösterge listesindeki isme tıklandığında pop-up penceresinin açılmasını sağlayan "window.gostergeDetayGoster" bağlantısı eklendi.
