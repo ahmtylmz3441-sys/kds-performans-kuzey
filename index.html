@@ -1240,7 +1240,7 @@
             html += `<tr>
                 <td>
                     <a href="#" class="text-decoration-none fw-semibold text-dark" onclick="window.gostergeDetayGoster('${g.id}','${g.ad.replace(/'/g, "\\'")}', '${g.gd ?? ''}', '${g.tr_ort ?? ''}', '${g.puan ?? ''}', '${g.gp ?? ''}', '${g.yon}', '${g.kod}', '${g.kurum_tipi}'); return false;">
-                        <small class="text-muted font-monospace">${g.kod}</small> - ${g.ad.substring(0,60)}...
+                        <small class="text-muted font-monospace">${g.kod}</small> - ${g.ad}
                     </a>
                 </td>`;
             for(let d of seciliDonemler) {
