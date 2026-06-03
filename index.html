@@ -50,9 +50,47 @@
         .sub-tab-btn { background: #f8f9fa; color: #495057; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; outline: none; }
         .sub-tab-btn:hover { background: #e9ecef; }
         .sub-tab-btn.active { background: var(--accent); color: white; }
+
+        /* Şifreli Giriş Ekranı Tasarımı */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: #0d2137; z-index: 99999; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: white; padding: 35px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); width: 100%; max-width: 420px; }
     </style>
 </head>
 <body>
+
+<!-- Şifreli Giriş Ekranı -->
+<div id="login-screen">
+    <div class="login-card">
+        <div class="text-center mb-4">
+            <span class="fs-1">🏥</span>
+            <h4 class="fw-bold text-dark mt-2 mb-1">KHHB-2 GÖREN PORTAL</h4>
+            <p class="text-muted small">Devam etmek için yetkili bilgilerinizi giriniz.</p>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small fw-bold text-secondary">Ad Soyad</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                <input type="text" id="loginName" class="form-control" placeholder="Örn: Ahmet Yılmaz">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small fw-bold text-secondary">E-posta Adresi</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                <input type="email" id="loginEmail" class="form-control" placeholder="Örn: ahmet@mail.com">
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="form-label small fw-bold text-secondary">Şifre</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-key"></i></span>
+                <input type="password" id="loginPassword" class="form-control" placeholder="••••••">
+            </div>
+        </div>
+        <div id="loginError" class="alert alert-danger py-2 small mb-3" style="display: none;"></div>
+        <button class="btn btn-primary w-100 fw-bold py-2" id="loginSubmitBtn" onclick="handleLogin()">Giriş Yap</button>
+    </div>
+</div>
 
 <div class="app-wrapper">
     <aside class="sidebar">
@@ -65,11 +103,19 @@
             <div class="nav-item" data-page="raporlar"><i class="bi bi-graph-up"></i> Raporlar</div>
             <div class="nav-item" data-page="itirazlar"><i class="bi bi-chat-dots"></i> İtirazlar</div>
             <div class="nav-item" data-page="e-tablo"><i class="bi bi-file-earmark-spreadsheet text-success"></i> Canlı E-Tablo</div>
+            <div class="nav-item" data-page="kullanici-yonetimi"><i class="bi bi-people-fill text-info"></i> Kullanıcı Yönetimi</div>
         </nav>
     </aside>
 
     <main class="main-content">
-        <header class="top-header"><h5 id="page-title" class="mb-0 fw-bold">Genel Bakış</h5><div class="badge bg-success px-3">🟢 Canlı</div></header>
+        <header class="top-header">
+            <h5 id="page-title" class="mb-0 fw-bold">Genel Bakış</h5>
+            <div class="d-flex align-items-center gap-3">
+                <span id="activeUserName" class="badge bg-light text-dark py-2 px-3 border"><i class="bi bi-person-check-fill text-success"></i> Kullanıcı</span>
+                <button class="btn btn-sm btn-outline-primary" onclick="acSifreDegistirModal()"><i class="bi bi-key"></i> Şifremi Değiştir</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="handleLogout()"><i class="bi bi-box-arrow-right"></i> Çıkış</button>
+            </div>
+        </header>
         <div id="filter-bar" class="filter-bar">
             <div class="filter-group"><label>Yıl</label><select id="f-yil"></select></div>
             <div class="filter-group"><label>Dönem</label><select id="f-donem"></select></div>
@@ -94,6 +140,30 @@
             <section id="karsilastirma" class="page"></section>
             <section id="raporlar" class="page"></section>
             <section id="itirazlar" class="page"></section>
+            <section id="kullanici-yonetimi" class="page">
+                <div class="kds-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-people-fill"></i> Kullanıcı Yönetimi Paneli</h5>
+                        <button class="btn btn-sm btn-primary" onclick="acYeniKullaniciModal()"><i class="bi bi-plus-lg"></i> Yeni Kullanıcı Ekle</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle table-bordered" style="font-size: 11.5px;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Ad Soyad</th>
+                                    <th>E-posta</th>
+                                    <th>Rol</th>
+                                    <th>Şifre</th>
+                                    <th class="text-center" style="width: 200px;">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kullaniciListesiGövde">
+                                <!-- Dinamik Dolacak -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
             <section id="e-tablo" class="page">
                 <div class="kds-card">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
@@ -131,6 +201,59 @@
         <button class="modal-close" onclick="kapatModal()">&times;</button>
         <h4 id="modalBaslik" class="fw-bold mb-3">Gösterge Detayı</h4>
         <div id="modalIcerik"></div>
+    </div>
+</div>
+
+<!-- Şifre Değiştirme Modalı -->
+<div id="sifreDegistirModal" class="modal-overlay" onclick="window.sifreModalDisKlikKapat(event)">
+    <div class="modal-container" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="kapatSifreModal()">&times;</button>
+        <h4 class="fw-bold mb-3">🗝️ Şifremi Değiştir</h4>
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Mevcut Şifre</label>
+            <input type="password" id="oldPassword" class="form-control" placeholder="Eski şifreniz">
+        </div>
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Yeni Şifre</label>
+            <input type="password" id="newPassword" class="form-control" placeholder="Yeni şifreniz">
+        </div>
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Yeni Şifre (Tekrar)</label>
+            <input type="password" id="newPasswordConfirm" class="form-control" placeholder="Yeni şifreniz tekrar">
+        </div>
+        <div id="sifreError" class="alert alert-danger py-2 small mb-3" style="display: none;"></div>
+        <div id="sifreSuccess" class="alert alert-success py-2 small mb-3" style="display: none;"></div>
+        <button class="btn btn-primary w-100 fw-bold py-2" onclick="handleSifreDegistir()">Şifreyi Güncelle</button>
+    </div>
+</div>
+
+<!-- Kullanıcı Ekle/Düzenle Modalı -->
+<div id="kullaniciModal" class="modal-overlay" onclick="window.kullaniciModalDisKlikKapat(event)">
+    <div class="modal-container" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="kapatKullaniciModal()">&times;</button>
+        <h4 id="kullaniciModalBaslik" class="fw-bold mb-3">👤 Yeni Kullanıcı Ekle</h4>
+        <input type="hidden" id="editUserId">
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Ad Soyad</label>
+            <input type="text" id="userAdSoyad" class="form-control" placeholder="Ad Soyad">
+        </div>
+        <div class="mb-3">
+            <label class="form-label small fw-bold">E-posta</label>
+            <input type="email" id="userEmail" class="form-control" placeholder="E-posta adresi">
+        </div>
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Rol</label>
+            <select id="userRol" class="form-select">
+                <option value="Kullanıcı">Kullanıcı</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Şifre</label>
+            <input type="text" id="userSifre" class="form-control" placeholder="Şifre">
+        </div>
+        <div id="kullaniciFormError" class="alert alert-danger py-2 small mb-3" style="display: none;"></div>
+        <button class="btn btn-primary w-100 fw-bold py-2" onclick="kaydetKullanici()">Kaydet</button>
     </div>
 </div>
 
@@ -212,6 +335,280 @@
         rawRapor: []
     };
     let currentETabloSubTab = 'rapor';
+
+    // ---------- ROL BAZLI YETKİLENDİRME (RBAC) FONKSİYONU ----------
+    function uygulaYetkilendirme(role) {
+        const itirazNavItem = document.querySelector('.nav-item[data-page="itirazlar"]');
+        const kullaniciNavItem = document.querySelector('.nav-item[data-page="kullanici-yonetimi"]');
+        const isAdmin = role && role.toLowerCase().trim() === 'admin';
+        
+        if (itirazNavItem) {
+            itirazNavItem.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
+        }
+        if (kullaniciNavItem) {
+            kullaniciNavItem.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
+        }
+    }
+
+    // ---------- SUPABASE GÜVENLİ GİRİŞ İŞLEMLERİ (PROFILES TABLOSU İLE) ----------
+    async function handleLogin() {
+        const name = document.getElementById('loginName').value.trim();
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value.trim();
+        const errorEl = document.getElementById('loginError');
+        
+        if(!name || !email || !password) {
+            errorEl.innerText = "Lütfen tüm alanları doldurunuz.";
+            errorEl.style.display = "block";
+            return;
+        }
+
+        errorEl.style.display = "none";
+        const btn = document.getElementById('loginSubmitBtn');
+        btn.disabled = true;
+        btn.innerText = "Sorgulanıyor...";
+
+        try {
+            // Supabase 'profiles' tablosundan kullanıcıyı sorgula
+            const { data, error } = await _supabase
+                .from('profiles')
+                .select('*')
+                .ilike('ad_soyad', name)
+                .eq('email', email)
+                .eq('sifre', password)
+                .maybeSingle();
+
+            if (error) throw error;
+
+            if (data) {
+                // Giriş başarılı
+                sessionStorage.setItem('khhb_auth_user', data.ad_soyad);
+                sessionStorage.setItem('khhb_auth_email', data.email);
+                sessionStorage.setItem('khhb_auth_role', data.rol || 'Kullanıcı');
+                
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('activeUserName').innerHTML = `<i class="bi bi-person-check-fill text-success"></i> ${data.ad_soyad} (${data.rol || 'Kullanıcı'})`;
+                
+                // Rol bazlı menü kontrolünü uygula
+                uygulaYetkilendirme(data.rol);
+            } else {
+                errorEl.innerText = "Giriş bilgileri hatalı ya da yetkiniz bulunmuyor.";
+                errorEl.style.display = "block";
+            }
+        } catch(err) {
+            console.error("Giriş hatası:", err);
+            errorEl.innerText = "Sorgulama sırasında hata oluştu. Supabase bağlantısını ve 'profiles' tablonuzu kontrol edin.";
+            errorEl.style.display = "block";
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Giriş Yap";
+        }
+    }
+
+    function handleLogout() {
+        sessionStorage.removeItem('khhb_auth_user');
+        sessionStorage.removeItem('khhb_auth_email');
+        sessionStorage.removeItem('khhb_auth_role');
+        document.getElementById('loginName').value = "";
+        document.getElementById('loginEmail').value = "";
+        document.getElementById('loginPassword').value = "";
+        document.getElementById('loginError').style.display = "none";
+        document.getElementById('login-screen').style.display = 'flex';
+        
+        // Yetkiyi temizle
+        uygulaYetkilendirme(null);
+    }
+
+    // ---------- KULLANICI KENDİ ŞİFRESİNİ DEĞİŞTİRME MODÜLÜ ----------
+    window.acSifreDegistirModal = () => {
+        document.getElementById('oldPassword').value = "";
+        document.getElementById('newPassword').value = "";
+        document.getElementById('newPasswordConfirm').value = "";
+        document.getElementById('sifreError').style.display = "none";
+        document.getElementById('sifreSuccess').style.display = "none";
+        document.getElementById('sifreDegistirModal').classList.add('active');
+    };
+    window.kapatSifreModal = () => document.getElementById('sifreDegistirModal').classList.remove('active');
+    window.sifreModalDisKlikKapat = (e) => { if(e.target.id === 'sifreDegistirModal') kapatSifreModal(); };
+    
+    async function handleSifreDegistir() {
+        const oldPass = document.getElementById('oldPassword').value.trim();
+        const newPass = document.getElementById('newPassword').value.trim();
+        const newPassConfirm = document.getElementById('newPasswordConfirm').value.trim();
+        const errorEl = document.getElementById('sifreError');
+        const successEl = document.getElementById('sifreSuccess');
+        
+        errorEl.style.display = "none";
+        successEl.style.display = "none";
+        
+        if(!oldPass || !newPass || !newPassConfirm) {
+            errorEl.innerText = "Lütfen tüm şifre alanlarını doldurunuz.";
+            errorEl.style.display = "block";
+            return;
+        }
+        if(newPass !== newPassConfirm) {
+            errorEl.innerText = "Yeni şifreler eşleşmiyor.";
+            errorEl.style.display = "block";
+            return;
+        }
+        
+        const activeEmail = sessionStorage.getItem('khhb_auth_email');
+        
+        try {
+            // 1. Mevcut şifreyi doğrula
+            const { data: user, error: checkError } = await _supabase
+                .from('profiles')
+                .select('*')
+                .eq('email', activeEmail)
+                .eq('sifre', oldPass)
+                .maybeSingle();
+            
+            if (checkError) throw checkError;
+            
+            if (!user) {
+                errorEl.innerText = "Mevcut şifreniz hatalı.";
+                errorEl.style.display = "block";
+                return;
+            }
+            
+            // 2. Şifreyi güncelle
+            const { error: updateError } = await _supabase
+                .from('profiles')
+                .update({ sifre: newPass })
+                .eq('email', activeEmail);
+            
+            if (updateError) throw updateError;
+            
+            successEl.innerText = "Şifreniz başarıyla güncellendi.";
+            successEl.style.display = "block";
+            setTimeout(() => { kapatSifreModal(); }, 1500);
+            
+        } catch(err) {
+            console.error("Şifre güncelleme hatası:", err);
+            errorEl.innerText = "Şifre güncellenirken bir hata oluştu.";
+            errorEl.style.display = "block";
+        }
+    }
+
+    // ---------- KULLANICI YÖNETİM PANELİ (ADMİNLER İÇİN) ----------
+    window.kullaniciModalDisKlikKapat = (e) => { if(e.target.id === 'kullaniciModal') kapatKullaniciModal(); };
+    window.kapatKullaniciModal = () => document.getElementById('kullaniciModal').classList.remove('active');
+    
+    window.acYeniKullaniciModal = () => {
+        document.getElementById('kullaniciModalBaslik').innerText = "👤 Yeni Kullanıcı Ekle";
+        document.getElementById('editUserId').value = "";
+        document.getElementById('userAdSoyad').value = "";
+        document.getElementById('userEmail').value = "";
+        document.getElementById('userRol').value = "Kullanıcı";
+        document.getElementById('userSifre').value = "";
+        document.getElementById('kullaniciFormError').style.display = "none";
+        document.getElementById('kullaniciModal').classList.add('active');
+    };
+    
+    async function kullanicilariYukle() {
+        const tbody = document.getElementById('kullaniciListesiGövde');
+        if(!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Yükleniyor...</td></tr>';
+        
+        try {
+            const { data, error } = await _supabase
+                .from('profiles')
+                .select('*')
+                .order('ad_soyad');
+            
+            if (error) throw error;
+            
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Hiç kullanıcı bulunamadı.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = data.map(u => `
+                <tr>
+                    <td><b>${u.ad_soyad}</b></td>
+                    <td>${u.email}</td>
+                    <td><span class="badge ${u.rol==='admin'?'bg-danger':'bg-secondary'}">${u.rol || 'Kullanıcı'}</span></td>
+                    <td><code class="text-dark">${u.sifre || ''}</code></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="acKullaniciDuzenleModal('${u.id}','${u.ad_soyad.replace(/'/g, "\\'")}','${u.email}','${u.rol}','${u.sifre}')"><i class="bi bi-pencil"></i> Düzenle</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="kullaniciSil('${u.id}','${u.ad_soyad.replace(/'/g, "\\'")}')"><i class="bi bi-trash"></i> Sil</button>
+                    </td>
+                </tr>
+            `).join('');
+            
+        } catch(err) {
+            console.error("Kullanıcı listesi yükleme hatası:", err);
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Kullanıcılar yüklenirken bir hata oluştu.</td></tr>';
+        }
+    }
+    
+    window.acKullaniciDuzenleModal = (id, name, email, rol, sifre) => {
+        document.getElementById('kullaniciModalBaslik').innerText = "👤 Kullanıcı Bilgilerini Düzenle";
+        document.getElementById('editUserId').value = id;
+        document.getElementById('userAdSoyad').value = name;
+        document.getElementById('userEmail').value = email;
+        document.getElementById('userRol').value = rol || "Kullanıcı";
+        document.getElementById('userSifre').value = sifre || "";
+        document.getElementById('kullaniciFormError').style.display = "none";
+        document.getElementById('kullaniciModal').classList.add('active');
+    };
+    
+    async function kaydetKullanici() {
+        const id = document.getElementById('editUserId').value;
+        const name = document.getElementById('userAdSoyad').value.trim();
+        const email = document.getElementById('userEmail').value.trim();
+        const rol = document.getElementById('userRol').value;
+        const sifre = document.getElementById('userSifre').value.trim();
+        const errorEl = document.getElementById('kullaniciFormError');
+        
+        errorEl.style.display = "none";
+        if(!name || !email || !sifre) {
+            errorEl.innerText = "Lütfen tüm alanları doldurunuz.";
+            errorEl.style.display = "block";
+            return;
+        }
+        
+        try {
+            if(id) {
+                // Güncelleme
+                const { error } = await _supabase
+                    .from('profiles')
+                    .update({ ad_soyad: name, email: email, rol: rol, sifre: sifre })
+                    .eq('id', id);
+                if (error) throw error;
+            } else {
+                // Yeni Kayıt
+                const { error } = await _supabase
+                    .from('profiles')
+                    .insert({ ad_soyad: name, email: email, rol: rol, sifre: sifre });
+                if (error) throw error;
+            }
+            
+            kapatKullaniciModal();
+            await kullanicilariYukle();
+            
+        } catch(err) {
+            console.error("Kullanıcı kaydetme hatası:", err);
+            errorEl.innerText = "Kullanıcı kaydedilirken bir hata oluştu.";
+            errorEl.style.display = "block";
+        }
+    }
+    
+    window.kullaniciSil = async (id, name) => {
+        if(confirm(`"${name}" adlı kullanıcıyı tamamen silmek istediğinize emin misiniz?`)) {
+            try {
+                const { error } = await _supabase
+                    .from('profiles')
+                    .delete()
+                    .eq('id', id);
+                if (error) throw error;
+                await kullanicilariYukle();
+            } catch(err) {
+                console.error("Kullanıcı silme hatası:", err);
+                alert("Kullanıcı silinirken bir hata oluştu.");
+            }
+        }
+    };
 
     // ---------- YARDIMCI FONKSİYONLAR ----------
     const formatDonemAdi = (donem) => AYLAR[donem-1] || `${donem}. Dönem`;
@@ -387,7 +784,7 @@
             return numA - numB;
         });
         
-        const { data: toplam } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('yil', yil).eq('donem', donem).maybeSingle();
+        const { data: toplam = null } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('yil', yil).eq('donem', donem).maybeSingle() || {};
         
         let html = `<div class="fw-bold fs-5 mb-3">📊 ${kurum} - ${formatDonemAdi(donem)} ${yil} Analiz Raporu</div>`;
         if(toplam) html += `<div class="alert alert-info py-2 mb-3">🏆 <b>Toplam Puanı:</b> <span class="fs-5 fw-bold text-primary">${toplam.toplam_puan}</span> | <b>Rol Ortalaması:</b> ${toplam.rol_ortalamasi}</div>`;
@@ -473,7 +870,7 @@
         const unique = [];
         const seen = new Set();
         data?.forEach(item => {
-            const label = item.gosterge_kodu ? `${item.gosterge_kodu} - ${item.gosterge_adi}` : item.gosterge_adi;
+            const label = item.gosterge_kodu ? `${item.gosterge_kodu} - ${item.gosterge_adi}$` : item.gosterge_adi;
             if(!seen.has(item.gosterge_adi)) {
                 seen.add(item.gosterge_adi);
                 unique.push({ adi: item.gosterge_adi, kodu: item.gosterge_kodu, label: label });
@@ -923,6 +1320,7 @@
     }
 
     // ÇOKETOPLA Formülleri ile Yoğun Bakım Durum Raporunu Çizdir (Görsel 1'deki Tablonun Birebir Canlı JavaScript Karşılığı)
+    // 3 Yeni Sütun Eklendi: Taburcu, Ex ve Taburcu+Ex
     function renderRaporView() {
         const rows = googleSheetsData.rawDATA;
         if(!rows || rows.length <= 1) {
@@ -956,12 +1354,15 @@
                             <th class="text-center">🚨 YB Bekleyen Hasta</th>
                             <th class="text-center">📥 Yatırılan Hasta (Kendi)</th>
                             <th class="text-center">🚚 Dış Kurumdan Gelen</th>
+                            <th class="text-center">📤 Taburcu</th>
+                            <th class="text-center">🖤 Ex (Vefat)</th>
+                            <th class="text-center">📊 Taburcu+Ex</th>
                         </tr>
                     </thead>
                     <tbody>
         `;
         
-        let totals = { yatak: 0, dolu: 0, bos: 0, bekleyen: 0, yatirilan: 0, disKurum: 0 };
+        let totals = { yatak: 0, dolu: 0, bos: 0, bekleyen: 0, yatirilan: 0, disKurum: 0, taburcu: 0, ex: 0, taburcuEx: 0 };
         
         HOSPITALS.forEach(h => {
             // ÇOKETOPLA(DATA!E:E; DATA!C:C; $A12; DATA!D:D; "Değişken"; DATA!B:B; MAK(DATA!B:B))
@@ -976,6 +1377,11 @@
             const yatirilan = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)"}]);
             const disKurum = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)"}]);
             
+            // Yeni Eklenen Sütunlar (DATA tablosundan ÇOKETOPLA ile çekilir)
+            const taburcu = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)"}]);
+            const ex = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)"}]);
+            const taburcuEx = taburcu + ex;
+            
             // Toplam Satırı Değerlerini Kümülatif Ekle
             totals.yatak += yatak;
             totals.dolu += dolu;
@@ -983,6 +1389,9 @@
             totals.bekleyen += bekleyen;
             totals.yatirilan += yatirilan;
             totals.disKurum += disKurum;
+            totals.taburcu += taburcu;
+            totals.ex += ex;
+            totals.taburcuEx += taburcuEx;
             
             tableHtml += `
                 <tr>
@@ -994,6 +1403,9 @@
                     <td class="text-center">${bekleyen}</td>
                     <td class="text-center">${yatirilan}</td>
                     <td class="text-center">${disKurum}</td>
+                    <td class="text-center text-secondary">${taburcu}</td>
+                    <td class="text-center text-danger">${ex}</td>
+                    <td class="text-center fw-bold text-dark bg-light">${taburcuEx}</td>
                 </tr>
             `;
         });
@@ -1010,6 +1422,9 @@
                 <td class="text-center">${totals.bekleyen}</td>
                 <td class="text-center">${totals.yatirilan}</td>
                 <td class="text-center">${totals.disKurum}</td>
+                <td class="text-center text-secondary">${totals.taburcu}</td>
+                <td class="text-center text-danger">${totals.ex}</td>
+                <td class="text-center text-dark">${totals.taburcuEx}</td>
             </tr>
         `;
         
@@ -1325,10 +1740,22 @@
         }
         if(sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
         if(sayfa === 'e-tablo') await initETabloDashboard();
+        if(sayfa === 'kullanici-yonetimi') await kullanicilariYukle();
     };
 
     // ---------- BAŞLATMA ----------
     (async function init() {
+        // Oturum kontrolü
+        const activeUser = sessionStorage.getItem('khhb_auth_user');
+        const activeRole = sessionStorage.getItem('khhb_auth_role');
+        if (activeUser) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('activeUserName').innerHTML = `<i class="bi bi-person-check-fill text-success"></i> ${activeUser} (${activeRole || 'Kullanıcı'})`;
+            uygulaYetkilendirme(activeRole);
+        } else {
+            uygulaYetkilendirme(null);
+        }
+
         await dinamikFiltreleriDoldur();
         await itirazDurumlariniYukle();
         
