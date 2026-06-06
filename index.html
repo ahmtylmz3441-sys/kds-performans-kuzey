@@ -816,7 +816,7 @@
         `;
         if(toplam) html += `<div class="alert alert-info py-2 mb-3">🏆 <b>Toplam Puanı:</b> <span class="fs-5 fw-bold text-primary">${toplam.toplam_puan}</span> | <b>Rol Ortalaması:</b> ${toplam.rol_ortalamasi}</div>`;
         
-        html += `<div class="table-responsive"><table id="kurumAnalizTablo" class="table table-hover align-middle"><thead><tr><th>Gösterge Adı</th><th>Yön</th><th>GD</th><th>TR Ort</th><th>Puan / GP</th><th>Değerlendirme</th><th>İşlem</th></tr></thead><tbody>`;
+        html += `<div class="table-responsive"><table id="kurumAnalizTablo" class="table table-hover align-middle"><thead><tr><th>Gösterge Adı</th><th>Beklenen Yön</th><th>GD</th><th>TR Ort</th><th>Puan / GP</th><th>Değerlendirme</th><th>İşlem</th></tr></thead><tbody>`;
         
         for(const r of perf) {
             const durum = degerlendir(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp, r.id);
