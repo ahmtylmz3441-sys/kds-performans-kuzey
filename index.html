@@ -390,18 +390,31 @@
         btn.innerText = "Sorgulanıyor...";
 
         try {
-            // Supabase 'profiles' tablosundan kullanıcıyı sorgula
+            // 1. Supabase 'profiles' tablosundan sadece e-posta ve şifre ile sorgulama yapıyoruz
             const { data, error } = await _supabase
                 .from('profiles')
                 .select('*')
-                .ilike('ad_soyad', name)
                 .eq('email', email)
                 .eq('sifre', password)
                 .maybeSingle();
 
             if (error) throw error;
 
-            if (data) {
+            // 2. Türkçe karakterleri ve harf büyüklüklerini tamamen standartlaştıran yardımcı fonksiyon
+            const trTemizle = (str) => {
+                return (str || "").toString().toLowerCase()
+                    .replace(/ı/g, 'i')
+                    .replace(/ğ/g, 'g')
+                    .replace(/ü/g, 'u')
+                    .replace(/ş/g, 's')
+                    .replace(/ö/g, 'o')
+                    .replace(/ç/g, 'c')
+                    .replace(/i̇/g, 'i') // İ harfindeki çift nokta uyumsuzlukları için
+                    .trim();
+            };
+
+            // 3. Veritabanındaki ad soyad ile kullanıcının yazdığı adı Türkçe engellerine takılmadan eşleştiriyoruz
+            if (data && trTemizle(data.ad_soyad) === trTemizle(name)) {
                 // Giriş başarılı
                 sessionStorage.setItem('khhb_auth_user', data.ad_soyad);
                 sessionStorage.setItem('khhb_auth_email', data.email);
