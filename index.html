@@ -327,7 +327,7 @@
     let charts = {};
     let itirazPerformansMap = {};
     let mevcutYillarDonemler = { yillar: [], donemler: [] };
-    const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+    const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Aralık", "Eylül", "Ekim", "Kasım", "Aralık"];
     
     // Google Sheets Veri Deposu
     let googleSheetsData = {
@@ -1028,44 +1028,41 @@
             const sonuc = {};
             data?.forEach(r => { if(!sonuc[r.kurum_adi]) sonuc[r.kurum_adi] = {}; sonuc[r.kurum_adi][`d${r.donem}`] = r.gd; });
             const labels = Object.keys(sonuc).slice(0,10);
-            const d1Data = labels.map(l=>sonuc[l]?.d1 !== undefined ? sonuc[l].d1 : null);
-            const d2Data = labels.map(l=>sonuc[l]?.d2 !== undefined ? sonuc[l].d2 : null);
-            const d3Data = labels.map(l=>sonuc[l]?.d3 !== undefined ? sonuc[l].d3 : null);
+            
+            // DİNAMİK DATASET YAPILANDIRMASI (Ocak, Şubat, Mart, Nisan, vb. otomatik eklenir)
+            const donemler = [...new Set(data?.map(r => r.donem).filter(d => d))].sort((a,b)=>a-b);
+            const colors = [
+                { bg: 'rgba(54, 162, 235, 0.75)', border: 'rgba(54, 162, 235, 1)' }, // Mavi (Ocak)
+                { bg: 'rgba(245, 158, 11, 0.75)', border: 'rgba(245, 158, 11, 1)' },  // Turuncu (Şubat)
+                { bg: 'rgba(16, 185, 129, 0.75)', border: 'rgba(16, 185, 129, 1)' },  // Yeşil (Mart)
+                { bg: 'rgba(239, 68, 68, 0.75)', border: 'rgba(239, 68, 68, 1)' },    // Kırmızı (Nisan)
+                { bg: 'rgba(139, 92, 246, 0.75)', border: 'rgba(139, 92, 246, 1)' },  // Mor (Mayıs)
+                { bg: 'rgba(236, 72, 153, 0.75)', border: 'rgba(236, 72, 153, 1)' },  // Pembe (Haziran)
+                { bg: 'rgba(20, 184, 166, 0.75)', border: 'rgba(20, 184, 166, 1)' }   // Turkuaz (Temmuz)
+            ];
+            
+            const datasets = donemler.map((d, index) => {
+                const color = colors[index % colors.length];
+                const monthLabel = AYLAR[d - 1] || `${d}. Dönem`;
+                const dData = labels.map(l => sonuc[l]?.[`d${d}`] !== undefined ? sonuc[l][`d${d}`] : null);
+                
+                return {
+                    label: `${monthLabel} GD`,
+                    data: dData,
+                    backgroundColor: color.bg,
+                    borderColor: color.border,
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    hoverBackgroundColor: color.bg.replace('0.75', '0.95')
+                };
+            });
             
             if(charts.gosterge) charts.gosterge.destroy();
             charts.gosterge = new Chart(document.getElementById('gostergeChart'), { 
                 type: 'bar', 
                 data: { 
                     labels, 
-                    datasets: [
-                        { 
-                            label: 'Ocak GD', 
-                            data: d1Data, 
-                            backgroundColor: 'rgba(54, 162, 235, 0.75)', 
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1.5,
-                            borderRadius: 6,
-                            hoverBackgroundColor: 'rgba(54, 162, 235, 0.95)'
-                        }, 
-                        { 
-                            label: 'Şubat GD', 
-                            data: d2Data, 
-                            backgroundColor: 'rgba(245, 158, 11, 0.75)', 
-                            borderColor: 'rgba(245, 158, 11, 1)',
-                            borderWidth: 1.5,
-                            borderRadius: 6,
-                            hoverBackgroundColor: 'rgba(245, 158, 11, 0.95)'
-                        },
-                        { 
-                            label: 'Mart GD', 
-                            data: d3Data, 
-                            backgroundColor: 'rgba(16, 185, 129, 0.75)', 
-                            borderColor: 'rgba(16, 185, 129, 1)',
-                            borderWidth: 1.5,
-                            borderRadius: 6,
-                            hoverBackgroundColor: 'rgba(16, 185, 129, 0.95)'
-                        }
-                    ] 
+                    datasets: datasets 
                 }, 
                 options: { 
                     indexAxis: 'y', // Yatay Görünüm
@@ -1106,53 +1103,6 @@
         document.getElementById('sapmaFiltreDonem').onchange = () => hedefSapmaAnaliziYukle();
 
         await hedefSapmaAnaliziYukle();
-    }
-
-    async function hedefSapmaAnaliziYukle() {
-        const y = document.getElementById('sapmaFiltreYil').value;
-        const d = document.getElementById('sapmaFiltreDonem').value;
-        
-        const tbody = document.querySelector('#sapmaTablo tbody');
-        if(!tbody) return;
-        
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Veriler analiz ediliyor...</td></tr>';
-
-        const { data } = await _supabase.from('performans').select('kurum_adi, gosterge_adi, gd, tr_ort, gosterge_yonu').eq('yil', y).eq('donem', d);
-        if(!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Seçilen döneme ait sapma verisi bulunamadı.</td></tr>'; return; }
-        
-        let sapmalar = [];
-        data.forEach(r => {
-            if(r.gd !== null && r.tr_ort !== null && r.tr_ort !== 0) {
-                let sapmaMiktari = 0;
-                let kritikDurum = false;
-                if(r.gosterge_yonu === 'Pozitif' && r.gd < r.tr_ort) {
-                    sapmaMiktari = ((r.tr_ort - r.gd) / r.tr_ort) * 100;
-                    kritikDurum = true;
-                } else if(r.gosterge_yonu === 'Negatif' && r.gd > r.tr_ort) {
-                    sapmaMiktari = ((r.gd - r.tr_ort) / r.tr_ort) * 100;
-                    kritikDurum = true;
-                }
-                if(kritikDurum) {
-                    sapmalar.push({ kurum: r.kurum_adi, gosterge: r.gosterge_adi, gd: r.gd, tr: r.tr_ort, sapma: sapmaMiktari });
-                }
-            }
-        });
-        
-        sapmalar.sort((a,b) => b.sapma - a.sapma);
-        const enKritikSapmalar = sapmalar.slice(0, 15);
-        
-        if(enKritikSapmalar.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success fw-bold">Mükemmel! Türkiye ortalamasının altında kalan kritik sapma saptanmadı.</td></tr>';
-            return;
-        }
-        
-        tbody.innerHTML = enKritikSapmalar.map(s => `<tr>
-            <td><b>${s.kurum}</b></td>
-            <td><small>${s.gosterge}</small></td>
-            <td class="text-danger fw-bold">${s.gd}</td>
-            <td>${s.tr}</td>
-            <td><span class="badge bg-danger">Ortalamadan %${s.sapma.toFixed(1)} Sapma</span></td>
-        </tr>`).join('');
     }
 
     // ---------- DÖNEMSEL KARŞILAŞTIRMA ----------
