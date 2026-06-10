@@ -26,7 +26,6 @@
         .page.active { display: block; }
         .kds-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-top: 4px solid var(--accent); height: 100%; margin-bottom: 20px; }
         .stat-val { font-size: 2.2rem; font-weight: 800; }
-        .itiraz-btn { background: #f59e0b; border: none; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; transition: 0.2s; }
         .badge-muaf { background: #e2e3e5; color: #6c757d; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-basarili { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-kritik { background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
@@ -105,7 +104,7 @@
             <div class="nav-item" data-page="e-tablo"><i class="bi bi-file-earmark-spreadsheet text-success"></i> Canlı E-Tablo</div>
             <div class="nav-item" data-page="kullanici-yonetimi"><i class="bi bi-people-fill text-info"></i> Kullanıcı Yönetimi</div>
         </nav>
-    </</aside>
+    </aside>
 
     <main class="main-content">
         <header class="top-header">
@@ -785,7 +784,7 @@
     window.itirazEkle = async function(pid, kurum, gosterge, yil, donem) {
         const metin = prompt(`${kurum}\n${gosterge}\n${yil}/${donem}\nİtiraz Gerekçenizi Yazınız:`);
         if(!metin) return;
-        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede' });
+        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede', olusturma_tarihi: new Date().toISOString() });
         alert(error ? "Hata: " + error.message : "✅ İtiraz başarıyla kaydedildi.");
         if(!error) { await itirazDurumlariniYukle(); window.kurumAnaliz(); }
     };
@@ -1622,7 +1621,7 @@
         if(sayfa === 'genel-bakis') await dashboard();
         
         if(sayfa === 'tum-bolge') {
-            const yilOptions = bandwidth_years = mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`).join('');
+            const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`).join('');
             const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
 
             document.getElementById('tum-bolge').innerHTML = `
@@ -1662,6 +1661,10 @@
             await window.bolgeListesi();
         }
         if(sayfa === 'raporlar') await raporlar();
+        if(sayfa === 'itirazlar') {
+            document.getElementById('itirazlar').innerHTML = `<div class="kds-card"><h6>⚠️ İtiraz Yönetimi Paneli</h6><div id="itirazListe"></div></div>`;
+            await window.itirazlariGoster();
+        }
         if(sayfa === 'karsilastirma') {
             document.getElementById('karsilastirma').innerHTML = `
                 <div class="kds-card">
@@ -1670,7 +1673,7 @@
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Kurum Türü</label>
                             <select id="karsKurumTip" class="form-select">
-                                <option value="">Tümü</option>
+                                <option value="">Tümü (Hastane & ADSM)</option>
                                 <option value="Hastane">Hastane</option>
                                 <option value="ADSM">ADSM/ADSH</option>
                             </select>
