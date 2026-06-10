@@ -26,7 +26,6 @@
         .page.active { display: block; }
         .kds-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-top: 4px solid var(--accent); height: 100%; margin-bottom: 20px; }
         .stat-val { font-size: 2.2rem; font-weight: 800; }
-        .itiraz-btn { background: #f59e0b; border: none; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; transition: 0.2s; }
         .badge-muaf { background: #e2e3e5; color: #6c757d; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-basarili { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-kritik { background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
@@ -41,7 +40,7 @@
         .modal-close { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #6c757d; }
         .donem-checkbox-group { display: block; margin: 15px 0; padding: 18px; background: #ffffff; border-radius: 12px; border: 1px dashed #ced4da; min-height: 110px; transition: all 0.3s ease; }
         .progress-bar { width: 100%; background: #e9ecef; border-radius: 10px; height: 8px; overflow: hidden; }
-        .progress-fill { height: 100%; border-radius: 10px; }
+        .progress-bar-fill { height: 100%; border-radius: 10px; }
         .loading { text-align: center; padding: 30px; color: #6c757d; }
         .gosterge-detay { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
         .fs-7 { font-size: 0.85rem; }
@@ -327,7 +326,7 @@
     let charts = {};
     let itirazPerformansMap = {};
     let mevcutYillarDonemler = { yillar: [], donemler: [] };
-    const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Aralık", "Eylül", "Ekim", "Kasım", "Aralık"];
+    const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
     
     // Google Sheets Veri Deposu
     let googleSheetsData = {
@@ -644,87 +643,11 @@
         }
     };
 
-    // ---------- YARDIMCI FONKSİYONLAR ----------
-    const formatDonemAdi = (donem) => AYLAR[donem-1] || `${donem}. Dönem`;
-    const showLoading = (elementId, mesaj = "Yükleniyor...") => { const el = document.getElementById(elementId); if(el) el.innerHTML = `<div class="loading">${mesaj}</div>`; };
-    
-    async function fetchData(table, select, filters = {}) {
-        try {
-            let query = _supabase.from(table).select(select);
-            Object.entries(filters).forEach(([key, val]) => { if(val !== undefined && val !== null && val !== '') query = query.eq(key, val); });
-            const { data, error } = await query;
-            if(error) throw error;
-            return data;
-        } catch(err) { console.error(`fetchData hatası (${table}):`, err); return null; }
-    }
-
-    async function itirazDurumlariniYukle() {
-        const data = await fetchData('itirazlar', 'performans_id');
-        itirazPerformansMap = {};
-        data?.forEach(i => { itirazPerformansMap[i.performans_id] = true; });
-    }
-
-    function degerlendir(gd, trOrt, yon, puan, gp, performansId = null) {
-        let itirazBadge = (performansId && itirazPerformansMap[performansId]) ? '<span class="badge-itiraz-var">📝 İtiraz var</span>' : '';
-        if (gd === null || gd === undefined || trOrt === null || trOrt === undefined) 
-            return { class: 'badge-muaf', text: '🔘 Muaf' + itirazBadge };
-        const ilOrtBasari = yon === 'Pozitif' ? gd >= trOrt : gd <= trOrt;
-        const puanOrani = (puan / gp) * 100;
-        if (ilOrtBasari && puanOrani >= 75) return { class: 'badge-basarili', text: '✅ Mükemmel' + itirazBadge };
-        if (ilOrtBasari && puanOrani >= 50) return { class: 'badge-basarili', text: '✅ Başarılı' + itirazBadge };
-        if (!ilOrtBasari && puanOrani >= 50) return { class: 'badge-orta', text: '⚠️ Gelişmeli' + itirazBadge };
-        return { class: 'badge-kritik', text: '❌ Kritik' + itirazBadge };
-    }
-
-    function yonOku(yon) {
-        return yon === 'Pozitif' ? '<span class="text-success fw-bold">↑ Pozitif</span>' : '<span class="text-danger fw-bold">↓ Negatif</span>';
-    }
-
-    function pdfUrlGetir(gostergeKodu, kurumTipi) {
-        if(!gostergeKodu) return null;
-        if(gostergeKodu.startsWith('SYPG-BH-')) {
-            let numara = gostergeKodu.split('-')[2];
-            return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/pendikismdenetim/dokumanlar/h${numara}.pdf`;
-        }
-        if(gostergeKodu.startsWith('SYPG-ADSH-')) {
-            let numara = gostergeKodu.split('-')[2];
-            return `https://raw.githubusercontent.com/ahmtylmz3441-sys/kds-performans-kuzey/pendikismdenetim/dokumanlar/a${numara}.pdf`;
-        }
-        return null;
-    }
-
-    window.gostergeDetayGoster = function(id, ad, gd, trOrt, puan, gp, yon, gostergeKodu, kurumTipi) {
-        document.getElementById('modalBaslik').innerHTML = `📊 ${gostergeKodu} - ${ad}`;
-        const yonTuru = yon === 'Pozitif' ? '↑ Pozitif (Artmalı)' : '↓ Negatif (Azalmalı)';
-        let html = `<div class="gosterge-detay"><strong>🎯 Hedef Yönü:</strong> ${yonTuru}</div>
-                    <div class="gosterge-detay"><strong>📈 Gösterge Değeri (GD):</strong> ${gd ?? '-'}</div>
-                    <div class="gosterge-detay"><strong>📊 TR Ortalama:</strong> ${trOrt ?? '-'}</div>
-                    <div class="gosterge-detay"><strong>⭐ Alınan Puan / Gösterge Puanı:</strong> ${puan ?? 'null'}/${gp ?? '-'}</div>`;
-        if(itirazPerformansMap[id]) html += `<div class="gosterge-detay alert alert-warning py-1 mt-2"><strong>📝 İtiraz Durumu:</strong> ⏳ İtiraz yapılmış ve inceleme sürecinde.</div>`;
-        else html += `<div class="gosterge-detay text-muted"><strong>📝 İtiraz Durumu:</strong> Henüz bir itiraz kaydı yok.</div>`;
-        const pdfUrl = pdfUrlGetir(gostergeKodu, kurumTipi);
-        if(pdfUrl) {
-            const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-            html += `<div class="gosterge-detay mt-3"><strong>📄 Gösterge Kılavuz Dokümanı:</strong>
-                    <iframe src="${viewerUrl}" style="width:100%; height:320px; border:1px solid #ddd; border-radius:8px; margin-top:5px;"></iframe>
-                    <a href="${pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary w-100 mt-2">🔗 Kılavuzu Yeni Sekmede Aç</a></div>`;
-        }
-        document.getElementById('modalIcerik').innerHTML = html;
-        document.getElementById('gostergeModal').classList.add('active');
-    };
-    
-    window.kapatModal = () => document.getElementById('gostergeModal').classList.remove('active');
-    
-    window.modalDisKlikKapat = function(e) { 
-        if(e.target.id === 'gostergeModal') {
-            kapatModal(); 
-        }
-    };
-
     // ---------- DİNAMİK YIL/DÖNEM FİLTRELERİNİ DOLDUR ----------
     async function dinamikFiltreleriDoldur() {
         const { data: donemlerData } = await _supabase.from('toplam_puanlar').select('donem, yil');
-        if(!donemlerData) return;
+        if(!donemlerData || donemlerData.length === 0) return;
+        
         const yillar = [...new Set(donemlerData.map(d => d.yil).filter(y => y))].sort((a,b)=>b-a);
         const donemler = [...new Set(donemlerData.map(d => d.donem).filter(d => d))].sort((a,b)=>a-b);
         
@@ -732,8 +655,21 @@
 
         const yilSelect = document.getElementById('f-yil');
         if(yilSelect) yilSelect.innerHTML = yillar.map(y => `<option value="${y}">${y}</option>`).join('');
+        
         const donemSelect = document.getElementById('f-donem');
         if(donemSelect) donemSelect.innerHTML = donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
+        
+        // Veritabanındaki en güncel (maksimum) yılı ve bu yıla ait en güncel dönemi otomatik tespit edip seçiyoruz
+        const enSonYil = yillar[0]; // Zaten azalan sırada (b-a) sıralandığı için ilk eleman en büyüktür
+        const buYilinDonemleri = donemlerData.filter(d => d.yil === enSonYil).map(d => d.donem);
+        const enSonDonem = Math.max(...buYilinDonemleri);
+        
+        if(yilSelect) {
+            yilSelect.value = enSonYil;
+        }
+        if(donemSelect) {
+            donemSelect.value = enSonDonem;
+        }
     }
 
     // ---------- GENEL BAKIŞ ----------
@@ -848,7 +784,7 @@
     window.itirazEkle = async function(pid, kurum, gosterge, yil, donem) {
         const metin = prompt(`${kurum}\n${gosterge}\n${yil}/${donem}\nİtiraz Gerekçenizi Yazınız:`);
         if(!metin) return;
-        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede' });
+        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede', olusturma_tarihi: new Date().toISOString() });
         alert(error ? "Hata: " + error.message : "✅ İtiraz başarıyla kaydedildi.");
         if(!error) { await itirazDurumlariniYukle(); window.kurumAnaliz(); }
     };
@@ -1737,7 +1673,7 @@
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Kurum Türü</label>
                             <select id="karsKurumTip" class="form-select">
-                                <option value="">Tümü</option>
+                                <option value="">Tümü (Hastane & ADSM)</option>
                                 <option value="Hastane">Hastane</option>
                                 <option value="ADSM">ADSM/ADSH</option>
                             </select>
@@ -1763,7 +1699,7 @@
             document.getElementById('karsilastirBtn').onclick = () => window.donemselKarsilastir();
             await window.karsilastirmaKurumListesiGuncelle();
         }
-        if(sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
+        if(sayfa === 'kurum-bazli') await kurumAnaliz();
         if(sayfa === 'e-tablo') await initETabloDashboard();
         if(sayfa === 'kullanici-yonetimi') await kullanicilariYukle();
     };
@@ -1782,7 +1718,6 @@
         }
 
         await dinamikFiltreleriDoldur();
-        await itirazDurumlariniYukle();
         
         const fTipSelect = document.getElementById('f-tip');
         if(fTipSelect) {
