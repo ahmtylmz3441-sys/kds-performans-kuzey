@@ -19,7 +19,7 @@
         .filter-bar { background: #fff; padding: 12px 25px; display: none; gap: 12px; border-bottom: 1px solid #ddd; align-items: flex-end; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; }
         .filter-group { display: flex; flex-direction: column; min-width: 130px; flex-shrink: 0; }
         .filter-group select, .filter-group input { padding: 8px 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 13px; background: white; width: 100%; }
-        .btn-sm-custom { padding: 8px 20px; font-size: 12px; border-radius: 10px; background: var(--accent); border: none; color: white; cursor: pointer; transition: 0.2s; white-space: nowrap; flex-shrink: 0; }
+        .btn-sm-custom { padding: 8px 20px; font-size: 12px; border-radius: 10px; background: var(--accent); border: none; color: white; cursor: pointer; transition: 0.2s; nowrap; flex-shrink: 0; }
         .btn-sm-custom:hover { background: #1aa179; }
         .page-padding { padding: 25px; }
         .page { display: none; }
@@ -785,7 +785,7 @@
     window.itirazEkle = async function(pid, kurum, gosterge, yil, donem) {
         const metin = prompt(`${kurum}\n${gosterge}\n${yil}/${donem}\nİtiraz Gerekçenizi Yazınız:`);
         if(!metin) return;
-        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede' });
+        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'durum', tarih: 'olusturma_tarihi' });
         alert(error ? "Hata: " + error.message : "✅ İtiraz başarıyla kaydedildi.");
         if(!error) { await itirazDurumlariniYukle(); window.kurumAnaliz(); }
     };
@@ -1362,7 +1362,7 @@
                     <td class="text-center">${dolu}</td>
                     <td class="text-center">${bos}</td>
                     <td class="text-center fw-bold text-primary">${oranStr}%</td>
-                    <td class="text-center">${bekleyen}</td>
+                    <td class="text-center">${processed_waiting}</td>
                     <td class="text-center">${yatirilan}</td>
                     <td class="text-center">${disKurum}</td>
                     <td class="text-center text-secondary">${taburcu}</td>
