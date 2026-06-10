@@ -105,7 +105,7 @@
             <div class="nav-item" data-page="e-tablo"><i class="bi bi-file-earmark-spreadsheet text-success"></i> Canlı E-Tablo</div>
             <div class="nav-item" data-page="kullanici-yonetimi"><i class="bi bi-people-fill text-info"></i> Kullanıcı Yönetimi</div>
         </nav>
-    </aside>
+    </</aside>
 
     <main class="main-content">
         <header class="top-header">
@@ -1042,58 +1042,6 @@
         await hedefSapmaAnaliziYukle();
     }
 
-    async function hedefSapmaAnaliziYukle() {
-        const y = document.getElementById('sapmaFiltreYil').value;
-        const d = document.getElementById('sapmaFiltreDonem').value;
-        
-        const tbody = document.querySelector('#sapmaTablo tbody');
-        if(!tbody) return;
-        
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Veriler analiz ediliyor...</td></tr>';
-
-        // PostgreSQL tipi sayısal olduğu için d ve y parametreleri parseInt() ile sayıya dönüştürülerek sorgulanır
-        const { data } = await _supabase.from('performans')
-            .select('kurum_adi, gosterge_adi, gd, tr_ort, gosterge_yonu')
-            .eq('yil', parseInt(y))
-            .eq('donem', parseInt(d));
-            
-        if(!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Seçilen döneme ait sapma verisi bulunamadı.</td></tr>'; return; }
-        
-        let sapmalar = [];
-        data.forEach(r => {
-            if(r.gd !== null && r.tr_ort !== null && r.tr_ort !== 0) {
-                let sapmaMiktari = 0;
-                let kritikDurum = false;
-                if(r.gosterge_yonu === 'Pozitif' && r.gd < r.tr_ort) {
-                    sapmaMiktari = ((r.tr_ort - r.gd) / r.tr_ort) * 100;
-                    kritikDurum = true;
-                } else if(r.gosterge_yonu === 'Negatif' && r.gd > r.tr_ort) {
-                    sapmaMiktari = ((r.gd - r.tr_ort) / r.tr_ort) * 100;
-                    kritikDurum = true;
-                }
-                if(kritikDurum) {
-                    sapmalar.push({ kurum: r.kurum_adi, gosterge: r.gosterge_adi, gd: r.gd, tr: r.tr_ort, sapma: sapmaMiktari });
-                }
-            }
-        });
-        
-        sapmalar.sort((a,b) => b.sapma - a.sapma);
-        const enKritikSapmalar = sapmalar.slice(0, 15);
-        
-        if(enKritikSapmalar.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success fw-bold">Mükemmel! Türkiye ortalamasının altında kalan kritik sapma saptanmadı.</td></tr>';
-            return;
-        }
-        
-        tbody.innerHTML = enKritikSapmalar.map(s => `<tr>
-            <td><b>${s.kurum}</b></td>
-            <td><small>${s.gosterge}</small></td>
-            <td class="text-danger fw-bold">${s.gd}</td>
-            <td>${s.tr}</td>
-            <td><span class="badge bg-danger">Ortalamadan %${s.sapma.toFixed(1)} Sapma</span></td>
-        </tr>`).join('');
-    }
-
     // ---------- DÖNEMSEL KARŞILAŞTIRMA ----------
     window.karsilastirmaKurumListesiGuncelle = async function() {
         const tip = document.getElementById('karsKurumTip').value;
@@ -1674,7 +1622,7 @@
         if(sayfa === 'genel-bakis') await dashboard();
         
         if(sayfa === 'tum-bolge') {
-            const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`).join('');
+            const yilOptions = bandwidth_years = mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`).join('');
             const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
 
             document.getElementById('tum-bolge').innerHTML = `
@@ -1714,10 +1662,6 @@
             await window.bolgeListesi();
         }
         if(sayfa === 'raporlar') await raporlar();
-        if(sayfa === 'itirazlar') {
-            document.getElementById('itirazlar').innerHTML = `<div class="kds-card"><h6>⚠️ İtiraz Yönetimi Paneli</h6><div id="itirazListe"></div></div>`;
-            await window.itirazlariGoster();
-        }
         if(sayfa === 'karsilastirma') {
             document.getElementById('karsilastirma').innerHTML = `
                 <div class="kds-card">
@@ -1752,7 +1696,7 @@
             document.getElementById('karsilastirBtn').onclick = () => window.donemselKarsilastir();
             await window.karsilastirmaKurumListesiGuncelle();
         }
-        if(sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
+        if(sayfa === 'kurum-bazli') await kurumAnaliz();
         if(sayfa === 'e-tablo') await initETabloDashboard();
         if(sayfa === 'kullanici-yonetimi') await kullanicilariYukle();
     };
@@ -1771,7 +1715,6 @@
         }
 
         await dinamikFiltreleriDoldur();
-        await itirazDurumlariniYukle();
         
         const fTipSelect = document.getElementById('f-tip');
         if(fTipSelect) {
