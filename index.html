@@ -731,9 +731,25 @@
         mevcutYillarDonemler = { yillar, donemler };
 
         const yilSelect = document.getElementById('f-yil');
-        if(yilSelect) yilSelect.innerHTML = yillar.map(y => `<option value="${y}">${y}</option>`).join('');
+        if(yilSelect) {
+            yilSelect.innerHTML = yillar.map(y => `<option value="${y}">${y}</option>`).join('');
+            if (yillar.length > 0) {
+                yilSelect.value = yillar[0]; // En güncel yıl varsayılan seçilir
+            }
+        }
+        
+        // En güncel yıla ait en son aktif dönemi tespit et
+        const enSonYil = yillar[0];
+        const enSonYilinDonemleri = [...new Set(donemlerData.filter(d => d.yil === enSonYil).map(d => d.donem))].sort((a,b)=>b-a);
+        const enSonDonem = enSonYilinDonemleri[0];
+
         const donemSelect = document.getElementById('f-donem');
-        if(donemSelect) donemSelect.innerHTML = donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
+        if(donemSelect) {
+            donemSelect.innerHTML = donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
+            if (enSonDonem) {
+                donemSelect.value = enSonDonem; // En güncel dönemi varsayılan olarak seç
+            }
+        }
     }
 
     // ---------- GENEL BAKIŞ ----------
@@ -891,7 +907,7 @@
                             <option value="reddedildi" ${it.durum==='reddedildi'?'selected':''}>❌ Reddedildi</option>
                         </select>
                         <button class="btn btn-sm btn-success w-100 mb-1" onclick="window.itirazDurumGuncelle('${it.id}')">Güncelle</button>
-                        <button class="btn btn-sm btn-outline-danger w-100" onclick="window.itirazSil('${it.id}')">Sil</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="window.itirazSil('${it.id}')">Sil</button>
                     </div>
                 </div>
             </div>`;
@@ -933,8 +949,11 @@
     async function raporlar() {
         const container = document.getElementById('raporlar');
         
-        const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`).join('');
-        const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
+        const globalYil = document.getElementById('f-yil')?.value || mevcutYillarDonemler.yillar[0];
+        const globalDonem = document.getElementById('f-donem')?.value || mevcutYillarDonemler.donemler[0];
+
+        const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}" ${y == globalYil ? 'selected' : ''}>${y}</option>`).join('');
+        const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}" ${d == globalDonem ? 'selected' : ''}>${formatDonemAdi(d)}</option>`).join('');
 
         container.innerHTML = `
             <div class="row g-4">
@@ -990,9 +1009,9 @@
                                     <tr>
                                         <th>Kurum Adı</th>
                                         <th>Gösterge Adı</th>
-                                        <th>Kurum Verisi (GD)</th>
-                                        <th>TR Ortalaması</th>
-                                        <th>Sapma Oranı</th>
+                                        <th class="text-center">Kurum Verisi (GD)</th>
+                                        <th class="text-center">TR Ortalaması</th>
+                                        <th class="text-center">Sapma Oranı</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1029,16 +1048,16 @@
             data?.forEach(r => { if(!sonuc[r.kurum_adi]) sonuc[r.kurum_adi] = {}; sonuc[r.kurum_adi][`d${r.donem}`] = r.gd; });
             const labels = Object.keys(sonuc).slice(0,10);
             
-            // DİNAMİK DATASET YAPILANDIRMASI (Ocak, Şubat, Mart, Nisan, vb. otomatik eklenir)
+            // DİNAMİK DATASET YAPILANDIRMASI
             const donemler = [...new Set(data?.map(r => r.donem).filter(d => d))].sort((a,b)=>a-b);
             const colors = [
-                { bg: 'rgba(54, 162, 235, 0.75)', border: 'rgba(54, 162, 235, 1)' }, // Mavi (Ocak)
-                { bg: 'rgba(245, 158, 11, 0.75)', border: 'rgba(245, 158, 11, 1)' },  // Turuncu (Şubat)
-                { bg: 'rgba(16, 185, 129, 0.75)', border: 'rgba(16, 185, 129, 1)' },  // Yeşil (Mart)
-                { bg: 'rgba(239, 68, 68, 0.75)', border: 'rgba(239, 68, 68, 1)' },    // Kırmızı (Nisan)
-                { bg: 'rgba(139, 92, 246, 0.75)', border: 'rgba(139, 92, 246, 1)' },  // Mor (Mayıs)
-                { bg: 'rgba(236, 72, 153, 0.75)', border: 'rgba(236, 72, 153, 1)' },  // Pembe (Haziran)
-                { bg: 'rgba(20, 184, 166, 0.75)', border: 'rgba(20, 184, 166, 1)' }   // Turkuaz (Temmuz)
+                { bg: 'rgba(54, 162, 235, 0.75)', border: 'rgba(54, 162, 235, 1)' },
+                { bg: 'rgba(245, 158, 11, 0.75)', border: 'rgba(245, 158, 11, 1)' },
+                { bg: 'rgba(16, 185, 129, 0.75)', border: 'rgba(16, 185, 129, 1)' },
+                { bg: 'rgba(239, 68, 68, 0.75)', border: 'rgba(239, 68, 68, 1)' },
+                { bg: 'rgba(139, 92, 246, 0.75)', border: 'rgba(139, 92, 246, 1)' },
+                { bg: 'rgba(236, 72, 153, 0.75)', border: 'rgba(236, 72, 153, 1)' },
+                { bg: 'rgba(20, 184, 166, 0.75)', border: 'rgba(20, 184, 166, 1)' }
             ];
             
             const datasets = donemler.map((d, index) => {
@@ -1105,6 +1124,97 @@
         await hedefSapmaAnaliziYukle();
     }
 
+    // ---------- RAPORLAR: HEDEF SAPMA ANALİZİ YÜKLEME FONKSİYONU ----------
+    async function hedefSapmaAnaliziYukle() {
+        const tbody = document.querySelector('#sapmaTablo tbody');
+        if(!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Yükleniyor...</td></tr>';
+        
+        const yil = document.getElementById('sapmaFiltreYil')?.value;
+        const donem = document.getElementById('sapmaFiltreDonem')?.value;
+        
+        if(!yil || !donem) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Lütfen yıl ve dönem seçiniz.</td></tr>';
+            return;
+        }
+        
+        try {
+            const { data, error } = await _supabase
+                .from('performans')
+                .select('*')
+                .eq('yil', yil)
+                .eq('donem', donem);
+            
+            if (error) throw error;
+            
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Seçili dönem için veri bulunamadı.</td></tr>';
+                return;
+            }
+            
+            const sapmalar = [];
+            
+            data.forEach(r => {
+                const gd = parseFloat(r.gd);
+                const trOrt = parseFloat(r.tr_ort);
+                
+                if (isNaN(gd) || isNaN(trOrt) || trOrt === 0) return;
+                
+                let sapmaOrani = 0;
+                let isNegativeDeviation = false;
+                
+                if (r.gosterge_yonu === 'Pozitif') {
+                    // Gösterge Pozitif yönde ise ve Gösterge Değeri Türkiye ortalamasının altında ise negatif sapmadır.
+                    if (gd < trOrt) {
+                        sapmaOrani = ((trOrt - gd) / trOrt) * 100;
+                        isNegativeDeviation = true;
+                    }
+                } else if (r.gosterge_yonu === 'Negatif') {
+                    // Gösterge Negatif yönde ise ve Gösterge Değeri Türkiye ortalamasının üzerinde ise negatif sapmadır.
+                    if (gd > trOrt) {
+                        sapmaOrani = ((gd - trOrt) / trOrt) * 100;
+                        isNegativeDeviation = true;
+                    }
+                }
+                
+                if (isNegativeDeviation && sapmaOrani > 0) {
+                    sapmalar.push({
+                        kurum_adi: r.kurum_adi,
+                        gosterge_adi: r.gosterge_kodu ? `${r.gosterge_kodu} - ${r.gosterge_adi}` : r.gosterge_adi,
+                        gd: gd,
+                        tr_ort: trOrt,
+                        sapma_orani: sapmaOrani
+                    });
+                }
+            });
+            
+            // En yüksek negatif sapma oranına göre sırala
+            sapmalar.sort((a, b) => b.sapma_orani - a.sapma_orani);
+            
+            // İlk 15 sonucu göster
+            const listelenen = sapmalar.slice(0, 15);
+            
+            if (listelenen.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success fw-semibold">Mükemmel! Türkiye ortalamasının gerisinde kalan negatif sapmalı kurum bulunamadı.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = listelenen.map(s => `
+                <tr>
+                    <td><b>${s.kurum_adi}</b></td>
+                    <td>${s.gosterge_adi}</td>
+                    <td class="text-center fw-semibold text-dark">${s.gd}</td>
+                    <td class="text-center text-secondary">${s.tr_ort}</td>
+                    <td class="text-center text-danger fw-bold">-%${s.sapma_orani.toFixed(1)}</td>
+                </tr>
+            `).join('');
+            
+        } catch(err) {
+            console.error("Sapma analizi yükleme hatası:", err);
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Veriler hesaplanırken teknik bir hata oluştu.</td></tr>';
+        }
+    }
+
     // ---------- DÖNEMSEL KARŞILAŞTIRMA ----------
     window.karsilastirmaKurumListesiGuncelle = async function() {
         const tip = document.getElementById('karsKurumTip').value;
@@ -1157,7 +1267,6 @@
             toplamlar[d] = data || { toplam_puan: '-', rol_ortalamasi: '-' };
         }
         
-        // Gösterge detay pencereleri için id, puan, gp ve kurum_tipi gibi ilişkili sütunlar da sorguya dahil edildi.
         const { data: tumGostergeler } = await _supabase.from('performans').select('id, gosterge_kodu, gosterge_adi, gosterge_yonu, donem, gd, tr_ort, puan, gp, kurum_tipi').eq('kurum_adi', kurum).in('donem', seciliDonemler);
         const gostergeMap = new Map();
         tumGostergeler?.forEach(g => { 
@@ -1170,7 +1279,7 @@
                     gp: g.gp,
                     puan: g.puan,
                     kurum_tipi: g.kurum_tipi,
-                    gd: g.gd,          // En güncel dönemin verisini varsayılan değer olarak alır
+                    gd: g.gd,
                     tr_ort: g.tr_ort
                 }); 
             } else {
@@ -1188,7 +1297,6 @@
         const gostergeDegerler = {};
         tumGostergeler?.forEach(g => { gostergeDegerler[`${g.gosterge_kodu}_${g.donem}`] = { gd: g.gd, tr_ort: g.tr_ort }; });
         
-        // "Excel'e Aktar" butonu tablonun hemen üstüne eklendi
         let html = `
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <h6 class="mb-0 fw-bold"><i class="bi bi-table"></i> Karşılaştırma Sonuç Matrisi</h6>
@@ -1199,7 +1307,6 @@
             <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td>${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
         
         for(let g of gostergeler) {
-            // Gösterge listesindeki isme tıklandığında pop-up penceresinin açılmasını sağlayan "window.gostergeDetayGoster" bağlantısı eklendi.
             html += `<tr>
                 <td>
                     <a href="#" class="text-decoration-none fw-semibold text-dark" onclick="window.gostergeDetayGoster('${g.id}','${g.ad.replace(/'/g, "\\'")}', '${g.gd ?? ''}', '${g.tr_ort ?? ''}', '${g.puan ?? ''}', '${g.gp ?? ''}', '${g.yon}', '${g.kod}', '${g.kurum_tipi}'); return false;">
@@ -1293,22 +1400,20 @@
         }
     }
 
-    // E-Tablo Tarihlerini Doğru Algılayan Helper (Görsel 2'deki sıralamayı garanti eder)
     function parseSheetDate(dateStr) {
         if(!dateStr) return null;
         dateStr = dateStr.trim();
         const parts = dateStr.split('.');
         if(parts.length === 3 && parts[2].length === 4) {
-            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`); // YYYY-MM-DD
+            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
         }
         return new Date(dateStr);
     }
 
-    // Veritabanındaki tüm benzersiz tarihleri sıralı dizi olarak çeker
     function getSortedDates(rows) {
         const dates = new Set();
         for(let i = 1; i < rows.length; i++) {
-            const dStr = rows[i][1]; // B Sütunu (Tarih)
+            const dStr = rows[i][1];
             if(dStr && dStr.trim()) {
                 dates.add(dStr.trim());
             }
@@ -1320,7 +1425,6 @@
         });
     }
 
-    // JavaScript SUMIFS (ÇOKETOPLA) Taklit Fonksiyonu
     function sumifs(rows, sumColIdx, criteriaPairs) {
         let total = 0;
         for(let i = 1; i < rows.length; i++) {
@@ -1344,8 +1448,6 @@
         return total;
     }
 
-    // ÇOKETOPLA Formülleri ile Yoğun Bakım Durum Raporunu Çizdir (Görsel 1'deki Tablonun Birebir Canlı JavaScript Karşılığı)
-    // 3 Yeni Sütun Eklendi: Taburcu, Ex ve Taburcu+Ex
     function renderRaporView() {
         const rows = googleSheetsData.rawDATA;
         if(!rows || rows.length <= 1) {
@@ -1359,7 +1461,6 @@
             return;
         }
         
-        // Formüldeki MAK(DATA!B:B) tarih karşılığı
         const maxDate = sortedDates[sortedDates.length - 1];
         
         let tableHtml = `
@@ -1390,11 +1491,9 @@
         let totals = { yatak: 0, dolu: 0, bos: 0, bekleyen: 0, yatirilan: 0, disKurum: 0, taburcu: 0, ex: 0, taburcuEx: 0 };
         
         HOSPITALS.forEach(h => {
-            // ÇOKETOPLA(DATA!E:E; DATA!C:C; $A12; DATA!D:D; "Değişken"; DATA!B:B; MAK(DATA!B:B))
             const yatak = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)"}]);
             const bos = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)"}]);
             
-            // Dolu Yatak = Yatak - Boş Yatak
             const dolu = yatak - bos;
             const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(2).replace('.', ',') : "0,00";
             
@@ -1402,12 +1501,10 @@
             const yatirilan = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)"}]);
             const disKurum = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)"}]);
             
-            // Yeni Eklenen Sütunlar (DATA tablosundan ÇOKETOPLA ile çekilir)
             const taburcu = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)"}]);
             const ex = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)"}]);
             const taburcuEx = taburcu + ex;
             
-            // Toplam Satırı Değerlerini Kümülatif Ekle
             totals.yatak += yatak;
             totals.dolu += dolu;
             totals.bos += bos;
@@ -1435,7 +1532,6 @@
             `;
         });
         
-        // Excel Toplam Satırı (Görsel 1'deki "TOPLAM")
         const totalOranStr = totals.yatak > 0 ? (totals.dolu / totals.yatak * 100).toFixed(2).replace('.', ',') : "0,00";
         tableHtml += `
             <tr class="table-secondary fw-bold text-dark">
@@ -1457,7 +1553,6 @@
         document.getElementById('eTabloDashboardContent').innerHTML = tableHtml;
     }
 
-    // Seçilen Hastane ve Değişkene Göre Canlı Trend Analiz Modülü (Görsel 2'deki Grafiğin Birebir Web Sürümü)
     function renderDATAAnalizView() {
         const rows = googleSheetsData.rawDATA;
         if(!rows || rows.length <= 1) {
@@ -1499,12 +1594,10 @@
         
         document.getElementById('eTabloDashboardContent').innerHTML = html;
         
-        // Elementlerin tetikleyicilerini bağla
         document.getElementById('trendFilterHospital').onchange = () => updateTrendChart();
         document.getElementById('trendFilterVariable').onchange = () => updateTrendChart();
         document.getElementById('trendFilterRange').onchange = () => updateTrendChart();
         
-        // Görsel 2'deki varsayılan seçimi ata
         const defaultH = "Prof. Dr. Feriha Öz ADH";
         const defaultV = "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)";
         
@@ -1532,7 +1625,6 @@
             chartDates = chartDates.slice(-limit);
         }
         
-        // Her bir sıralı tarih için ÇOKETOPLA (SUMIFS) çalıştır
         const dataPoints = chartDates.map(date => {
             return sumifs(rows, 4, [
                 { colIdx: 1, val: date },
@@ -1590,7 +1682,6 @@
         }
     }
 
-    // Google Sheets "DATA" Sekmesini Çizdir (Ham Liste)
     function renderHamDATAView() {
         const rows = googleSheetsData.rawDATA;
         if(!rows || rows.length === 0) {
@@ -1623,14 +1714,12 @@
         document.getElementById('eTabloDashboardContent').innerHTML = html;
     }
 
-    // Gelişmiş Dinamik CSV Ayrıştırıcı (Bölgesel virgül/noktalı virgül/tab ayarlarını otomatik algılar)
     function parseCSV(text) {
         if (!text) return [];
         
         const lines = text.split(/\r?\n/);
         if (lines.length === 0) return [];
         
-        // İlk satırdaki noktalı virgül, virgül ve tab karakterlerini sayarak delimiterı (ayırıcıyı) otomatik tespit ediyoruz
         const firstLine = lines[0];
         const commaCount = (firstLine.match(/,/g) || []).length;
         const semiCount = (firstLine.match(/;/g) || []).length;
