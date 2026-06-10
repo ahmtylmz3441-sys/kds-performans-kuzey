@@ -26,12 +26,10 @@
         .page.active { display: block; }
         .kds-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-top: 4px solid var(--accent); height: 100%; margin-bottom: 20px; }
         .stat-val { font-size: 2.2rem; font-weight: 800; }
-        .itiraz-btn { background: #f59e0b; border: none; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; transition: 0.2s; }
         .badge-muaf { background: #e2e3e5; color: #6c757d; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-basarili { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-kritik { background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-orta { background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .badge-itiraz-var { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-left: 8px; }
         .rank-card { background: #f8f9fa; border-radius: 12px; padding: 12px; margin-bottom: 8px; transition: 0.2s; display: flex; align-items: center; justify-content: space-between; }
         .rank-number { width: 28px; height: 28px; background: var(--accent); color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px; }
         .chart-container { position: relative; height: 400px; margin-top: 15px; }
@@ -41,7 +39,7 @@
         .modal-close { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #6c757d; }
         .donem-checkbox-group { display: block; margin: 15px 0; padding: 18px; background: #ffffff; border-radius: 12px; border: 1px dashed #ced4da; min-height: 110px; transition: all 0.3s ease; }
         .progress-bar { width: 100%; background: #e9ecef; border-radius: 10px; height: 8px; overflow: hidden; }
-        .progress-fill { height: 100%; border-radius: 10px; }
+        .progress-bar-fill { height: 100%; border-radius: 10px; }
         .loading { text-align: center; padding: 30px; color: #6c757d; }
         .gosterge-detay { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
         .fs-7 { font-size: 0.85rem; }
@@ -785,7 +783,7 @@
     window.itirazEkle = async function(pid, kurum, gosterge, yil, donem) {
         const metin = prompt(`${kurum}\n${gosterge}\n${yil}/${donem}\nİtiraz Gerekçenizi Yazınız:`);
         if(!metin) return;
-        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede', olusturma_tarihi: new Date().toISOString() });
+        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede' });
         alert(error ? "Hata: " + error.message : "✅ İtiraz başarıyla kaydedildi.");
         if(!error) { await itirazDurumlariniYukle(); window.kurumAnaliz(); }
     };
