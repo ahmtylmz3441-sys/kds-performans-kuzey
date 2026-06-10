@@ -26,6 +26,7 @@
         .page.active { display: block; }
         .kds-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-top: 4px solid var(--accent); height: 100%; margin-bottom: 20px; }
         .stat-val { font-size: 2.2rem; font-weight: 800; }
+        .itiraz-btn { background: #f59e0b; border: none; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; transition: 0.2s; }
         .badge-muaf { background: #e2e3e5; color: #6c757d; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-basarili { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .badge-kritik { background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
@@ -45,12 +46,10 @@
         .gosterge-detay { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
         .fs-7 { font-size: 0.85rem; }
         
-        /* Canlı E-Tablo Alt Menü Butonları */
         .sub-tab-btn { background: #f8f9fa; color: #495057; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; outline: none; }
         .sub-tab-btn:hover { background: #e9ecef; }
         .sub-tab-btn.active { background: var(--accent); color: white; }
 
-        /* Şifreli Giriş Ekranı Tasarımı */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: #0d2137; z-index: 99999; display: flex; align-items: center; justify-content: center; }
         .login-card { background: white; padding: 35px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); width: 100%; max-width: 420px; }
     </style>
@@ -157,7 +156,6 @@
                                 </tr>
                             </thead>
                             <tbody id="kullaniciListesiGövde">
-                                <!-- Dinamik Dolacak -->
                             </tbody>
                         </table>
                     </div>
@@ -173,7 +171,6 @@
                         <button class="btn btn-sm btn-success" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
                     </div>
                     
-                    <!-- İç Sekmeler -->
                     <ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
                         <li style="flex:1;">
                             <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-rapor-btn" onclick="window.switchETabloSubTab('rapor')">📋 Günlük Durum Raporu (Son Gün)</button>
@@ -187,7 +184,6 @@
                     </ul>
                     
                     <div id="eTabloDashboardContent">
-                        <!-- Veriler Dinamik Olarak Buraya Yüklenecektir -->
                     </div>
                 </div>
             </section>
@@ -203,7 +199,6 @@
     </div>
 </div>
 
-<!-- Şifre Değiştirme Modalı -->
 <div id="sifreDegistirModal" class="modal-overlay" onclick="window.sifreModalDisKlikKapat(event)">
     <div class="modal-container" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="kapatSifreModal()">&times;</button>
@@ -226,7 +221,6 @@
     </div>
 </div>
 
-<!-- Kullanıcı Ekle/Düzenle Modalı -->
 <div id="kullaniciModal" class="modal-overlay" onclick="window.kullaniciModalDisKlikKapat(event)">
     <div class="modal-container" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="kapatKullaniciModal()">&times;</button>
@@ -294,7 +288,7 @@
         }
     };
 
-    // ---------- ANALİZ SABİTLERİ (KULLANICIDAN ALINAN TANIMLAR) ----------
+    // ---------- ANALİZ SABİTLERİ ----------
     const HOSPITALS = [
         "Beykoz DH",
         "Çekmeköy DH",
@@ -328,14 +322,57 @@
     let mevcutYillarDonemler = { yillar: [], donemler: [] };
     const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
     
-    // Google Sheets Veri Deposu
     let googleSheetsData = {
         rawDATA: [],
         rawRapor: []
     };
     let currentETabloSubTab = 'rapor';
 
-    // ---------- ROL BAZLI YETKİLENDİRME (RBAC) FONKSİYONU ----------
+    // ---------- EKSİK YARDIMCI FONKSİYONLAR ----------
+    function formatDonemAdi(donem) {
+        const d = parseInt(donem);
+        return AYLAR[d - 1] || `${d}. Dönem`;
+    }
+
+    async function fetchData(table, columns, filters) {
+        let query = _supabase.from(table).select(columns);
+        for (const [key, value] of Object.entries(filters)) {
+            if (value !== undefined && value !== null && value !== '') {
+                query = query.eq(key, value);
+            }
+        }
+        const { data, error } = await query;
+        if (error) {
+            console.error("fetchData Hatası:", error);
+            return [];
+        }
+        return data || [];
+    }
+
+    function showLoading(elementId, message = 'Yükleniyor...') {
+        const el = document.getElementById(elementId);
+        if (el) el.innerHTML = `<div class="text-center text-muted py-4"><i class="bi bi-arrow-repeat"></i> ${message}</div>`;
+    }
+
+    function yonOku(yon) {
+        if (!yon) return '-';
+        return yon === 'Pozitif' ? '⬆️ Pozitif' : '⬇️ Negatif';
+    }
+
+    function degerlendir(gd, trOrt, yon, puan, gp, id) {
+        if (gd === null || trOrt === null) return { class: 'badge-muaf', text: '⚪ Veri Yok' };
+        const gdNum = parseFloat(gd);
+        const trNum = parseFloat(trOrt);
+        if (yon === 'Pozitif') {
+            if (gdNum >= trNum) return { class: 'badge-basarili', text: '✅ Başarılı' };
+            else return { class: 'badge-kritik', text: '❌ Altında' };
+        } else {
+            if (gdNum <= trNum) return { class: 'badge-basarili', text: '✅ Başarılı' };
+            else return { class: 'badge-kritik', text: '❌ Üstünde' };
+        }
+    }
+
+    // ---------- ROL BAZLI YETKİLENDİRME ----------
     function uygulaYetkilendirme(role) {
         const itirazNavItem = document.querySelector('.nav-item[data-page="itirazlar"]');
         const kullaniciNavItem = document.querySelector('.nav-item[data-page="kullanici-yonetimi"]');
@@ -349,7 +386,7 @@
         }
     }
 
-    // ---------- EXCEL DIŞA AKTARMA (TÜRKÇE KARAKTER DUYARLI) ----------
+    // ---------- EXCEL DIŞA AKTARMA ----------
     window.exportTableToExcel = function(tableId, filename = 'rapor') {
         const table = document.getElementById(tableId);
         if (!table) return;
@@ -370,7 +407,7 @@
         document.body.removeChild(link);
     };
 
-    // ---------- SUPABASE GÜVENLİ GİRİŞ İŞLEMLERİ (PROFILES TABLOSU İLE) ----------
+    // ---------- GİRİŞ İŞLEMLERİ ----------
     async function handleLogin() {
         const name = document.getElementById('loginName').value.trim();
         const email = document.getElementById('loginEmail').value.trim();
@@ -389,7 +426,6 @@
         btn.innerText = "Sorgulanıyor...";
 
         try {
-            // 1. Supabase 'profiles' tablosundan sadece e-posta ve şifre ile sorgulama yapıyoruz
             const { data, error } = await _supabase
                 .from('profiles')
                 .select('*')
@@ -399,7 +435,6 @@
 
             if (error) throw error;
 
-            // 2. Türkçe karakterleri ve harf büyüklüklerini tamamen standartlaştıran yardımcı fonksiyon
             const trTemizle = (str) => {
                 return (str || "").toString().toLowerCase()
                     .replace(/ı/g, 'i')
@@ -408,13 +443,11 @@
                     .replace(/ş/g, 's')
                     .replace(/ö/g, 'o')
                     .replace(/ç/g, 'c')
-                    .replace(/i̇/g, 'i') // İ harfindeki çift nokta uyumsuzlukları için
+                    .replace(/i̇/g, 'i')
                     .trim();
             };
 
-            // 3. Veritabanındaki ad soyad ile kullanıcının yazdığı adı Türkçe engellerine takılmadan eşleştiriyoruz
             if (data && trTemizle(data.ad_soyad) === trTemizle(name)) {
-                // Giriş başarılı
                 sessionStorage.setItem('khhb_auth_user', data.ad_soyad);
                 sessionStorage.setItem('khhb_auth_email', data.email);
                 sessionStorage.setItem('khhb_auth_role', data.rol || 'Kullanıcı');
@@ -422,7 +455,6 @@
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('activeUserName').innerHTML = `<i class="bi bi-person-check-fill text-success"></i> ${data.ad_soyad} (${data.rol || 'Kullanıcı'})`;
                 
-                // Rol bazlı menü kontrolünü uygula
                 uygulaYetkilendirme(data.rol);
             } else {
                 errorEl.innerText = "Giriş bilgileri hatalı ya da yetkiniz bulunmuyor.";
@@ -430,7 +462,7 @@
             }
         } catch(err) {
             console.error("Giriş hatası:", err);
-            errorEl.innerText = "Sorgulama sırasında hata oluştu. Supabase bağlantısını ve 'profiles' tablonuzu kontrol edin.";
+            errorEl.innerText = "Sorgulama sırasında hata oluştu.";
             errorEl.style.display = "block";
         } finally {
             btn.disabled = false;
@@ -447,12 +479,10 @@
         document.getElementById('loginPassword').value = "";
         document.getElementById('loginError').style.display = "none";
         document.getElementById('login-screen').style.display = 'flex';
-        
-        // Yetkiyi temizle
         uygulaYetkilendirme(null);
     }
 
-    // ---------- KULLANICI KENDİ ŞİFRESİNİ DEĞİŞTİRME MODÜLÜ ----------
+    // ---------- ŞİFRE DEĞİŞTİRME ----------
     window.acSifreDegistirModal = () => {
         document.getElementById('oldPassword').value = "";
         document.getElementById('newPassword').value = "";
@@ -488,7 +518,6 @@
         const activeEmail = sessionStorage.getItem('khhb_auth_email');
         
         try {
-            // 1. Mevcut şifreyi doğrula
             const { data: user, error: checkError } = await _supabase
                 .from('profiles')
                 .select('*')
@@ -504,7 +533,6 @@
                 return;
             }
             
-            // 2. Şifreyi güncelle
             const { error: updateError } = await _supabase
                 .from('profiles')
                 .update({ sifre: newPass })
@@ -523,7 +551,7 @@
         }
     }
 
-    // ---------- KULLANICI YÖNETİM PANELİ (ADMİNLER İÇİN) ----------
+    // ---------- KULLANICI YÖNETİMİ ----------
     window.kullaniciModalDisKlikKapat = (e) => { if(e.target.id === 'kullaniciModal') kapatKullaniciModal(); };
     window.kapatKullaniciModal = () => document.getElementById('kullaniciModal').classList.remove('active');
     
@@ -603,14 +631,12 @@
         
         try {
             if(id) {
-                // Güncelleme
                 const { error } = await _supabase
                     .from('profiles')
                     .update({ ad_soyad: name, email: email, rol: rol, sifre: sifre })
                     .eq('id', id);
                 if (error) throw error;
             } else {
-                // Yeni Kayıt
                 const { error } = await _supabase
                     .from('profiles')
                     .insert({ ad_soyad: name, email: email, rol: rol, sifre: sifre });
@@ -643,13 +669,16 @@
         }
     };
 
-    // ---------- DİNAMİK YIL/DÖNEM FİLTRELERİNİ DOLDUR ----------
+    // ---------- DİNAMİK YIL/DÖNEM FİLTRELERİ (DÜZELTİLDİ) ----------
     async function dinamikFiltreleriDoldur() {
-        const { data: donemlerData } = await _supabase.from('toplam_puanlar').select('donem, yil');
-        if(!donemlerData || donemlerData.length === 0) return;
+        const { data: donemlerData1 } = await _supabase.from('toplam_puanlar').select('donem, yil');
+        const { data: donemlerData2 } = await _supabase.from('performans').select('donem, yil');
         
-        const yillar = [...new Set(donemlerData.map(d => d.yil).filter(y => y))].sort((a,b)=>b-a);
-        const donemler = [...new Set(donemlerData.map(d => d.donem).filter(d => d))].sort((a,b)=>a-b);
+        const combinedData = [...(donemlerData1 || []), ...(donemlerData2 || [])];
+        if(combinedData.length === 0) return;
+        
+        const yillar = [...new Set(combinedData.map(d => parseInt(d.yil)).filter(y => !isNaN(y)))].sort((a,b)=>b-a);
+        const donemler = [...new Set(combinedData.map(d => parseInt(d.donem)).filter(d => !isNaN(d)))].sort((a,b)=>a-b);
         
         mevcutYillarDonemler = { yillar, donemler };
 
@@ -659,20 +688,15 @@
         const donemSelect = document.getElementById('f-donem');
         if(donemSelect) donemSelect.innerHTML = donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
         
-        // Veritabanındaki en güncel (maksimum) yılı ve bu yıla ait en güncel dönemi otomatik tespit edip seçiyoruz
-        const enSonYil = yillar[0]; // Zaten azalan sırada (b-a) sıralandığı için ilk eleman en büyüktür
-        const buYilinDonemleri = donemlerData.filter(d => d.yil === enSonYil).map(d => d.donem);
+        const enSonYil = yillar[0]; 
+        const buYilinDonemleri = combinedData.filter(d => parseInt(d.yil) === enSonYil).map(d => parseInt(d.donem));
         const enSonDonem = Math.max(...buYilinDonemleri);
         
-        if(yilSelect) {
-            yilSelect.value = enSonYil;
-        }
-        if(donemSelect) {
-            donemSelect.value = enSonDonem;
-        }
+        if(yilSelect && enSonYil) yilSelect.value = enSonYil;
+        if(donemSelect && enSonDonem) donemSelect.value = enSonDonem;
     }
 
-    // ---------- GENEL BAKIŞ ----------
+    // ---------- GENEL BAKIŞ (DÜZELTİLDİ) ----------
     async function dashboard() {
         showLoading('top-hastane', 'Yükleniyor...');
         showLoading('top-adsm', 'Yükleniyor...');
@@ -681,16 +705,19 @@
         let seciliDonem = document.getElementById('f-donem')?.value;
         
         if(!seciliYil || !seciliDonem) {
-            const { data: enSon } = await _supabase.from('toplam_puanlar').select('yil, donem').order('yil', {ascending:false}).order('donem', {ascending:false}).limit(1).maybeSingle();
-            seciliYil = enSon?.yil || '2026';
-            seciliDonem = enSon?.donem || '2';
+            seciliYil = mevcutYillarDonemler.yillar[0] || new Date().getFullYear();
+            seciliDonem = mevcutYillarDonemler.donemler.length > 0 ? Math.max(...mevcutYillarDonemler.donemler) : (new Date().getMonth() + 1);
             
             if(document.getElementById('f-yil')) document.getElementById('f-yil').value = seciliYil;
             if(document.getElementById('f-donem')) document.getElementById('f-donem').value = seciliDonem;
         }
 
-        const data = await fetchData('toplam_puanlar', '*', { yil: seciliYil, donem: seciliDonem });
-        if(!data?.length) {
+        const { data, error } = await _supabase.from('toplam_puanlar')
+            .select('*')
+            .eq('yil', parseInt(seciliYil))
+            .eq('donem', parseInt(seciliDonem));
+
+        if(error || !data || data.length === 0) {
             document.getElementById('s-toplam').innerText = '0';
             document.getElementById('s-h-ort').innerText = '0.0';
             document.getElementById('s-a-ort').innerText = '0.0';
@@ -703,14 +730,14 @@
         const hastane = data.filter(x => x.kurum_tipi === 'Hastane');
         const adsm = data.filter(x => x.kurum_tipi === 'ADSM' || x.kurum_tipi === 'ADSH');
         
-        document.getElementById('s-h-ort').innerText = (hastane.reduce((s,v)=>s+v.toplam_puan,0)/(hastane.length||1)).toFixed(1);
-        document.getElementById('s-a-ort').innerText = (adsm.reduce((s,v)=>s+v.toplam_puan,0)/(adsm.length||1)).toFixed(1);
+        document.getElementById('s-h-ort').innerText = (hastane.reduce((s,v)=>s+ (parseFloat(v.toplam_puan)||0),0)/(hastane.length||1)).toFixed(1);
+        document.getElementById('s-a-ort').innerText = (adsm.reduce((s,v)=>s+ (parseFloat(v.toplam_puan)||0),0)/(adsm.length||1)).toFixed(1);
         
-        const topH = [...hastane].sort((a,b)=>b.toplam_puan - a.toplam_puan).slice(0,5);
-        const topA = [...adsm].sort((a,b)=>b.toplam_puan - a.toplam_puan).slice(0,5);
+        const topH = [...hastane].sort((a,b)=> (parseFloat(b.toplam_puan)||0) - (parseFloat(a.toplam_puan)||0)).slice(0,5);
+        const topA = [...adsm].sort((a,b)=> (parseFloat(b.toplam_puan)||0) - (parseFloat(a.toplam_puan)||0)).slice(0,5);
         
-        document.getElementById('top-hastane').innerHTML = topH.map((k,i)=>`<div class="rank-card"><div><span class="rank-number">${i+1}</span> <strong>${k.kurum_adi}</strong></div><span class="text-primary fw-bold">${k.toplam_puan} Puan</span></div>`).join('');
-        document.getElementById('top-adsm').innerHTML = topA.map((k,i)=>`<div class="rank-card"><div><span class="rank-number">${i+1}</span> <strong>${k.kurum_adi}</strong></div><span class="text-primary fw-bold">${k.toplam_puan} Puan</span></div>`).join('');
+        document.getElementById('top-hastane').innerHTML = topH.map((k,i)=>`<div class="rank-card"><div><span class="rank-number">${i+1}</span> <strong>${k.kurum_adi}</strong></div><span class="text-primary fw-bold">${k.toplam_puan} Puan</span></div>`).join('') || '<div class="text-muted small">Hastane verisi yok.</div>';
+        document.getElementById('top-adsm').innerHTML = topA.map((k,i)=>`<div class="rank-card"><div><span class="rank-number">${i+1}</span> <strong>${k.kurum_adi}</strong></div><span class="text-primary fw-bold">${k.toplam_puan} Puan</span></div>`).join('') || '<div class="text-muted small">ADSM verisi yok.</div>';
     }
 
     // ---------- TÜM BÖLGE ----------
@@ -721,7 +748,7 @@
         
         if(!seciliYil || !seciliDonem) return;
         
-        let query = _supabase.from('toplam_puanlar').select('*').eq('yil', seciliYil).eq('donem', seciliDonem);
+        let query = _supabase.from('toplam_puanlar').select('*').eq('yil', parseInt(seciliYil)).eq('donem', parseInt(seciliDonem));
         if(tip === 'Hastane') query = query.eq('kurum_tipi', 'Hastane');
         if(tip === 'ADSM') query = query.in('kurum_tipi', ['ADSM', 'ADSH']);
         
@@ -745,7 +772,7 @@
         if(!kurum) { alert('Lütfen bir kurum seçiniz.'); return; }
         await itirazDurumlariniYukle();
         
-        const { data: perfRaw } = await _supabase.from('performans').select('*').eq('kurum_adi', kurum).eq('yil', yil).eq('donem', donem);
+        const { data: perfRaw } = await _supabase.from('performans').select('*').eq('kurum_adi', kurum).eq('yil', parseInt(yil)).eq('donem', parseInt(donem));
         if(!perfRaw?.length) { document.getElementById('kurumAnalizIcerik').innerHTML = `<div class="text-center py-4 text-muted">Bu dönem için kuruma ait performans verisi bulunamadı.</div>`; return; }
         
         const perf = perfRaw.sort((a,b) => {
@@ -754,9 +781,8 @@
             return numA - numB;
         });
         
-        const { data: toplam = null } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('yil', yil).eq('donem', donem).maybeSingle() || {};
+        const { data: toplam = null } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('yil', parseInt(yil)).eq('donem', parseInt(donem)).maybeSingle() || {};
         
-        // "Excel'e Aktar" butonu tablonun hemen üstüne eklendi
         let html = `
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div class="fw-bold fs-5">📊 ${kurum} - ${formatDonemAdi(donem)} ${yil} Analiz Raporu</div>
@@ -781,10 +807,19 @@
     };
 
     // ---------- İTİRAZLAR ----------
+    async function itirazDurumlariniYukle() {
+        const { data } = await _supabase.from('itirazlar').select('performans_id');
+        itirazPerformansMap = {};
+        data?.forEach(i => {
+            if(!itirazPerformansMap[i.performans_id]) itirazPerformansMap[i.performans_id] = [];
+            itirazPerformansMap[i.performans_id].push(i);
+        });
+    }
+
     window.itirazEkle = async function(pid, kurum, gosterge, yil, donem) {
         const metin = prompt(`${kurum}\n${gosterge}\n${yil}/${donem}\nİtiraz Gerekçenizi Yazınız:`);
         if(!metin) return;
-        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede', olusturma_tarihi: new Date().toISOString() });
+        const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede' });
         alert(error ? "Hata: " + error.message : "✅ İtiraz başarıyla kaydedildi.");
         if(!error) { await itirazDurumlariniYukle(); window.kurumAnaliz(); }
     };
@@ -834,7 +869,7 @@
         }).join('');
     };
 
-    // ---------- GÖSTERGE LİSTESİNİ DİNAMİK YÜKLE ----------
+    // ---------- GÖSTERGE LİSTESİ ----------
     async function gostergeListesiniYukle(kurumTipi) {
         let q = _supabase.from('performans').select('gosterge_adi, gosterge_kodu');
         if(kurumTipi === 'Hastane') {
@@ -865,12 +900,15 @@
         }
     }
 
-    // ---------- RAPORLAR SAYFASI ----------
+    // ---------- RAPORLAR SAYFASI (DÜZELTİLDİ) ----------
     async function raporlar() {
         const container = document.getElementById('raporlar');
         
-        const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`).join('');
-        const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
+        const enSonYil = mevcutYillarDonemler.yillar[0];
+        const enSonDonem = mevcutYillarDonemler.donemler.length > 0 ? Math.max(...mevcutYillarDonemler.donemler) : null;
+
+        const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}" ${y == enSonYil ? 'selected' : ''}>${y}</option>`).join('');
+        const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}" ${d == enSonDonem ? 'selected' : ''}>${formatDonemAdi(d)}</option>`).join('');
 
         container.innerHTML = `
             <div class="row g-4">
@@ -940,10 +978,8 @@
                 </div>
             </div>`;
         
-        // İlk açılışta tüm göstergeleri yükle
         await gostergeListesiniYukle('');
         
-        // Kurum türü değiştiğinde ilgili göstergeleri dinamik olarak getir
         document.getElementById('raporKurumTipi').onchange = async (e) => {
             await gostergeListesiniYukle(e.target.value);
         };
@@ -965,16 +1001,15 @@
             data?.forEach(r => { if(!sonuc[r.kurum_adi]) sonuc[r.kurum_adi] = {}; sonuc[r.kurum_adi][`d${r.donem}`] = r.gd; });
             const labels = Object.keys(sonuc).slice(0,10);
             
-            // DİNAMİK DATASET YAPILANDIRMASI (Ocak, Şubat, Mart, Nisan, vb. otomatik eklenir)
             const donemler = [...new Set(data?.map(r => r.donem).filter(d => d))].sort((a,b)=>a-b);
             const colors = [
-                { bg: 'rgba(54, 162, 235, 0.75)', border: 'rgba(54, 162, 235, 1)' }, // Mavi (Ocak)
-                { bg: 'rgba(245, 158, 11, 0.75)', border: 'rgba(245, 158, 11, 1)' },  // Turuncu (Şubat)
-                { bg: 'rgba(16, 185, 129, 0.75)', border: 'rgba(16, 185, 129, 1)' },  // Yeşil (Mart)
-                { bg: 'rgba(239, 68, 68, 0.75)', border: 'rgba(239, 68, 68, 1)' },    // Kırmızı (Nisan)
-                { bg: 'rgba(139, 92, 246, 0.75)', border: 'rgba(139, 92, 246, 1)' },  // Mor (Mayıs)
-                { bg: 'rgba(236, 72, 153, 0.75)', border: 'rgba(236, 72, 153, 1)' },  // Pembe (Haziran)
-                { bg: 'rgba(20, 184, 166, 0.75)', border: 'rgba(20, 184, 166, 1)' }   // Turkuaz (Temmuz)
+                { bg: 'rgba(54, 162, 235, 0.75)', border: 'rgba(54, 162, 235, 1)' },
+                { bg: 'rgba(245, 158, 11, 0.75)', border: 'rgba(245, 158, 11, 1)' },
+                { bg: 'rgba(16, 185, 129, 0.75)', border: 'rgba(16, 185, 129, 1)' },
+                { bg: 'rgba(239, 68, 68, 0.75)', border: 'rgba(239, 68, 68, 1)' },
+                { bg: 'rgba(139, 92, 246, 0.75)', border: 'rgba(139, 92, 246, 1)' },
+                { bg: 'rgba(236, 72, 153, 0.75)', border: 'rgba(236, 72, 153, 1)' },
+                { bg: 'rgba(20, 184, 166, 0.75)', border: 'rgba(20, 184, 166, 1)' }
             ];
             
             const datasets = donemler.map((d, index) => {
@@ -1001,7 +1036,7 @@
                     datasets: datasets 
                 }, 
                 options: { 
-                    indexAxis: 'y', // Yatay Görünüm
+                    indexAxis: 'y',
                     responsive: true, 
                     maintainAspectRatio: false,
                     plugins: {
@@ -1039,6 +1074,69 @@
         document.getElementById('sapmaFiltreDonem').onchange = () => hedefSapmaAnaliziYukle();
 
         await hedefSapmaAnaliziYukle();
+    }
+
+    // ---------- SAPMA ANALİZİ (DÜZELTİLDİ) ----------
+    async function hedefSapmaAnaliziYukle() {
+        let y = document.getElementById('sapmaFiltreYil')?.value;
+        let d = document.getElementById('sapmaFiltreDonem')?.value;
+        
+        const tbody = document.querySelector('#sapmaTablo tbody');
+        if(!tbody) return;
+        
+        if (!y || y === "undefined") y = mevcutYillarDonemler.yillar[0];
+        if (!d || d === "undefined") d = mevcutYillarDonemler.donemler.length > 0 ? Math.max(...mevcutYillarDonemler.donemler) : 1;
+        
+        if (!y || !d) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Sistemde kayıtlı yıl/dönem bilgisi bulunamadı.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Veriler analiz ediliyor...</td></tr>';
+
+        const { data } = await _supabase.from('performans')
+            .select('kurum_adi, gosterge_adi, gd, tr_ort, gosterge_yonu')
+            .eq('yil', parseInt(y))
+            .eq('donem', parseInt(d));
+            
+        if(!data || data.length === 0) { 
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Seçilen döneme ait sapma verisi bulunamadı.</td></tr>'; 
+            return; 
+        }
+        
+        let sapmalar = [];
+        data.forEach(r => {
+            if(r.gd !== null && r.tr_ort !== null && r.tr_ort !== 0) {
+                let sapmaMiktari = 0;
+                let kritikDurum = false;
+                if(r.gosterge_yonu === 'Pozitif' && parseFloat(r.gd) < parseFloat(r.tr_ort)) {
+                    sapmaMiktari = ((parseFloat(r.tr_ort) - parseFloat(r.gd)) / parseFloat(r.tr_ort)) * 100;
+                    kritikDurum = true;
+                } else if(r.gosterge_yonu === 'Negatif' && parseFloat(r.gd) > parseFloat(r.tr_ort)) {
+                    sapmaMiktari = ((parseFloat(r.gd) - parseFloat(r.tr_ort)) / parseFloat(r.tr_ort)) * 100;
+                    kritikDurum = true;
+                }
+                if(kritikDurum) {
+                    sapmalar.push({ kurum: r.kurum_adi, gosterge: r.gosterge_adi, gd: r.gd, tr: r.tr_ort, sapma: sapmaMiktari });
+                }
+            }
+        });
+        
+        sapmalar.sort((a,b) => b.sapma - a.sapma);
+        const enKritikSapmalar = sapmalar.slice(0, 15);
+        
+        if(enKritikSapmalar.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success fw-bold">Mükemmel! Türkiye ortalamasının altında kalan kritik sapma saptanmadı.</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = enKritikSapmalar.map(s => `<tr>
+            <td><b>${s.kurum}</b></td>
+            <td><small>${s.gosterge}</small></td>
+            <td class="text-danger fw-bold">${s.gd}</td>
+            <td>${s.tr}</td>
+            <td><span class="badge bg-danger">Ortalamadan %${s.sapma.toFixed(1)} Sapma</span></td>
+        </tr>`).join('');
     }
 
     // ---------- DÖNEMSEL KARŞILAŞTIRMA ----------
@@ -1093,7 +1191,6 @@
             toplamlar[d] = data || { toplam_puan: '-', rol_ortalamasi: '-' };
         }
         
-        // Gösterge detay pencereleri için id, puan, gp ve kurum_tipi gibi ilişkili sütunlar da sorguya dahil edildi.
         const { data: tumGostergeler } = await _supabase.from('performans').select('id, gosterge_kodu, gosterge_adi, gosterge_yonu, donem, gd, tr_ort, puan, gp, kurum_tipi').eq('kurum_adi', kurum).in('donem', seciliDonemler);
         const gostergeMap = new Map();
         tumGostergeler?.forEach(g => { 
@@ -1106,7 +1203,7 @@
                     gp: g.gp,
                     puan: g.puan,
                     kurum_tipi: g.kurum_tipi,
-                    gd: g.gd,          // En güncel dönemin verisini varsayılan değer olarak alır
+                    gd: g.gd,
                     tr_ort: g.tr_ort
                 }); 
             } else {
@@ -1124,7 +1221,6 @@
         const gostergeDegerler = {};
         tumGostergeler?.forEach(g => { gostergeDegerler[`${g.gosterge_kodu}_${g.donem}`] = { gd: g.gd, tr_ort: g.tr_ort }; });
         
-        // "Excel'e Aktar" butonu tablonun hemen üstüne eklendi
         let html = `
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <h6 class="mb-0 fw-bold"><i class="bi bi-table"></i> Karşılaştırma Sonuç Matrisi</h6>
@@ -1135,7 +1231,6 @@
             <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td>${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
         
         for(let g of gostergeler) {
-            // Gösterge listesindeki isme tıklandığında pop-up penceresinin açılmasını sağlayan "window.gostergeDetayGoster" bağlantısı eklendi.
             html += `<tr>
                 <td>
                     <a href="#" class="text-decoration-none fw-semibold text-dark" onclick="window.gostergeDetayGoster('${g.id}','${g.ad.replace(/'/g, "\\'")}', '${g.gd ?? ''}', '${g.tr_ort ?? ''}', '${g.puan ?? ''}', '${g.gp ?? ''}', '${g.yon}', '${g.kod}', '${g.kurum_tipi}'); return false;">
@@ -1171,9 +1266,9 @@
         }, 100);
     };
 
-    // ---------- GOOGLE E-TABLO CANLI VERI VE ANALIZ ENTEGRASYONU ----------
+    // ---------- GOOGLE E-TABLO ----------
     async function initETabloDashboard() {
-        showLoading('eTabloDashboardContent', 'Google E-Tablo verileri canlı olarak çekiliyor ve formüllerle işleniyor, lütfen bekleyiniz...');
+        showLoading('eTabloDashboardContent', 'Google E-Tablo verileri canlı olarak çekiliyor...');
         
         const spreadsheetId = '1bK5aWZH-dQt3ej8kD548KXlu_owvHMomildqmdu6JwI';
         const dataUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=DATA`;
@@ -1195,7 +1290,6 @@
             googleSheetsData.rawDATA = parseCSV(dataText);
             googleSheetsData.rawRapor = parseCSV(raporText);
             
-            // Aktif alt sekmeyi çizdir
             renderETabloActiveView();
             
         } catch(err) {
@@ -1203,7 +1297,7 @@
             document.getElementById('eTabloDashboardContent').innerHTML = `
                 <div class="alert alert-danger py-4">
                     <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> Canlı Entegrasyon Hatası</h5>
-                    <p class="small mb-3">Google Sheets üzerinden veriler çekilemedi. Lütfen bağlantı izinlerini ve e-tablo adını kontrol edin.</p>
+                    <p class="small mb-3">Google Sheets üzerinden veriler çekilemedi.</p>
                     <div class="p-2 bg-light rounded text-monospace small text-danger mb-3" style="font-size:11px;">Hata Detayı: ${err.message}</div>
                     <button class="btn btn-sm btn-primary px-3" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
                 </div>
@@ -1211,7 +1305,6 @@
         }
     }
 
-    // Alt sekmeler arası geçiş
     window.switchETabloSubTab = function(tabName) {
         currentETabloSubTab = tabName;
         document.querySelectorAll('.sub-tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -1229,22 +1322,20 @@
         }
     }
 
-    // E-Tablo Tarihlerini Doğru Algılayan Helper (Görsel 2'deki sıralamayı garanti eder)
     function parseSheetDate(dateStr) {
         if(!dateStr) return null;
         dateStr = dateStr.trim();
         const parts = dateStr.split('.');
         if(parts.length === 3 && parts[2].length === 4) {
-            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`); // YYYY-MM-DD
+            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
         }
         return new Date(dateStr);
     }
 
-    // Veritabanındaki tüm benzersiz tarihleri sıralı dizi olarak çeker
     function getSortedDates(rows) {
         const dates = new Set();
         for(let i = 1; i < rows.length; i++) {
-            const dStr = rows[i][1]; // B Sütunu (Tarih)
+            const dStr = rows[i][1];
             if(dStr && dStr.trim()) {
                 dates.add(dStr.trim());
             }
@@ -1256,7 +1347,6 @@
         });
     }
 
-    // JavaScript SUMIFS (ÇOKETOPLA) Taklit Fonksiyonu
     function sumifs(rows, sumColIdx, criteriaPairs) {
         let total = 0;
         for(let i = 1; i < rows.length; i++) {
@@ -1280,8 +1370,6 @@
         return total;
     }
 
-    // ÇOKETOPLA Formülleri ile Yoğun Bakım Durum Raporunu Çizdir (Görsel 1'deki Tablonun Birebir Canlı JavaScript Karşılığı)
-    // 3 Yeni Sütun Eklendi: Taburcu, Ex ve Taburcu+Ex
     function renderRaporView() {
         const rows = googleSheetsData.rawDATA;
         if(!rows || rows.length <= 1) {
@@ -1295,13 +1383,12 @@
             return;
         }
         
-        // Formüldeki MAK(DATA!B:B) tarih karşılığı
         const maxDate = sortedDates[sortedDates.length - 1];
         
         let tableHtml = `
             <div class="alert alert-success py-2 small mb-3 d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-calendar-check"></i> Canlı Rapor Tarihi (Son Gün / MAK): <b>${maxDate}</b></span>
-                <span class="badge bg-dark">${HOSPITALS.length} Hastane Canlı Hesaplanıyor</span>
+                <span><i class="bi bi-calendar-check"></i> Canlı Rapor Tarihi: <b>${maxDate}</b></span>
+                <span class="badge bg-dark">${HOSPITALS.length} Hastane</span>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm table-hover table-bordered bg-white align-middle" style="font-size: 11.5px;">
@@ -1326,11 +1413,9 @@
         let totals = { yatak: 0, dolu: 0, bos: 0, bekleyen: 0, yatirilan: 0, disKurum: 0, taburcu: 0, ex: 0, taburcuEx: 0 };
         
         HOSPITALS.forEach(h => {
-            // ÇOKETOPLA(DATA!E:E; DATA!C:C; $A12; DATA!D:D; "Değişken"; DATA!B:B; MAK(DATA!B:B))
             const yatak = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)"}]);
             const bos = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)"}]);
             
-            // Dolu Yatak = Yatak - Boş Yatak
             const dolu = yatak - bos;
             const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(2).replace('.', ',') : "0,00";
             
@@ -1338,12 +1423,10 @@
             const yatirilan = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)"}]);
             const disKurum = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)"}]);
             
-            // Yeni Eklenen Sütunlar (DATA tablosundan ÇOKETOPLA ile çekilir)
             const taburcu = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)"}]);
             const ex = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)"}]);
             const taburcuEx = taburcu + ex;
             
-            // Toplam Satırı Değerlerini Kümülatif Ekle
             totals.yatak += yatak;
             totals.dolu += dolu;
             totals.bos += bos;
@@ -1371,7 +1454,6 @@
             `;
         });
         
-        // Excel Toplam Satırı (Görsel 1'deki "TOPLAM")
         const totalOranStr = totals.yatak > 0 ? (totals.dolu / totals.yatak * 100).toFixed(2).replace('.', ',') : "0,00";
         tableHtml += `
             <tr class="table-secondary fw-bold text-dark">
@@ -1393,7 +1475,6 @@
         document.getElementById('eTabloDashboardContent').innerHTML = tableHtml;
     }
 
-    // Seçilen Hastane ve Değişkene Göre Canlı Trend Analiz Modülü (Görsel 2'deki Grafiğin Birebir Web Sürümü)
     function renderDATAAnalizView() {
         const rows = googleSheetsData.rawDATA;
         if(!rows || rows.length <= 1) {
@@ -1435,12 +1516,10 @@
         
         document.getElementById('eTabloDashboardContent').innerHTML = html;
         
-        // Elementlerin tetikleyicilerini bağla
         document.getElementById('trendFilterHospital').onchange = () => updateTrendChart();
         document.getElementById('trendFilterVariable').onchange = () => updateTrendChart();
         document.getElementById('trendFilterRange').onchange = () => updateTrendChart();
         
-        // Görsel 2'deki varsayılan seçimi ata
         const defaultH = "Prof. Dr. Feriha Öz ADH";
         const defaultV = "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)";
         
@@ -1468,7 +1547,6 @@
             chartDates = chartDates.slice(-limit);
         }
         
-        // Her bir sıralı tarih için ÇOKETOPLA (SUMIFS) çalıştır
         const dataPoints = chartDates.map(date => {
             return sumifs(rows, 4, [
                 { colIdx: 1, val: date },
@@ -1526,7 +1604,6 @@
         }
     }
 
-    // Google Sheets "DATA" Sekmesini Çizdir (Ham Liste)
     function renderHamDATAView() {
         const rows = googleSheetsData.rawDATA;
         if(!rows || rows.length === 0) {
@@ -1538,7 +1615,7 @@
         const dataRows = rows.slice(1);
         
         let html = `
-            <div class="alert alert-light border py-2 small mb-3"><i class="bi bi-info-circle"></i> DATA sekmesindeki tüm ham kayıtlar aşağıda listelenmiştir.</div>
+            <div class="alert alert-light border py-2 small mb-3"><i class="bi bi-info-circle"></i> DATA sekmesindeki tüm ham kayıtlar.</div>
             <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                 <table class="table table-sm table-striped table-hover align-middle table-bordered" style="font-size: 11.5px;">
                     <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
@@ -1559,14 +1636,12 @@
         document.getElementById('eTabloDashboardContent').innerHTML = html;
     }
 
-    // Gelişmiş Dinamik CSV Ayrıştırıcı (Bölgesel virgül/noktalı virgül/tab ayarlarını otomatik algılar)
     function parseCSV(text) {
         if (!text) return [];
         
         const lines = text.split(/\r?\n/);
         if (lines.length === 0) return [];
         
-        // İlk satırdaki noktalı virgül, virgül ve tab karakterlerini sayarak delimiterı (ayırıcıyı) otomatik tespit ediyoruz
         const firstLine = lines[0];
         const commaCount = (firstLine.match(/,/g) || []).length;
         const semiCount = (firstLine.match(/;/g) || []).length;
@@ -1608,7 +1683,7 @@
         return r;
     }
 
-    // ---------- SAYFA GEÇIŞLERI ----------
+    // ---------- SAYFA GEÇİŞLERİ ----------
     window.gitSayfa = async function(sayfa, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(sayfa).classList.add('active');
@@ -1673,7 +1748,7 @@
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Kurum Türü</label>
                             <select id="karsKurumTip" class="form-select">
-                                <option value="">Tümü (Hastane & ADSM)</option>
+                                <option value="">Tümü</option>
                                 <option value="Hastane">Hastane</option>
                                 <option value="ADSM">ADSM/ADSH</option>
                             </select>
@@ -1699,14 +1774,13 @@
             document.getElementById('karsilastirBtn').onclick = () => window.donemselKarsilastir();
             await window.karsilastirmaKurumListesiGuncelle();
         }
-        if(sayfa === 'kurum-bazli') await kurumAnaliz();
+        if(sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
         if(sayfa === 'e-tablo') await initETabloDashboard();
         if(sayfa === 'kullanici-yonetimi') await kullanicilariYukle();
     };
 
     // ---------- BAŞLATMA ----------
     (async function init() {
-        // Oturum kontrolü
         const activeUser = sessionStorage.getItem('khhb_auth_user');
         const activeRole = sessionStorage.getItem('khhb_auth_role');
         if (activeUser) {
@@ -1718,6 +1792,7 @@
         }
 
         await dinamikFiltreleriDoldur();
+        await itirazDurumlariniYukle();
         
         const fTipSelect = document.getElementById('f-tip');
         if(fTipSelect) {
@@ -1742,9 +1817,25 @@
             });
         });
         
-        // Sayfa ilk açıldığında Genel Bakışı tetikle
         await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
     })();
+
+    // ---------- MODAL KAPATMA ----------
+    window.modalDisKlikKapat = (e) => { if(e.target.id === 'gostergeModal') kapatModal(); };
+    window.kapatModal = () => document.getElementById('gostergeModal').classList.remove('active');
+    
+    window.gostergeDetayGoster = function(id, ad, gd, trOrt, puan, gp, yon, kod, kurumTipi) {
+        document.getElementById('modalBaslik').innerText = `${kod} - ${ad}`;
+        document.getElementById('modalIcerik').innerHTML = `
+            <div class="gosterge-detay"><strong>Beklenen Yön:</strong> ${yonOku(yon)}</div>
+            <div class="gosterge-detay"><strong>Kurum Verisi (GD):</strong> ${gd || '-'}</div>
+            <div class="gosterge-detay"><strong>Türkiye Ortalaması:</strong> ${trOrt || '-'}</div>
+            <div class="gosterge-detay"><strong>Puan:</strong> ${puan || '-'}</div>
+            <div class="gosterge-detay"><strong>Gap Puan (GP):</strong> ${gp || '-'}</div>
+            <div class="gosterge-detay"><strong>Kurum Tipi:</strong> ${kurumTipi || '-'}</div>
+        `;
+        document.getElementById('gostergeModal').classList.add('active');
+    };
 </script>
 </body>
 </html>
