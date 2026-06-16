@@ -102,6 +102,7 @@
             <div class="nav-item" data-page="karsilastirma"><i class="bi bi-arrow-left-right"></i> Dönemsel Karşılaştırma</div>
             <div class="nav-item" data-page="raporlar"><i class="bi bi-graph-up"></i> Raporlar</div>
             <div class="nav-item" data-page="itirazlar"><i class="bi bi-chat-dots"></i> İtirazlar</div>
+            <div class="nav-item" data-page="mhrs"><i class="bi bi-calendar2-week text-warning"></i> MHRS Analiz</div>
             <div class="nav-item" data-page="e-tablo"><i class="bi bi-file-earmark-spreadsheet text-success"></i> Canlı E-Tablo</div>
             <div class="nav-item" data-page="kullanici-yonetimi"><i class="bi bi-people-fill text-info"></i> Kullanıcı Yönetimi</div>
         </nav>
@@ -140,6 +141,51 @@
             <section id="karsilastirma" class="page"></section>
             <section id="raporlar" class="page"></section>
             <section id="itirazlar" class="page"></section>
+            <section id="mhrs" class="page">
+                <div class="kds-card" style="border-top-color: #f59e0b;">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
+                        <div>
+                            <h5 class="fw-bold mb-0 text-warning"><i class="bi bi-calendar2-week"></i> MHRS Canlı Performans & Analiz Paneli</h5>
+                            <p class="text-muted small mb-0">Google Sheets üzerinden MHRS mesai içi kapasite, randevu ve gerçekleşme verilerini canlı analiz eder.</p>
+                        </div>
+                        <button class="btn btn-sm btn-warning text-white fw-semibold" onclick="initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
+                    </div>
+
+                    <!-- İç Sekmeler -->
+                    <ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
+                        <li style="flex:1;">
+                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-mhrs-h-btn" onclick="window.switchMhrsSubTab('H')">🏥 Hastane Mesai İçi (H_MESAİ_İÇİ)</button>
+                        </li>
+                        <li style="flex:1;">
+                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-a-btn" onclick="window.switchMhrsSubTab('A')">🏛️ ADSM/ADSH Mesai İçi (A_MESAİ_İÇİ)</button>
+                        </li>
+                    </ul>
+
+                    <!-- Filtreler -->
+                    <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-secondary">Yıl</label>
+                            <select id="mhrs-f-yil" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-secondary">Ay</label>
+                            <select id="mhrs-f-ay" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-secondary">Kurum Adı</label>
+                            <select id="mhrs-f-kurum" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-secondary">Branş</label>
+                            <select id="mhrs-f-brans" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
+                        </div>
+                    </div>
+
+                    <div id="mhrsDashboardContent">
+                        <!-- Veriler Dinamik Olarak Buraya Yüklenecektir -->
+                    </div>
+                </div>
+            </section>
             <section id="kullanici-yonetimi" class="page">
                 <div class="kds-card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -335,6 +381,10 @@
         rawRapor: []
     };
     let currentETabloSubTab = 'rapor';
+
+    // MHRS Veri Deposu
+    let mhrsData = { H: [], A: [] };
+    let currentMhrsSubTab = 'H';
 
     // ---------- ROL BAZLI YETKİLENDİRME (RBAC) FONKSİYONU ----------
     function uygulaYetkilendirme(role) {
@@ -1761,6 +1811,482 @@
         return r;
     }
 
+    // ---------- MHRS TABLO PARS VE VERİ TRANSFER SİSTEMİ ----------
+    function mapRowToObj(headers, row) {
+        const obj = {};
+        headers.forEach((h, idx) => {
+            if (!h) return;
+            let cleanH = h.toString().toLowerCase().trim().replace(/^["']|["']$/g, '');
+            cleanH = cleanH
+                .replace(/ı/g, 'i')
+                .replace(/ğ/g, 'g')
+                .replace(/ü/g, 'u')
+                .replace(/ş/g, 's')
+                .replace(/ö/g, 'o')
+                .replace(/ç/g, 'c')
+                .replace(/[\s_]+/g, '_');
+            
+            obj[cleanH] = row[idx] !== undefined ? row[idx].toString().replace(/^["']|["']$/g, '').trim() : '';
+        });
+        return obj;
+    }
+
+    const getVal = (obj, keyName) => {
+        const foldedKey = keyName.toLowerCase()
+            .replace(/ı/g,'i')
+            .replace(/ğ/g,'g')
+            .replace(/ü/g,'u')
+            .replace(/ş/g,'s')
+            .replace(/ö/g,'o')
+            .replace(/ç/g,'c')
+            .replace(/[\s_]+/g,'_');
+        return obj[foldedKey] || obj[keyName] || '';
+    };
+
+    window.switchMhrsSubTab = function(tabName) {
+        currentMhrsSubTab = tabName;
+        document.querySelectorAll('#mhrs .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+        if (tabName === 'H') {
+            document.getElementById('subtab-mhrs-h-btn').classList.add('active');
+        } else {
+            document.getElementById('subtab-mhrs-a-btn').classList.add('active');
+        }
+        window.populateMhrsFilters();
+        window.filterMhrsData();
+    };
+
+    window.initMhrsDashboard = async function() {
+        showLoading('mhrsDashboardContent', 'MHRS verileri canlı olarak Google Sheets dosyasından çekiliyor, lütfen bekleyiniz...');
+        
+        const spreadsheetId = '1QhpIfSB6jd44_0J36ltXK3Wb5zq5-KbfYMgNB-zv9UA';
+        const hUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("H_MESAİ_İÇİ")}`;
+        const aUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("A_MESAİ_İÇİ")}`;
+        
+        try {
+            const [hRes, aRes] = await Promise.all([
+                fetch(hUrl),
+                fetch(aUrl)
+            ]);
+            
+            if (!hRes.ok || !aRes.ok) throw new Error("MHRS sekmeleri Google Sheets'ten alınamadı.");
+            
+            const hText = await hRes.text();
+            const aText = await aRes.text();
+            
+            const hRows = parseCSV(hText);
+            const aRows = parseCSV(aText);
+            
+            if (hRows.length > 0) {
+                const headers = hRows[0];
+                mhrsData.H = hRows.slice(1).map(row => mapRowToObj(headers, row));
+            }
+            if (aRows.length > 0) {
+                const headers = aRows[0];
+                mhrsData.A = aRows.slice(1).map(row => mapRowToObj(headers, row));
+            }
+            
+            window.populateMhrsFilters();
+            window.filterMhrsData();
+            
+        } catch(err) {
+            console.error('MHRS canlı veri çekme hatası:', err);
+            document.getElementById('mhrsDashboardContent').innerHTML = `
+                <div class="alert alert-danger py-4">
+                    <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> MHRS Canlı Entegrasyon Hatası</h5>
+                    <p class="small mb-3">Google Sheets dosyasından MHRS verileri okunamadı. Lütfen internet bağlantınızı veya dosya paylaşım izinlerini kontrol edin.</p>
+                    <div class="p-2 bg-light rounded text-monospace small text-danger mb-3" style="font-size:11px;">Hata Detayı: ${err.message}</div>
+                    <button class="btn btn-sm btn-primary px-3" onclick="window.initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
+                </div>
+            `;
+        }
+    };
+
+    window.populateMhrsFilters = function() {
+        const list = mhrsData[currentMhrsSubTab];
+        if (!list || list.length === 0) return;
+        
+        const yillar = [...new Set(list.map(item => getVal(item, 'yil')).filter(Boolean))].sort((a,b)=>b-a);
+        const aylar = [...new Set(list.map(item => getVal(item, 'ay')).filter(Boolean))].sort((a,b)=>a-b);
+        const kurumlar = [...new Set(list.map(item => getVal(item, 'kurum_adi')).filter(Boolean))].sort();
+        const branslar = [...new Set(list.map(item => getVal(item, 'brans')).filter(Boolean))].sort();
+        
+        const yilSelect = document.getElementById('mhrs-f-yil');
+        const aySelect = document.getElementById('mhrs-f-ay');
+        const kurumSelect = document.getElementById('mhrs-f-kurum');
+        const bransSelect = document.getElementById('mhrs-f-brans');
+        
+        if (yilSelect) {
+            yilSelect.innerHTML = yillar.map(y => `<option value="${y}">${y}</option>`).join('');
+            if (yillar.length > 0) yilSelect.value = yillar[0];
+        }
+        
+        if (aySelect) {
+            aySelect.innerHTML = '<option value="">Tümü</option>' + aylar.map(a => `<option value="${a}">${a}</option>`).join('');
+            const monthsInLatestYear = [...new Set(list.filter(item => getVal(item, 'yil') === yillar[0]).map(item => getVal(item, 'ay')).filter(Boolean))].sort((a,b)=>b-a);
+            if (monthsInLatestYear.length > 0) aySelect.value = monthsInLatestYear[0];
+        }
+        
+        if (kurumSelect) {
+            kurumSelect.innerHTML = '<option value="">Tüm Kurumlar</option>' + kurumlar.map(k => `<option value="${k}">${k}</option>`).join('');
+        }
+        
+        if (bransSelect) {
+            bransSelect.innerHTML = '<option value="">Tüm Branşlar</option>' + branslar.map(b => `<option value="${b}">${b}</option>`).join('');
+        }
+    };
+
+    window.filterMhrsData = function() {
+        const list = mhrsData[currentMhrsSubTab];
+        if (!list || list.length === 0) {
+            document.getElementById('mhrsDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Analiz edilecek ham veri bulunamadı.</div>';
+            return;
+        }
+        
+        const selYil = document.getElementById('mhrs-f-yil')?.value;
+        const selAy = document.getElementById('mhrs-f-ay')?.value;
+        const selKurum = document.getElementById('mhrs-f-kurum')?.value;
+        const selBrans = document.getElementById('mhrs-f-brans')?.value;
+        
+        let filtered = list.filter(item => {
+            if (selYil && getVal(item, 'yil') !== selYil) return false;
+            if (selAy && getVal(item, 'ay') !== selAy) return false;
+            if (selKurum && getVal(item, 'kurum_adi') !== selKurum) return false;
+            if (selBrans && getVal(item, 'brans') !== selBrans) return false;
+            return true;
+        });
+        
+        document.getElementById('mhrsDashboardContent').innerHTML = `
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center">
+                        <h6 class="text-secondary small fw-bold">🎯 İLK MUAYENE DOLULUK</h6>
+                        <div class="fs-4 fw-bold text-primary" id="mhrs-stat-ilk-doluluk">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-ilk-doluluk">0 / 0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center">
+                        <h6 class="text-secondary small fw-bold">🔄 DEVAM EDEN DOLULUK</h6>
+                        <div class="fs-4 fw-bold text-success" id="mhrs-stat-devam-doluluk">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-devam-doluluk">0 / 0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center">
+                        <h6 class="text-secondary small fw-bold">📈 İLK MUAYENE GERÇEKLEŞME</h6>
+                        <div class="fs-4 fw-bold text-info" id="mhrs-stat-ilk-gerceklesme">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-ilk-gerceklesme">0 / 0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center">
+                        <h6 class="text-secondary small fw-bold">📊 DEVAM EDEN GERÇEKLEŞME</h6>
+                        <div class="fs-4 fw-bold text-warning" id="mhrs-stat-devam-gerceklesme">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-devam-gerceklesme">0 / 0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-8">
+                    <div class="p-3 border rounded bg-white shadow-sm">
+                        <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-bar-chart-line"></i> Kapasite, Randevu ve Gerçekleşme Dağılımı (Top 10)</h6>
+                        <div style="height: 320px; position: relative;">
+                            <canvas id="mhrsMainChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 border rounded bg-white shadow-sm">
+                        <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-star"></i> En Çok Randevu Alınan Branşlar</h6>
+                        <div id="mhrs-top-branches" style="max-height: 320px; overflow-y: auto;">
+                            <div class="text-muted small text-center py-5">Veri yükleniyor...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border rounded p-3 bg-white shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-table"></i> Detaylı MHRS Performans Tablosu</h6>
+                    <button class="btn btn-sm btn-outline-success" onclick="window.exportMhrsTableToExcel()"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
+                </div>
+                <div class="table-responsive" style="max-height: 400px;">
+                    <table class="table table-sm table-bordered table-striped table-hover align-middle" id="mhrsDetailTable" style="font-size: 11.5px;">
+                        <thead class="table-dark" style="position: sticky; top:0; z-index:2;">
+                            <tr>
+                                <th>Kurum Adı</th>
+                                <th>Branş</th>
+                                <th class="text-center">Aktif Hekim / Uzman</th>
+                                <th class="text-center">Açılan Kapasite</th>
+                                <th class="text-center">Alınan Randevu</th>
+                                <th class="text-center">Gerçekleşen Muayene</th>
+                                <th class="text-center">Randevu Doluluk (%)</th>
+                                <th class="text-center">Muayene Gerçekleşme (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Satırlar Dinamik Dolacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        let total_ilk_acilan = 0;
+        let total_ilk_alinan = 0;
+        let total_ilk_gerceklesen = 0;
+        
+        let total_devam_acilan = 0;
+        let total_devam_alinan = 0;
+        let total_devam_gerceklesen = 0;
+        
+        filtered.forEach(item => {
+            const parseNum = (v) => {
+                if (!v) return 0;
+                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                return isNaN(n) ? 0 : n;
+            };
+            
+            total_ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
+            total_ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
+            total_ilk_gerceklesen += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
+            
+            total_devam_acilan += parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
+            total_devam_alinan += parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+            total_devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+        });
+
+        const ilk_doluluk = total_ilk_acilan > 0 ? (total_ilk_alinan / total_ilk_acilan) * 100 : 0;
+        const devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
+        const ilk_gerceklesme = total_ilk_alinan > 0 ? (total_ilk_gerceklesen / total_ilk_alinan) * 100 : 0;
+        const devam_gerceklesme = total_devam_alinan > 0 ? (total_devam_gerceklesen / total_devam_alinan) * 100 : 0;
+
+        document.getElementById('mhrs-stat-ilk-doluluk').innerText = `${ilk_doluluk.toFixed(1)}%`;
+        document.getElementById('mhrs-desc-ilk-doluluk').innerText = `${total_ilk_alinan.toLocaleString('tr-TR')} / ${total_ilk_acilan.toLocaleString('tr-TR')}`;
+        
+        document.getElementById('mhrs-stat-devam-doluluk').innerText = `${devam_doluluk.toFixed(1)}%`;
+        document.getElementById('mhrs-desc-devam-doluluk').innerText = `${total_devam_alinan.toLocaleString('tr-TR')} / ${total_devam_acilan.toLocaleString('tr-TR')}`;
+
+        document.getElementById('mhrs-stat-ilk-gerceklesme').innerText = `${ilk_gerceklesme.toFixed(1)}%`;
+        document.getElementById('mhrs-desc-ilk-gerceklesme').innerText = `${total_ilk_gerceklesen.toLocaleString('tr-TR')} / ${total_ilk_alinan.toLocaleString('tr-TR')}`;
+
+        document.getElementById('mhrs-stat-devam-gerceklesme').innerText = `${devam_gerceklesme.toFixed(1)}%`;
+        document.getElementById('mhrs-desc-devam-gerceklesme').innerText = `${total_devam_gerceklesen.toLocaleString('tr-TR')} / ${total_devam_alinan.toLocaleString('tr-TR')}`;
+
+        const tbody = document.querySelector('#mhrsDetailTable tbody');
+        if (tbody) {
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Seçili filtrelere uygun veri bulunamadı.</td></tr>';
+            } else {
+                tbody.innerHTML = filtered.map(item => {
+                    const parseNum = (v) => {
+                        if (!v) return 0;
+                        const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                        return isNaN(n) ? 0 : n;
+                    };
+                    
+                    const ilk_ac = parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
+                    const ilk_al = parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
+                    const ilk_ge = parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
+                    const dev_ac = parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
+                    const dev_al = parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+                    const dev_ge = parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+                    
+                    const toplam_acilan = ilk_ac + dev_ac;
+                    const toplam_alinan = ilk_al + dev_al;
+                    const toplam_gerceklesen = ilk_ge + dev_ge;
+                    
+                    const doluluk_orani = toplam_acilan > 0 ? (toplam_alinan / toplam_acilan) * 100 : 0;
+                    const gerceklesme_orani = toplam_alinan > 0 ? (toplam_gerceklesen / toplam_alinan) * 100 : 0;
+                    
+                    let hekim_sayisi = 0;
+                    if (currentMhrsSubTab === 'H') {
+                        hekim_sayisi = parseNum(getVal(item, 'aktif_klinisyen_uzman_sayisi')) + parseNum(getVal(item, 'asistan_sayisi'));
+                    } else {
+                        hekim_sayisi = parseNum(getVal(item, 'aktif_calisan_uzman_doktoralı_sayisi')) + parseNum(getVal(item, 'aktif_calisan_hekim_sayisi_uzman_haric'));
+                    }
+                    
+                    return `
+                        <tr>
+                            <td><b>${getVal(item, 'kurum_adi')}</b></td>
+                            <td>${getVal(item, 'brans')}</td>
+                            <td class="text-center">${hekim_sayisi}</td>
+                            <td class="text-center">${toplam_acilan.toLocaleString('tr-TR')}</td>
+                            <td class="text-center">${toplam_alinan.toLocaleString('tr-TR')}</td>
+                            <td class="text-center">${toplam_gerceklesen.toLocaleString('tr-TR')}</td>
+                            <td class="text-center fw-bold text-primary">${doluluk_orani.toFixed(1)}%</td>
+                            <td class="text-center fw-bold text-success">${gerceklesme_orani.toFixed(1)}%</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        const bransRandevulari = {};
+        filtered.forEach(item => {
+            const parseNum = (v) => {
+                if (!v) return 0;
+                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                return isNaN(n) ? 0 : n;
+            };
+            const al = parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+            const bName = getVal(item, 'brans');
+            if (bName) {
+                bransRandevulari[bName] = (bransRandevulari[bName] || 0) + al;
+            }
+        });
+
+        const sortedBranches = Object.entries(bransRandevulari)
+            .map(([name, vol]) => ({ name, vol }))
+            .sort((a,b)=>b.vol - a.vol);
+
+        const topBranchesEl = document.getElementById('mhrs-top-branches');
+        if (topBranchesEl) {
+            if (sortedBranches.length === 0) {
+                topBranchesEl.innerHTML = '<div class="text-muted small text-center py-5">Branş bazında randevu bulunamadı.</div>';
+            } else {
+                topBranchesEl.innerHTML = sortedBranches.slice(0, 5).map((b, idx) => `
+                    <div class="rank-card">
+                        <div>
+                            <span class="rank-number" style="background:#f59e0b;">${idx+1}</span>
+                            <strong>${b.name}</strong>
+                        </div>
+                        <span class="text-warning fw-bold small">${b.vol.toLocaleString('tr-TR')} Randevu</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        const kurumAggregates = {};
+        filtered.forEach(item => {
+            const parseNum = (v) => {
+                if (!v) return 0;
+                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                return isNaN(n) ? 0 : n;
+            };
+            const ac = parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
+            const al = parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+            const ge = parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+            
+            const kName = getVal(item, 'kurum_adi');
+            if (kName) {
+                if (!kurumAggregates[kName]) {
+                    kurumAggregates[kName] = { acilan: 0, alinan: 0, gerceklesen: 0 };
+                }
+                kurumAggregates[kName].acilan += ac;
+                kurumAggregates[kName].alinan += al;
+                kurumAggregates[kName].gerceklesen += ge;
+            }
+        });
+
+        const chartLabels = [];
+        const chartAcilan = [];
+        const chartAlinan = [];
+        const chartGerceklesen = [];
+
+        if (selKurum) {
+            const bransAggregates = {};
+            filtered.forEach(item => {
+                const parseNum = (v) => {
+                    if (!v) return 0;
+                    const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                    return isNaN(n) ? 0 : n;
+                };
+                const ac = parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
+                const al = parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+                const ge = parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+                
+                const bName = getVal(item, 'brans');
+                if (bName) {
+                    if (!bransAggregates[bName]) {
+                        bransAggregates[bName] = { acilan: 0, alinan: 0, gerceklesen: 0 };
+                    }
+                    bransAggregates[bName].acilan += ac;
+                    bransAggregates[bName].alinan += al;
+                    bransAggregates[bName].gerceklesen += ge;
+                }
+            });
+            
+            const sortedBransList = Object.entries(bransAggregates)
+                .sort((a,b)=>b[1].alinan - a[1].alinan)
+                .slice(0, 10);
+                
+            sortedBransList.forEach(([bName, val]) => {
+                chartLabels.push(bName.length > 20 ? bName.substring(0, 18) + '...' : bName);
+                chartAcilan.push(val.acilan);
+                chartAlinan.push(val.alinan);
+                chartGerceklesen.push(val.gerceklesen);
+            });
+        } else {
+            const sortedKurumList = Object.entries(kurumAggregates)
+                .sort((a,b)=>b[1].alinan - a[1].alinan)
+                .slice(0, 10);
+                
+            sortedKurumList.forEach(([kName, val]) => {
+                chartLabels.push(kName.replace("Devlet Hastanesi", "DH").replace("Eğitim ve Araştırma Hastanesi", "EAH"));
+                chartAcilan.push(val.acilan);
+                chartAlinan.push(val.alinan);
+                chartGerceklesen.push(val.gerceklesen);
+            });
+        }
+
+        const ctx = document.getElementById('mhrsMainChart')?.getContext('2d');
+        if (ctx) {
+            if (charts.mhrsMain) charts.mhrsMain.destroy();
+            charts.mhrsMain = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Açılan Kapasite',
+                            data: chartAcilan,
+                            backgroundColor: 'rgba(54, 162, 235, 0.75)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Alınan Randevu',
+                            data: chartAlinan,
+                            backgroundColor: 'rgba(245, 158, 11, 0.75)',
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Gerçekleşen Muayene',
+                            data: chartGerceklesen,
+                            backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { 
+                            grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
+                            ticks: { precision: 0 }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { font: { family: "'Segoe UI', sans-serif", size: 11 } } }
+                    }
+                }
+            });
+        }
+    };
+
+    window.exportMhrsTableToExcel = function() {
+        window.exportTableToExcel('mhrsDetailTable', `MHRS_Performans_Raporu_${currentMhrsSubTab}`);
+    };
+
     // ---------- SAYFA GEÇIŞLERI ----------
     window.gitSayfa = async function(sayfa, el) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1854,6 +2380,7 @@
         }
         if(sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
         if(sayfa === 'e-tablo') await initETabloDashboard();
+        if(sayfa === 'mhrs') await initMhrsDashboard();
         if(sayfa === 'kullanici-yonetimi') await kullanicilariYukle();
     };
 
