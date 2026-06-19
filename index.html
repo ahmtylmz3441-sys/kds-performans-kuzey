@@ -146,7 +146,7 @@
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
                         <div>
                             <h5 class="fw-bold mb-0 text-warning"><i class="bi bi-calendar2-week"></i> MHRS Canlı Performans & Analiz Paneli</h5>
-                            <p class="text-muted small mb-0">Google Sheets üzerinden MHRS kapasite, randevu ve gerçekleşme verilerini canlı analiz eder.</p>
+                            <p class="text-muted small mb-0">Google Sheets üzerinden MHRS mesai içi kapasite, randevu ve gerçekleşme verilerini canlı analiz eder.</p>
                         </div>
                         <button class="btn btn-sm btn-warning text-white fw-semibold" onclick="initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
                     </div>
@@ -154,10 +154,10 @@
                     <!-- İç Sekmeler -->
                     <ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
                         <li style="flex:1;">
-                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-mhrs-h-btn" onclick="window.switchMhrsSubTab('H')">🏥 Hastane (H_MESAİ)</button>
+                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-mhrs-h-btn" onclick="window.switchMhrsSubTab('H')">🏥 Hastane Mesai İçi (H_MESAİ_İÇİ)</button>
                         </li>
                         <li style="flex:1;">
-                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-a-btn" onclick="window.switchMhrsSubTab('A')">🏛️ ADSM/ADSH (A_MESAİ)</button>
+                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-a-btn" onclick="window.switchMhrsSubTab('A')">🏛️ ADSM/ADSH Mesai İçi (A_MESAİ_İÇİ)</button>
                         </li>
                     </ul>
 
@@ -171,19 +171,11 @@
                             <label class="form-label small fw-bold text-secondary">Ay</label>
                             <select id="mhrs-f-ay" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
                         </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold text-secondary">Veri Türü</label>
-                            <select id="mhrs-f-tur" class="form-select form-select-sm shadow-sm" onchange="window.handleMhrsTurChange()">
-                                <option value="ic">MESAİ İÇİ</option>
-                                <option value="dis">MESAİ DIŞI</option>
-                                <option value="kaydirma">MESAİ KAYDIRMA</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label small fw-bold text-secondary">Kurum Adı</label>
                             <select id="mhrs-f-kurum" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label small fw-bold text-secondary">Branş</label>
                             <select id="mhrs-f-brans" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
                         </div>
@@ -2066,7 +2058,7 @@
         });
 
         const ilk_doluluk = total_ilk_acilan > 0 ? (total_ilk_alinan / total_ilk_acilan) * 100 : 0;
-        constamp devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
+        const devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
         const ilk_gerceklesme = total_ilk_alinan > 0 ? (total_ilk_gerceklesen / total_ilk_alinan) * 100 : 0;
         const devam_gerceklesme = total_devam_alinan > 0 ? (total_devam_gerceklesen / total_devam_alinan) * 100 : 0;
 
