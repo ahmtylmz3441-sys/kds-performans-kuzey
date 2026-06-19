@@ -146,7 +146,7 @@
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
                         <div>
                             <h5 class="fw-bold mb-0 text-warning"><i class="bi bi-calendar2-week"></i> MHRS Canlı Performans & Analiz Paneli</h5>
-                            <p class="text-muted small mb-0">Google Sheets üzerinden MHRS mesai içi kapasite, randevu ve gerçekleşme verilerini canlı analiz eder.</p>
+                            <p class="text-muted small mb-0">Google Sheets üzerinden MHRS mesai içi, dışı ve kaydırma verilerini canlı analiz eder.</p>
                         </div>
                         <button class="btn btn-sm btn-warning text-white fw-semibold" onclick="initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
                     </div>
@@ -154,15 +154,23 @@
                     <!-- İç Sekmeler -->
                     <ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
                         <li style="flex:1;">
-                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-mhrs-h-btn" onclick="window.switchMhrsSubTab('H')">🏥 Hastane Mesai İçi (H_MESAİ_İÇİ)</button>
+                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-mhrs-h-btn" onclick="window.switchMhrsSubTab('H')">🏥 Hastane</button>
                         </li>
                         <li style="flex:1;">
-                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-a-btn" onclick="window.switchMhrsSubTab('A')">🏛️ ADSM/ADSH Mesai İçi (A_MESAİ_İÇİ)</button>
+                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-a-btn" onclick="window.switchMhrsSubTab('A')">🏛️ ADSM/ADSH</button>
                         </li>
                     </ul>
 
                     <!-- Filtreler -->
                     <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-secondary">Veri Türü</label>
+                            <select id="mhrs-f-tip" class="form-select form-select-sm shadow-sm" onchange="window.populateMhrsFilters(); window.filterMhrsData();">
+                                <option value="MESAİ_İÇİ">MESAİ İÇİ</option>
+                                <option value="MESAİ_DIŞI">MESAİ DIŞI</option>
+                                <option value="MESAİ_KAYDIRMA">MESAİ KAYDIRMA</option>
+                            </select>
+                        </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-bold text-secondary">Yıl</label>
                             <select id="mhrs-f-yil" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
@@ -171,11 +179,11 @@
                             <label class="form-label small fw-bold text-secondary">Ay</label>
                             <select id="mhrs-f-ay" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label small fw-bold text-secondary">Kurum Adı</label>
                             <select id="mhrs-f-kurum" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label small fw-bold text-secondary">Branş</label>
                             <select id="mhrs-f-brans" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
                         </div>
@@ -383,8 +391,9 @@
     let currentETabloSubTab = 'rapor';
 
     // MHRS Veri Deposu
-    let mhrsData = { H: [], A: [] };
+    let mhrsData = { H: { MESAİ_İÇİ: [], MESAİ_DIŞI: [], MESAİ_KAYDIRMA: [] }, A: { MESAİ_İÇİ: [], MESAİ_DIŞI: [], MESAİ_KAYDIRMA: [] } };
     let currentMhrsSubTab = 'H';
+    let currentMhrsVeriTipi = 'MESAİ_İÇİ';
 
     // ---------- ROL BAZLI YETKİLENDİRME (RBAC) FONKSİYONU ----------
     function uygulaYetkilendirme(role) {
@@ -1851,6 +1860,8 @@
         } else {
             document.getElementById('subtab-mhrs-a-btn').classList.add('active');
         }
+        // Veri türünü de sıfırla
+        currentMhrsVeriTipi = document.getElementById('mhrs-f-tip')?.value || 'MESAİ_İÇİ';
         window.populateMhrsFilters();
         window.filterMhrsData();
     };
@@ -1859,32 +1870,51 @@
         showLoading('mhrsDashboardContent', 'MHRS verileri canlı olarak Google Sheets dosyasından çekiliyor, lütfen bekleyiniz...');
         
         const spreadsheetId = '1QhpIfSB6jd44_0J36ltXK3Wb5zq5-KbfYMgNB-zv9UA';
-        const hUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("H_MESAİ_İÇİ")}`;
-        const aUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("A_MESAİ_İÇİ")}`;
+        
+        // Veri türleri ve tablo isimleri
+        const veriTipleri = ['MESAİ_İÇİ', 'MESAİ_DIŞI', 'MESAİ_KAYDIRMA'];
+        const sheets = {
+            H: veriTipleri.map(t => ({ name: `H_${t}`, key: t })),
+            A: veriTipleri.map(t => ({ name: `A_${t}`, key: t }))
+        };
         
         try {
-            const [hRes, aRes] = await Promise.all([
-                fetch(hUrl),
-                fetch(aUrl)
-            ]);
+            // Tüm sekmeleri paralel çek
+            const fetchPromises = [];
+            const fetchMap = {};
             
-            if (!hRes.ok || !aRes.ok) throw new Error("MHRS sekmeleri Google Sheets'ten alınamadı.");
-            
-            const hText = await hRes.text();
-            const aText = await aRes.text();
-            
-            const hRows = parseCSV(hText);
-            const aRows = parseCSV(aText);
-            
-            if (hRows.length > 0) {
-                const headers = hRows[0];
-                mhrsData.H = hRows.slice(1).map(row => mapRowToObj(headers, row));
-            }
-            if (aRows.length > 0) {
-                const headers = aRows[0];
-                mhrsData.A = aRows.slice(1).map(row => mapRowToObj(headers, row));
+            for (const [tabloTipi, sheetList] of Object.entries(sheets)) {
+                for (const sheet of sheetList) {
+                    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet.name)}`;
+                    fetchPromises.push(
+                        fetch(url).then(async res => {
+                            if (!res.ok) throw new Error(`${sheet.name} okunamadı`);
+                            const text = await res.text();
+                            fetchMap[`${tabloTipi}_${sheet.key}`] = text;
+                        })
+                    );
+                }
             }
             
+            await Promise.all(fetchPromises);
+            
+            // Verileri dönüştür
+            for (const [tabloTipi, sheetList] of Object.entries(sheets)) {
+                for (const sheet of sheetList) {
+                    const key = `${tabloTipi}_${sheet.key}`;
+                    const text = fetchMap[key];
+                    if (text) {
+                        const rows = parseCSV(text);
+                        if (rows.length > 0) {
+                            const headers = rows[0];
+                            mhrsData[tabloTipi][sheet.key] = rows.slice(1).map(row => mapRowToObj(headers, row));
+                        }
+                    }
+                }
+            }
+            
+            // İlk filtreleme ve gösterim
+            currentMhrsVeriTipi = document.getElementById('mhrs-f-tip')?.value || 'MESAİ_İÇİ';
             window.populateMhrsFilters();
             window.filterMhrsData();
             
@@ -1902,8 +1932,15 @@
     };
 
     window.populateMhrsFilters = function() {
-        const list = mhrsData[currentMhrsSubTab];
-        if (!list || list.length === 0) return;
+        const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
+        if (!list || list.length === 0) {
+            // Filtreleri temizle
+            ['mhrs-f-yil', 'mhrs-f-ay', 'mhrs-f-kurum', 'mhrs-f-brans'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '<option value="">-</option>';
+            });
+            return;
+        }
         
         const yillar = [...new Set(list.map(item => getVal(item, 'yil')).filter(Boolean))].sort((a,b)=>b-a);
         const aylar = [...new Set(list.map(item => getVal(item, 'ay')).filter(Boolean))].sort((a,b)=>a-b);
@@ -1936,9 +1973,9 @@
     };
 
     window.filterMhrsData = function() {
-        const list = mhrsData[currentMhrsSubTab];
+        const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
         if (!list || list.length === 0) {
-            document.getElementById('mhrsDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Analiz edilecek ham veri bulunamadı.</div>';
+            document.getElementById('mhrsDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Seçili veri türü için analiz edilecek ham veri bulunamadı.</div>';
             return;
         }
         
@@ -2018,6 +2055,8 @@
                                 <th>Kurum Adı</th>
                                 <th>Branş</th>
                                 <th class="text-center">Aktif Hekim / Uzman</th>
+                                <th class="text-center">Asistan</th>
+                                <th class="text-center">Toplam Poliklinik Oda</th>
                                 <th class="text-center">Açılan Kapasite</th>
                                 <th class="text-center">Alınan Randevu</th>
                                 <th class="text-center">Gerçekleşen Muayene</th>
@@ -2059,6 +2098,7 @@
 
         const ilk_doluluk = total_ilk_acilan > 0 ? (total_ilk_alinan / total_ilk_acilan) * 100 : 0;
         const devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
+        // DOĞRU HESAPLAMA: Gerçekleşme = Gerçekleşen / Alınan Randevu
         const ilk_gerceklesme = total_ilk_alinan > 0 ? (total_ilk_gerceklesen / total_ilk_alinan) * 100 : 0;
         const devam_gerceklesme = total_devam_alinan > 0 ? (total_devam_gerceklesen / total_devam_alinan) * 100 : 0;
 
@@ -2077,7 +2117,7 @@
         const tbody = document.querySelector('#mhrsDetailTable tbody');
         if (tbody) {
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Seçili filtrelere uygun veri bulunamadı.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Seçili filtrelere uygun veri bulunamadı.</td></tr>';
             } else {
                 tbody.innerHTML = filtered.map(item => {
                     const parseNum = (v) => {
@@ -2098,13 +2138,22 @@
                     const toplam_gerceklesen = ilk_ge + dev_ge;
                     
                     const doluluk_orani = toplam_acilan > 0 ? (toplam_alinan / toplam_acilan) * 100 : 0;
+                    // DOĞRU HESAPLAMA: Gerçekleşme = Gerçekleşen / Alınan Randevu
                     const gerceklesme_orani = toplam_alinan > 0 ? (toplam_gerceklesen / toplam_alinan) * 100 : 0;
                     
                     let hekim_sayisi = 0;
+                    let asistan_sayisi = 0;
+                    let toplam_oda_sayisi = 0;
+                    
                     if (currentMhrsSubTab === 'H') {
-                        hekim_sayisi = parseNum(getVal(item, 'aktif_klinisyen_uzman_sayisi')) + parseNum(getVal(item, 'asistan_sayisi'));
+                        hekim_sayisi = parseNum(getVal(item, 'aktif_klinisyen_uzman_sayisi'));
+                        asistan_sayisi = parseNum(getVal(item, 'asistan_sayisi'));
+                        toplam_oda_sayisi = parseNum(getVal(item, 'toplam_aktif_poliklinik_oda_sayisi'));
                     } else {
+                        // ADSM için farklı alan adları olabilir, uygun alanları kullan
                         hekim_sayisi = parseNum(getVal(item, 'aktif_calisan_uzman_doktoralı_sayisi')) + parseNum(getVal(item, 'aktif_calisan_hekim_sayisi_uzman_haric'));
+                        asistan_sayisi = 0; // ADSM'de asistan bilgisi olmayabilir
+                        toplam_oda_sayisi = parseNum(getVal(item, 'toplam_aktif_poliklinik_oda_sayisi'));
                     }
                     
                     return `
@@ -2112,6 +2161,8 @@
                             <td><b>${getVal(item, 'kurum_adi')}</b></td>
                             <td>${getVal(item, 'brans')}</td>
                             <td class="text-center">${hekim_sayisi}</td>
+                            <td class="text-center">${asistan_sayisi}</td>
+                            <td class="text-center">${toplam_oda_sayisi}</td>
                             <td class="text-center">${toplam_acilan.toLocaleString('tr-TR')}</td>
                             <td class="text-center">${toplam_alinan.toLocaleString('tr-TR')}</td>
                             <td class="text-center">${toplam_gerceklesen.toLocaleString('tr-TR')}</td>
@@ -2284,7 +2335,7 @@
     };
 
     window.exportMhrsTableToExcel = function() {
-        window.exportTableToExcel('mhrsDetailTable', `MHRS_Performans_Raporu_${currentMhrsSubTab}`);
+        window.exportTableToExcel('mhrsDetailTable', `MHRS_Performans_Raporu_${currentMhrsSubTab}_${currentMhrsVeriTipi}`);
     };
 
     // ---------- SAYFA GEÇIŞLERI ----------
