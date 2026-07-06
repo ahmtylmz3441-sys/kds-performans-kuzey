@@ -3,57 +3,406 @@
 <head>
     <meta charset="UTF-8">
     <title>🏥 VERİ ANALİZ - Gelişmiş</title>
+    <!-- Google Fonts - Modern Tipografi -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --sidebar-bg: #0d2137; --accent: #20c997; --bg: #f4f7f9; }
-        body { background: var(--bg); font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
+        :root { 
+            --sidebar-bg: #0b1329; 
+            --accent: #4f46e5; 
+            --accent-hover: #4338ca;
+            --accent-light: rgba(79, 70, 229, 0.1);
+            --bg: #f8fafc; 
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        body { 
+            background: var(--bg); 
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; 
+            color: var(--text-main);
+            margin: 0; 
+            overflow: hidden; 
+        }
+        
         .app-wrapper { display: flex; height: 100vh; }
-        .sidebar { width: 260px; background: var(--sidebar-bg); color: white; flex-shrink: 0; overflow-y: auto; }
-        .nav-item { padding: 15px 25px; color: #aeb7c0; cursor: pointer; border-left: 4px solid transparent; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
-        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.05); color: var(--accent); border-left-color: var(--accent); }
+        
+        /* Sol Menü (Sidebar) Tasarımı */
+        .sidebar { 
+            width: 280px; 
+            background: var(--sidebar-bg); 
+            color: white; 
+            flex-shrink: 0; 
+            overflow-y: auto;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-brand {
+            padding: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: rgba(0,0,0,0.15);
+        }
+        .nav-container {
+            padding: 15px 12px;
+        }
+        .nav-item { 
+            padding: 12px 16px; 
+            color: #94a3b8; 
+            cursor: pointer; 
+            border-radius: 12px;
+            transition: all 0.25s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .nav-item i {
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+        .nav-item:hover { 
+            background: rgba(255, 255, 255, 0.04); 
+            color: #f1f5f9; 
+        }
+        .nav-item.active { 
+            background: var(--accent); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+        }
+        .nav-item.active i {
+            color: white;
+        }
+        
+        /* Sağ Panel */
         .main-content { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .top-header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
-        .filter-bar { background: #fff; padding: 12px 25px; display: none; gap: 12px; border-bottom: 1px solid #ddd; align-items: flex-end; flex-wrap: wrap; position: sticky; top: 0; z-index: 100; }
-        .filter-group { display: flex; flex-direction: column; min-width: 130px; flex-shrink: 0; }
-        .filter-group select, .filter-group input { padding: 8px 12px; border-radius: 10px; border: 1px solid #ddd; font-size: 13px; background: white; width: 100%; }
-        .btn-sm-custom { padding: 8px 20px; font-size: 12px; border-radius: 10px; background: var(--accent); border: none; color: white; cursor: pointer; transition: 0.2s; white-space: nowrap; flex-shrink: 0; }
-        .btn-sm-custom:hover { background: #1aa179; }
-        .page-padding { padding: 25px; }
+        
+        /* Üst Header */
+        .top-header { 
+            background: white; 
+            padding: 20px 32px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid var(--border-color); 
+        }
+        .top-header h5 {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+        }
+        
+        /* Filtre Alanı */
+        .filter-bar { 
+            background: #fff; 
+            padding: 16px 32px; 
+            display: none; 
+            gap: 16px; 
+            border-bottom: 1px solid var(--border-color); 
+            align-items: flex-end; 
+            flex-wrap: wrap; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+        .filter-group { display: flex; flex-direction: column; min-width: 150px; flex-shrink: 0; }
+        .filter-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .filter-group select, .filter-group input { 
+            padding: 10px 14px; 
+            border-radius: 10px; 
+            border: 1px solid var(--border-color); 
+            font-size: 13px; 
+            background: #f8fafc; 
+            width: 100%; 
+            color: var(--text-main);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .filter-group select:focus, .filter-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .btn-sm-custom { 
+            padding: 11px 24px; 
+            font-size: 13px; 
+            font-weight: 600;
+            border-radius: 10px; 
+            background: var(--accent); 
+            border: none; 
+            color: white; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            white-space: nowrap; 
+            flex-shrink: 0; 
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+        }
+        .btn-sm-custom:hover { 
+            background: var(--accent-hover); 
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(79, 70, 229, 0.3);
+        }
+        .btn-sm-custom:active {
+            transform: translateY(0);
+        }
+        
+        .page-padding { padding: 32px; }
         .page { display: none; }
         .page.active { display: block; }
-        .kds-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border-top: 4px solid var(--accent); height: 100%; margin-bottom: 20px; }
-        .stat-val { font-size: 2.2rem; font-weight: 800; }
-        .itiraz-btn { background: #f59e0b; border: none; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; transition: 0.2s; }
-        .badge-muaf { background: #e2e3e5; color: #6c757d; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .badge-basarili { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .badge-kritik { background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .badge-orta { background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .badge-itiraz-var { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-left: 8px; }
-        .rank-card { background: #f8f9fa; border-radius: 12px; padding: 12px; margin-bottom: 8px; transition: 0.2s; display: flex; align-items: center; justify-content: space-between; }
-        .rank-number { width: 28px; height: 28px; background: var(--accent); color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px; }
-        .chart-container { position: relative; height: 400px; margin-top: 15px; }
-        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
-        .modal-overlay.active { display: flex; }
-        .modal-container { background: white; width: 600px; max-width:90%; max-height:80vh; overflow-y:auto; border-radius:20px; padding:24px; position: relative; }
-        .modal-close { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #6c757d; }
-        .donem-checkbox-group { display: block; margin: 15px 0; padding: 18px; background: #ffffff; border-radius: 12px; border: 1px dashed #ced4da; min-height: 110px; transition: all 0.3s ease; }
-        .progress-bar { width: 100%; background: #e9ecef; border-radius: 10px; height: 8px; overflow: hidden; }
-        .progress-fill { height: 100%; border-radius: 10px; }
-        .loading { text-align: center; padding: 30px; color: #6c757d; }
-        .gosterge-detay { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
-        .fs-7 { font-size: 0.85rem; }
         
-        /* Canlı E-Tablo Alt Menü Butonları */
-        .sub-tab-btn { background: #f8f9fa; color: #495057; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; outline: none; }
-        .sub-tab-btn:hover { background: #e9ecef; }
-        .sub-tab-btn.active { background: var(--accent); color: white; }
+        /* Modern Kart Tasarımı */
+        .kds-card { 
+            background: var(--card-bg); 
+            border-radius: 16px; 
+            padding: 24px; 
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03); 
+            border: 1px solid var(--border-color);
+            height: 100%; 
+            margin-bottom: 24px; 
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .kds-card:hover {
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+        }
+        .kds-card h6 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stat-val { 
+            font-size: 2.5rem; 
+            font-weight: 800; 
+            letter-spacing: -1px;
+            color: var(--text-main);
+        }
+        
+        /* Yenilenmiş Butonlar */
+        .itiraz-btn { 
+            background: rgba(245, 158, 11, 0.1); 
+            border: 1px solid rgba(245, 158, 11, 0.3); 
+            color: var(--warning); 
+            padding: 6px 16px; 
+            border-radius: 8px; 
+            font-size: 12px; 
+            font-weight: 600;
+            cursor: pointer; 
+            transition: all 0.2s; 
+        }
+        .itiraz-btn:hover { 
+            background: var(--warning);
+            color: white;
+            transform: translateY(-1px);
+        }
+        
+        /* Modernized Badges (Yarı Saydam Soft Tasarım) */
+        .badge-muaf { background: #f1f5f9; color: #475569; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #cbd5e1; }
+        .badge-basarili { background: #ecfdf5; color: #047857; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #a7f3d0; }
+        .badge-kritik { background: #fef2f2; color: #b91c1c; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #fca5a5; }
+        .badge-orta { background: #fffbeb; color: #b45309; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #fde68a; }
+        .badge-itiraz-var { background: #fffbeb; color: #b45309; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-left: 8px; border: 1px solid #fde68a; }
+        
+        /* Derece Kartları */
+        .rank-card { 
+            background: #f8fafc; 
+            border-radius: 12px; 
+            padding: 14px 18px; 
+            margin-bottom: 10px; 
+            transition: all 0.2s ease; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            border: 1px solid var(--border-color);
+        }
+        .rank-card:hover {
+            background: white;
+            border-color: var(--accent);
+            transform: translateX(3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .rank-number { 
+            width: 32px; 
+            height: 32px; 
+            background: var(--accent-light); 
+            color: var(--accent); 
+            border-radius: 8px; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 13px; 
+            font-weight: 700; 
+            margin-right: 12px; 
+        }
+        
+        /* Grafikler */
+        .chart-container { position: relative; height: 400px; margin-top: 20px; }
+        
+        /* Şık Modallar & Cam Efekti */
+        .modal-overlay { 
+            display: none; 
+            position: fixed; 
+            top:0; left:0; width:100%; height:100%; 
+            background: rgba(15, 23, 42, 0.4); 
+            backdrop-filter: blur(5px);
+            z-index:1000; 
+            align-items:center; 
+            justify-content:center; 
+            transition: all 0.3s ease;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-container { 
+            background: white; 
+            width: 640px; 
+            max-width:90%; 
+            max-height:85vh; 
+            overflow-y:auto; 
+            border-radius:20px; 
+            padding:32px; 
+            position: relative; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+            border: 1px solid var(--border-color);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal-container {
+            transform: scale(1);
+        }
+        .modal-close { 
+            position: absolute; 
+            top: 24px; 
+            right: 24px; 
+            background: #f1f5f9; 
+            border: none; 
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 20px; 
+            cursor: pointer; 
+            color: var(--text-secondary); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .modal-close:hover {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
+        
+        .donem-checkbox-group { 
+            display: block; 
+            margin: 20px 0; 
+            padding: 24px; 
+            background: #f8fafc; 
+            border-radius: 14px; 
+            border: 1px dashed var(--border-color); 
+            min-height: 110px; 
+            transition: all 0.3s ease; 
+        }
+        
+        /* Canlı E-Tablo / MHRS Alt Sekme Butonları */
+        .sub-tab-btn { 
+            background: #f8fafc; 
+            color: var(--text-secondary); 
+            font-size: 13px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            outline: none; 
+            padding: 12px;
+        }
+        .sub-tab-btn:hover { background: #f1f5f9; color: var(--text-main); }
+        .sub-tab-btn.active { background: var(--accent); color: white !important; }
 
-        /* Şifreli Giriş Ekranı Tasarımı */
-        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: #0d2137; z-index: 99999; display: flex; align-items: center; justify-content: center; }
-        .login-card { background: white; padding: 35px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); width: 100%; max-width: 420px; }
+        /* Gelişmiş Şifreli Giriş Ekranı */
+        #login-screen { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100vh; 
+            background: radial-gradient(circle at 10% 20%, rgba(15,23,42,1) 0%, rgba(21,34,64,1) 90%);
+            z-index: 99999; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .login-card { 
+            background: white; 
+            padding: 44px; 
+            border-radius: 24px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); 
+            width: 100%; 
+            max-width: 440px; 
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .login-card .form-control {
+            padding: 12px 16px;
+            border-radius: 12px;
+            border-color: #cbd5e1;
+            font-size: 14px;
+        }
+        .login-card .form-control:focus {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+            border-color: var(--accent);
+        }
+        .login-card .input-group-text {
+            background-color: #f8fafc;
+            border-color: #cbd5e1;
+            color: var(--text-secondary);
+            border-radius: 12px 0 0 12px;
+        }
+        
+        /* Tablo Stilleri */
+        .table {
+            border-color: var(--border-color);
+        }
+        .table th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            padding: 14px;
+        }
+        .table td {
+            padding: 14px;
+            font-size: 13px;
+        }
+        
+        /* Detay satırları */
+        .gosterge-detay { 
+            padding: 12px 0; 
+            border-bottom: 1px solid var(--border-color); 
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -87,15 +436,17 @@
                 <input type="password" id="loginPassword" class="form-control" placeholder="•••••">
             </div>
         </div>
-        <div id="loginError" class="alert alert-danger py-2 small mb-3" style="display: none;"></div>
-        <button class="btn btn-primary w-100 fw-bold py-2" id="loginSubmitBtn" onclick="handleLogin()">Giriş Yap</button>
+        <div id="loginError" class="alert alert-danger py-2 small mb-3" style="display: none; border-radius: 10px;"></div>
+        <button class="btn btn-primary w-100 fw-bold py-2" style="border-radius:12px; background:var(--accent); border:none;" id="loginSubmitBtn" onclick="handleLogin()">Giriş Yap</button>
     </div>
 </div>
 
 <div class="app-wrapper">
     <aside class="sidebar">
-        <div class="p-4 text-center border-bottom border-secondary"><h5 class="fw-bold mb-0">🏥 VERİ ANALİZ</h5></div>
-        <nav class="mt-2">
+        <div class="sidebar-brand text-center">
+            <h5 class="fw-bold mb-0 text-white"><i class="bi bi-activity text-info me-2"></i>VERİ ANALİZ</h5>
+        </div>
+        <nav class="nav-container">
             <div class="nav-item" data-page="genel-bakis"><i class="bi bi-speedometer2"></i> Genel Bakış</div>
             <div class="nav-item" data-page="tum-bolge"><i class="bi bi-grid-3x3-gap"></i> Tüm Bölge</div>
             <div class="nav-item" data-page="kurum-bazli"><i class="bi bi-hospital"></i> Kurum Bazlı</div>
@@ -112,9 +463,9 @@
         <header class="top-header">
             <h5 id="page-title" class="mb-0 fw-bold">Genel Bakış</h5>
             <div class="d-flex align-items-center gap-3">
-                <span id="activeUserName" class="badge bg-light text-dark py-2 px-3 border"><i class="bi bi-person-check-fill text-success"></i> Kullanıcı</span>
-                <button class="btn btn-sm btn-outline-primary" onclick="acSifreDegistirModal()"><i class="bi bi-key"></i> Şifremi Değiştir</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="handleLogout()"><i class="bi bi-box-arrow-right"></i> Çıkış</button>
+                <span id="activeUserName" class="badge bg-light text-dark py-2 px-3 border" style="border-radius: 10px;"><i class="bi bi-person-check-fill text-success"></i> Kullanıcı</span>
+                <button class="btn btn-sm btn-outline-primary" style="border-radius: 10px;" onclick="acSifreDegistirModal()"><i class="bi bi-key"></i> Şifremi Değiştir</button>
+                <button class="btn btn-sm btn-outline-danger" style="border-radius: 10px;" onclick="handleLogout()"><i class="bi bi-box-arrow-right"></i> Çıkış</button>
             </div>
         </header>
         <div id="filter-bar" class="filter-bar">
@@ -127,9 +478,24 @@
         <div class="page-padding">
             <section id="genel-bakis" class="page active">
                 <div class="row g-4 mb-4">
-                    <div class="col-md-4"><div class="kds-card"><h6>📊 Toplam Kurum</h6><div class="stat-val" id="s-toplam">0</div></div></div>
-                    <div class="col-md-4"><div class="kds-card"><h6>🏥 Hastane Ortalaması</h6><div class="stat-val text-primary" id="s-h-ort">0.0</div></div></div>
-                    <div class="col-md-4"><div class="kds-card"><h6>🏛️ ADSM Ortalaması</h6><div class="stat-val text-success" id="s-a-ort">0.0</div></div></div>
+                    <div class="col-md-4">
+                        <div class="kds-card">
+                            <h6 class="text-secondary">📊 Toplam Kurum</h6>
+                            <div class="stat-val" id="s-toplam">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="kds-card">
+                            <h6 class="text-secondary">🏥 Hastane Ortalaması</h6>
+                            <div class="stat-val text-primary" id="s-h-ort">0.0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="kds-card">
+                            <h6 class="text-secondary">🏛️ ADSM Ortalaması</h6>
+                            <div class="stat-val text-success" id="s-a-ort">0.0</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="row g-4">
                     <div class="col-md-6"><div class="kds-card"><h6>🏆 En İyi 5 Hastane</h6><div id="top-hastane"></div></div></div>
@@ -142,13 +508,13 @@
             <section id="raporlar" class="page"></section>
             <section id="itirazlar" class="page"></section>
             <section id="mhrs" class="page">
-                <div class="kds-card" style="border-top-color: #f59e0b;">
+                <div class="kds-card" style="border-top: 4px solid #f59e0b;">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
                         <div>
                             <h5 class="fw-bold mb-0 text-warning"><i class="bi bi-calendar2-week"></i> MHRS Canlı Performans & Analiz Paneli</h5>
                             <p class="text-muted small mb-0">Google Sheets üzerinden MHRS mesai içi, dışı ve kaydırma verilerini canlı analiz eder.</p>
                         </div>
-                        <button class="btn btn-sm btn-warning text-white fw-semibold" onclick="initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
+                        <button class="btn btn-sm btn-warning text-white fw-semibold px-3 py-2" style="border-radius:10px;" onclick="initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
                     </div>
 
                     <!-- İç Sekmeler -->
@@ -198,7 +564,7 @@
                 <div class="kds-card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-people-fill"></i> Kullanıcı Yönetimi Paneli</h5>
-                        <button class="btn btn-sm btn-primary" onclick="acYeniKullaniciModal()"><i class="bi bi-plus-lg"></i> Yeni Kullanıcı Ekle</button>
+                        <button class="btn btn-sm btn-primary px-3 py-2" style="border-radius:10px;" onclick="acYeniKullaniciModal()"><i class="bi bi-plus-lg"></i> Yeni Kullanıcı Ekle</button>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover align-middle table-bordered" style="font-size: 11.5px;">
@@ -219,13 +585,13 @@
                 </div>
             </section>
             <section id="e-tablo" class="page">
-                <div class="kds-card">
+                <div class="kds-card" style="border-top-color: #10b981;">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
                         <div>
                             <h5 class="fw-bold mb-0 text-success"><i class="bi bi-file-earmark-spreadsheet"></i> E-Tablo Canlı Hesaplama & Analiz Paneli</h5>
                             <p class="text-muted small mb-0">E-Tablonuzdaki DATA sekmesini formüllerle dinamik işleyerek özet ve trend grafikleri oluşturur.</p>
                         </div>
-                        <button class="btn btn-sm btn-success" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
+                        <button class="btn btn-sm btn-success px-3 py-2" style="border-radius:10px;" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
                     </div>
                     
                     <!-- İç Sekmeler -->
@@ -253,7 +619,7 @@
 <div id="gostergeModal" class="modal-overlay" onclick="window.modalDisKlikKapat(event)">
     <div class="modal-container" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="kapatModal()">&times;</button>
-        <h4 id="modalBaslik" class="fw-bold mb-3">Gösterge Detayı</h4>
+        <h4 id="modalBaslik" class="fw-bold mb-3 text-dark">Gösterge Detayı</h4>
         <div id="modalIcerik"></div>
     </div>
 </div>
@@ -262,22 +628,22 @@
 <div id="sifreDegistirModal" class="modal-overlay" onclick="window.sifreModalDisKlikKapat(event)">
     <div class="modal-container" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="kapatSifreModal()">&times;</button>
-        <h4 class="fw-bold mb-3">🗝️ Şifremi Değiştir</h4>
+        <h4 class="fw-bold mb-3 text-dark">🗝️ Şifremi Değiştir</h4>
         <div class="mb-3">
-            <label class="form-label small fw-bold">Mevcut Şifre</label>
-            <input type="password" id="oldPassword" class="form-control" placeholder="Eski şifreniz">
+            <label class="form-label small fw-bold text-secondary">Mevcut Şifre</label>
+            <input type="password" id="oldPassword" class="form-control" placeholder="Eski şifreniz" style="border-radius: 10px;">
         </div>
         <div class="mb-3">
-            <label class="form-label small fw-bold">Yeni Şifre</label>
-            <input type="password" id="newPassword" class="form-control" placeholder="Yeni şifreniz">
+            <label class="form-label small fw-bold text-secondary">Yeni Şifre</label>
+            <input type="password" id="newPassword" class="form-control" placeholder="Yeni şifreniz" style="border-radius: 10px;">
         </div>
         <div class="mb-3">
-            <label class="form-label small fw-bold">Yeni Şifre (Tekrar)</label>
-            <input type="password" id="newPasswordConfirm" class="form-control" placeholder="Yeni şifreniz tekrar">
+            <label class="form-label small fw-bold text-secondary">Yeni Şifre (Tekrar)</label>
+            <input type="password" id="newPasswordConfirm" class="form-control" placeholder="Yeni şifreniz tekrar" style="border-radius: 10px;">
         </div>
-        <div id="sifreError" class="alert alert-danger py-2 small mb-3" style="display: none;"></div>
-        <div id="sifreSuccess" class="alert alert-success py-2 small mb-3" style="display: none;"></div>
-        <button class="btn btn-primary w-100 fw-bold py-2" onclick="handleSifreDegistir()">Şifreyi Güncelle</button>
+        <div id="sifreError" class="alert alert-danger py-2 small mb-3" style="display: none; border-radius: 10px;"></div>
+        <div id="sifreSuccess" class="alert alert-success py-2 small mb-3" style="display: none; border-radius: 10px;"></div>
+        <button class="btn btn-primary w-100 fw-bold py-2" style="border-radius:12px; background:var(--accent); border:none;" onclick="handleSifreDegistir()">Şifreyi Güncelle</button>
     </div>
 </div>
 
@@ -285,29 +651,29 @@
 <div id="kullaniciModal" class="modal-overlay" onclick="window.kullaniciModalDisKlikKapat(event)">
     <div class="modal-container" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="kapatKullaniciModal()">&times;</button>
-        <h4 id="kullaniciModalBaslik" class="fw-bold mb-3">👤 Yeni Kullanıcı Ekle</h4>
+        <h4 id="kullaniciModalBaslik" class="fw-bold mb-3 text-dark">👤 Yeni Kullanıcı Ekle</h4>
         <input type="hidden" id="editUserId">
         <div class="mb-3">
-            <label class="form-label small fw-bold">Ad Soyad</label>
-            <input type="text" id="userAdSoyad" class="form-control" placeholder="Ad Soyad">
+            <label class="form-label small fw-bold text-secondary">Ad Soyad</label>
+            <input type="text" id="userAdSoyad" class="form-control" placeholder="Ad Soyad" style="border-radius: 10px;">
         </div>
         <div class="mb-3">
-            <label class="form-label small fw-bold">E-posta</label>
-            <input type="email" id="userEmail" class="form-control" placeholder="E-posta adresi">
+            <label class="form-label small fw-bold text-secondary">E-posta</label>
+            <input type="email" id="userEmail" class="form-control" placeholder="E-posta adresi" style="border-radius: 10px;">
         </div>
         <div class="mb-3">
-            <label class="form-label small fw-bold">Rol</label>
-            <select id="userRol" class="form-select">
+            <label class="form-label small fw-bold text-secondary">Rol</label>
+            <select id="userRol" class="form-select" style="border-radius: 10px;">
                 <option value="Kullanıcı">Kullanıcı</option>
                 <option value="admin">Admin</option>
             </select>
         </div>
         <div class="mb-3">
-            <label class="form-label small fw-bold">Şifre</label>
-            <input type="text" id="userSifre" class="form-control" placeholder="Şifre">
+            <label class="form-label small fw-bold text-secondary">Şifre</label>
+            <input type="text" id="userSifre" class="form-control" placeholder="Şifre" style="border-radius: 10px;">
         </div>
-        <div id="kullaniciFormError" class="alert alert-danger py-2 small mb-3" style="display: none;"></div>
-        <button class="btn btn-primary w-100 fw-bold py-2" onclick="kaydetKullanici()">Kaydet</button>
+        <div id="kullaniciFormError" class="alert alert-danger py-2 small mb-3" style="display: none; border-radius: 10px;"></div>
+        <button class="btn btn-primary w-100 fw-bold py-2" style="border-radius:12px; background:var(--accent); border:none;" onclick="kaydetKullanici()">Kaydet</button>
     </div>
 </div>
 
@@ -899,10 +1265,10 @@
         let html = `
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div class="fw-bold fs-5">📊 ${kurum} - ${formatDonemAdi(donem)} ${yil} Analiz Raporu</div>
-                <button class="btn btn-sm btn-outline-success" onclick="window.exportTableToExcel('kurumAnalizTablo', '${kurum.replace(/\\s+/g, '_')}_Analiz_Raporu')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
+                <button class="btn btn-sm btn-outline-success" style="border-radius:10px;" onclick="window.exportTableToExcel('kurumAnalizTablo', '${kurum.replace(/\\s+/g, '_')}_Analiz_Raporu')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
             </div>
         `;
-        if(toplam) html += `<div class="alert alert-info py-2 mb-3">🏆 <b>Toplam Puanı:</b> <span class="fs-5 fw-bold text-primary">${toplam.toplam_puan}</span> | <b>Rol Ortalaması:</b> ${toplam.rol_ortalamasi}</div>`;
+        if(toplam) html += `<div class="alert alert-info py-2 mb-3" style="border-radius: 12px;">🏆 <b>Toplam Puanı:</b> <span class="fs-5 fw-bold text-primary">${toplam.toplam_puan}</span> | <b>Rol Ortalaması:</b> ${toplam.rol_ortalamasi}</div>`;
         
         html += `<div class="table-responsive"><table id="kurumAnalizTablo" class="table table-hover align-middle"><thead><tr><th>Gösterge Adı</th><th>Beklenen Yön</th><th>GD</th><th>TR Ort</th><th>Puan / GP</th><th>Değerlendirme</th><th>İşlem</th></tr></thead><tbody>`;
         
@@ -944,7 +1310,7 @@
     window.itirazlariGoster = async function() {
         const { data: itirazlar } = await _supabase.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
         const div = document.getElementById('itirazListe');
-        if(!itirazlar?.length) { div.innerHTML = '<div class="alert alert-info">Sistemde kayıtlı aktif itiraz bulunmamaktadır.</div>'; return; }
+        if(!itirazlar?.length) { div.innerHTML = '<div class="alert alert-info" style="border-radius:12px;">Sistemde kayıtlı aktif itiraz bulunmamaktadır.</div>'; return; }
         
         const { data: performanslar } = await _supabase.from('performans').select('*').in('id', itirazlar.map(i=>i.performans_id));
         const perfMap = Object.fromEntries(performanslar?.map(p=>[p.id, p]) || []);
@@ -952,7 +1318,7 @@
         div.innerHTML = itirazlar.map(it => {
             const p = perfMap[it.performans_id];
             if(!p) return '';
-            return `<div class="card mb-3 p-3 border-start border-4 border-warning bg-white shadow-sm">
+            return `<div class="card mb-3 p-3 border-start border-4 border-warning bg-white shadow-sm" style="border-radius:12px;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="fw-bold text-primary">🏥 ${p.kurum_adi}</div>
@@ -960,13 +1326,13 @@
                         <div class="mt-2 p-2 bg-light rounded text-dark fs-7"><strong>📝 Gerekçe:</strong> ${it.itiraz_metni}</div>
                     </div>
                     <div style="min-width:140px;">
-                        <select id="durum_${it.id}" class="form-select form-select-sm mb-2">
+                        <select id="durum_${it.id}" class="form-select form-select-sm mb-2" style="border-radius:8px;">
                             <option value="beklemede" ${it.durum==='beklemede'?'selected':''}>⏳ Beklemede</option>
                             <option value="onaylandi" ${it.durum==='onaylandi'?'selected':''}>✅ Onaylandı</option>
                             <option value="reddedildi" ${it.durum==='reddedildi'?'selected':''}>❌ Reddedildi</option>
                         </select>
-                        <button class="btn btn-sm btn-success w-100 mb-1" onclick="window.itirazDurumGuncelle('${it.id}')">Güncelle</button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="window.itirazSil('${it.id}')">Sil</button>
+                        <button class="btn btn-sm btn-success w-100 mb-1" style="border-radius:8px;" onclick="window.itirazDurumGuncelle('${it.id}')">Güncelle</button>
+                        <button class="btn btn-sm btn-outline-danger w-100" style="border-radius:8px;" onclick="window.itirazSil('${it.id}')">Sil</button>
                     </div>
                 </div>
             </div>`;
@@ -1022,7 +1388,7 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
-                                <select id="raporKurumTipi" class="form-select form-select-sm">
+                                <select id="raporKurumTipi" class="form-select form-select-sm" style="border-radius:10px;">
                                     <option value="">Tümü (Hastane & ADSM)</option>
                                     <option value="Hastane">Hastane</option>
                                     <option value="ADSM">ADSM / ADSH</option>
@@ -1030,7 +1396,7 @@
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label small fw-bold text-secondary">Analiz Edilecek Gösterge</label>
-                                <select id="raporGosterge" class="form-select form-select-sm">
+                                <select id="raporGosterge" class="form-select form-select-sm" style="border-radius:10px;">
                                     <option value="">Gösterge Seçiniz</option>
                                 </select>
                             </div>
@@ -1054,11 +1420,11 @@
                             <div class="d-flex gap-2">
                                 <div class="filter-group text-start" style="min-width:100px;">
                                     <label class="small fw-bold text-secondary">Yıl</label>
-                                    <select id="sapmaFiltreYil" class="form-select form-select-sm">${yilOptions}</select>
+                                    <select id="sapmaFiltreYil" class="form-select form-select-sm" style="border-radius:8px;">${yilOptions}</select>
                                 </div>
                                 <div class="filter-group text-start" style="min-width:110px;">
                                     <label class="small fw-bold text-secondary">Dönem</label>
-                                    <select id="sapmaFiltreDonem" class="form-select form-select-sm">${donemOptions}</select>
+                                    <select id="sapmaFiltreDonem" class="form-select form-select-sm" style="border-radius:8px;">${donemOptions}</select>
                                 </div>
                             </div>
                         </div>
@@ -1110,7 +1476,7 @@
             // DİNAMİK DATASET YAPILANDIRMASI
             const donemler = [...new Set(data?.map(r => r.donem).filter(d => d))].sort((a,b)=>a-b);
             const colors = [
-                { bg: 'rgba(54, 162, 235, 0.75)', border: 'rgba(54, 162, 235, 1)' },
+                { bg: 'rgba(79, 70, 229, 0.75)', border: 'rgba(79, 70, 229, 1)' },
                 { bg: 'rgba(245, 158, 11, 0.75)', border: 'rgba(245, 158, 11, 1)' },
                 { bg: 'rgba(16, 185, 129, 0.75)', border: 'rgba(16, 185, 129, 1)' },
                 { bg: 'rgba(239, 68, 68, 0.75)', border: 'rgba(239, 68, 68, 1)' },
@@ -1150,7 +1516,7 @@
                         legend: {
                             labels: {
                                 font: {
-                                    family: "'Segoe UI', sans-serif",
+                                    family: "'Plus Jakarta Sans', sans-serif",
                                     size: 11
                                 }
                             }
@@ -1305,7 +1671,7 @@
         let html = `<div class="d-flex flex-wrap gap-2">`;
         donemler.forEach(d => {
             html += `
-            <label class="bg-white px-3 py-2 border rounded d-flex align-items-center gap-2 shadow-sm" style="cursor:pointer; user-select:none; transition:0.2s;">
+            <label class="bg-white px-3 py-2 border rounded d-flex align-items-center gap-2 shadow-sm" style="cursor:pointer; user-select:none; transition:0.2s; border-radius:10px;">
                 <input type="checkbox" class="donem-checkbox form-check-input m-0" value="${d}" checked> 
                 <span class="fs-7 fw-semibold text-dark">${formatDonemAdi(d)}</span>
             </label>`;
@@ -1359,7 +1725,7 @@
         let html = `
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <h6 class="mb-0 fw-bold"><i class="bi bi-table"></i> Karşılaştırma Sonuç Matrisi</h6>
-                <button class="btn btn-sm btn-outline-success" onclick="window.exportTableToExcel('karsilastirmaTablo', '${kurum.replace(/\\s+/g, '_')}_Donemsel_Karsilastirma')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
+                <button class="btn btn-sm btn-outline-success" style="border-radius:10px;" onclick="window.exportTableToExcel('karsilastirmaTablo', '${kurum.replace(/\\s+/g, '_')}_Donemsel_Karsilastirma')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
             </div>
             <div class="table-responsive"><table id="karsilastirmaTablo" class="table table-bordered bg-white align-middle"><thead><tr class="table-light"><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th>${formatDonemAdi(d)} <br><small class="text-muted">(GD / TR Ort)</small></th>`).join('')}</tr></thead><tbody>
             <tr class="table-info fw-bold text-dark"><td>🏆 TOPLAM PUAN</td>${seciliDonemler.map(d=>`<td class="text-primary fs-5">${toplamlar[d].toplam_puan}</td>`).join('')}</tr>
@@ -1381,7 +1747,7 @@
         html += `</tbody></table></div>`;
         
         const puanlar = seciliDonemler.map(d => toplamlar[d].toplam_puan !== '-' ? toplamlar[d].toplam_puan : 0);
-        html += `<div class="mt-4 p-3 bg-white border rounded"><h6>📈 Dönemsel Toplam Puan Trend Grafiği</h6><div style="height:220px; position:relative;"><canvas id="karsilastirmaChart"></canvas></div></div>`;
+        html += `<div class="mt-4 p-3 bg-white border rounded" style="border-radius:12px;"><h6>📈 Dönemsel Toplam Puan Trend Grafiği</h6><div style="height:220px; position:relative;"><canvas id="karsilastirmaChart"></canvas></div></div>`;
         
         document.getElementById('karsilastirmaSonuc').innerHTML = html;
         
@@ -1393,7 +1759,7 @@
                     type: 'line', 
                     data: { 
                         labels: seciliDonemler.map(d=>formatDonemAdi(d)), 
-                        datasets: [{ label: 'Kurum Toplam Puanı', data: puanlar, borderColor: '#20c997', backgroundColor: 'rgba(32, 201, 151, 0.1)', tension: 0.1, fill: true }] 
+                        datasets: [{ label: 'Kurum Toplam Puanı', data: puanlar, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', tension: 0.1, fill: true }] 
                     }, 
                     options: { responsive: true, maintainAspectRatio: false } 
                 });
@@ -1431,11 +1797,11 @@
         } catch(err) {
             console.error('Google E-Tablo verisi okunamadı:', err);
             document.getElementById('eTabloDashboardContent').innerHTML = `
-                <div class="alert alert-danger py-4">
+                <div class="alert alert-danger py-4" style="border-radius:12px;">
                     <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> Canlı Entegrasyon Hatası</h5>
                     <p class="small mb-3">Google Sheets üzerinden veriler çekilemedi. Lütfen bağlantı izinlerini ve e-tablo adını kontrol edin.</p>
                     <div class="p-2 bg-light rounded text-monospace small text-danger mb-3" style="font-size:11px;">Hata Detayı: ${err.message}</div>
-                    <button class="btn btn-sm btn-primary px-3" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
+                    <button class="btn btn-sm btn-primary px-3" style="border-radius:10px;" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
                 </div>
             `;
         }
@@ -1444,7 +1810,7 @@
     // Alt sekmeler arası geçiş
     window.switchETabloSubTab = function(tabName) {
         currentETabloSubTab = tabName;
-        document.querySelectorAll('.sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('#e-tablo .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(`subtab-${tabName}-btn`).classList.add('active');
         renderETabloActiveView();
     };
@@ -1484,6 +1850,7 @@
         });
     }
 
+    // ---------- SUMIFS TAKLİTÇİSİ (JS TABANLI HESAPLAMA) ----------
     function sumifs(rows, sumColIdx, criteriaPairs) {
         let total = 0;
         for(let i = 1; i < rows.length; i++) {
@@ -1523,7 +1890,7 @@
         const maxDate = sortedDates[sortedDates.length - 1];
         
         let tableHtml = `
-            <div class="alert alert-success py-2 small mb-3 d-flex justify-content-between align-items-center">
+            <div class="alert alert-success py-2 small mb-3 d-flex justify-content-between align-items-center" style="border-radius:12px;">
                 <span><i class="bi bi-calendar-check"></i> Canlı Rapor Tarihi (Son Gün / MAK): <b>${maxDate}</b></span>
                 <span class="badge bg-dark">${HOSPITALS.length} Hastane Canlı Hesaplanıyor</span>
             </div>
@@ -1626,15 +1993,15 @@
             <div class="row g-3 mb-4 p-3 bg-light rounded border">
                 <div class="col-md-4">
                     <label class="form-label small fw-bold text-secondary">Hastane Seçin</label>
-                    <select id="trendFilterHospital" class="form-select form-select-sm">${hospOptions}</select>
+                    <select id="trendFilterHospital" class="form-select form-select-sm" style="border-radius:8px;">${hospOptions}</select>
                 </div>
                 <div class="col-md-5">
                     <label class="form-label small fw-bold text-secondary">Değişken Seçin</label>
-                    <select id="trendFilterVariable" class="form-select form-select-sm">${varOptions}</select>
+                    <select id="trendFilterVariable" class="form-select form-select-sm" style="border-radius:8px;">${varOptions}</select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-secondary">Tarih Aralığı</label>
-                    <select id="trendFilterRange" class="form-select form-select-sm">
+                    <select id="trendFilterRange" class="form-select form-select-sm" style="border-radius:8px;">
                         <option value="7">Son 7 Gün</option>
                         <option value="14">Son 14 Gün</option>
                         <option value="30">Son 30 Gün</option>
@@ -1643,7 +2010,7 @@
                 </div>
             </div>
             
-            <div class="border rounded p-3 bg-white shadow-sm mb-4">
+            <div class="border rounded p-3 bg-white shadow-sm mb-4" style="border-radius:14px;">
                 <h6 id="trendChartTitle" class="fw-bold mb-3 text-secondary"><i class="bi bi-graph-up-arrow"></i> Canlı Trend Çizgisi</h6>
                 <div style="height:320px; position:relative;">
                     <canvas id="trendAnalysisCanvas"></canvas>
@@ -1704,12 +2071,12 @@
                     datasets: [{
                         label: variable,
                         data: dataPoints,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.08)',
                         borderWidth: 2,
                         tension: 0.15,
                         fill: true,
-                        pointBackgroundColor: '#2563eb',
+                        pointBackgroundColor: '#4f46e5',
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 1.5,
                         pointRadius: 4,
@@ -1752,7 +2119,7 @@
         const dataRows = rows.slice(1);
         
         let html = `
-            <div class="alert alert-light border py-2 small mb-3"><i class="bi bi-info-circle"></i> DATA sekmesindeki tüm ham kayıtlar aşağıda listelenmiştir.</div>
+            <div class="alert alert-light border py-2 small mb-3" style="border-radius:10px;"><i class="bi bi-info-circle"></i> DATA sekmesindeki tüm ham kayıtlar aşağıda listelenmiştir.</div>
             <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                 <table class="table table-sm table-striped table-hover align-middle table-bordered" style="font-size: 11.5px;">
                     <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
@@ -1921,11 +2288,11 @@
         } catch(err) {
             console.error('MHRS canlı veri çekme hatası:', err);
             document.getElementById('mhrsDashboardContent').innerHTML = `
-                <div class="alert alert-danger py-4">
+                <div class="alert alert-danger py-4" style="border-radius:12px;">
                     <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> MHRS Canlı Entegrasyon Hatası</h5>
                     <p class="small mb-3">Google Sheets dosyasından MHRS verileri okunamadı. Lütfen internet bağlantınızı veya dosya paylaşım izinlerini kontrol edin.</p>
                     <div class="p-2 bg-light rounded text-monospace small text-danger mb-3" style="font-size:11px;">Hata Detayı: ${err.message}</div>
-                    <button class="btn btn-sm btn-primary px-3" onclick="window.initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
+                    <button class="btn btn-sm btn-primary px-3" style="border-radius:10px;" onclick="window.initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
                 </div>
             `;
         }
@@ -1975,7 +2342,7 @@
     window.filterMhrsData = function() {
         const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
         if (!list || list.length === 0) {
-            document.getElementById('mhrsDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Seçili veri türü için analiz edilecek ham veri bulunamadı.</div>';
+            document.getElementById('mhrsDashboardContent').innerHTML = '<div class="alert alert-warning text-center" style="border-radius:12px;">Seçili veri türü için analiz edilecek ham veri bulunamadı.</div>';
             return;
         }
         
@@ -1995,28 +2362,28 @@
         document.getElementById('mhrsDashboardContent').innerHTML = `
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
                         <h6 class="text-secondary small fw-bold">🎯 MHRS DOLULUK</h6>
                         <div class="fs-4 fw-bold text-primary" id="mhrs-stat-ilk-doluluk">0%</div>
                         <div class="text-muted small" id="mhrs-desc-ilk-doluluk">0 / 0</div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
                         <h6 class="text-secondary small fw-bold">🔄 DEVAM EDEN DOLULUK</h6>
                         <div class="fs-4 fw-bold text-success" id="mhrs-stat-devam-doluluk">0%</div>
                         <div class="text-muted small" id="mhrs-desc-devam-doluluk">0 / 0</div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
                         <h6 class="text-secondary small fw-bold">📈 RANDEVU SADAKAT</h6>
                         <div class="fs-4 fw-bold text-info" id="mhrs-stat-ilk-gerceklesme">0%</div>
                         <div class="text-muted small" id="mhrs-desc-ilk-gerceklesme">0 / 0</div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
                         <h6 class="text-secondary small fw-bold">📊 DEVAM EDEN GERÇEKLEŞME</h6>
                         <div class="fs-4 fw-bold text-warning" id="mhrs-stat-devam-gerceklesme">0%</div>
                         <div class="text-muted small" id="mhrs-desc-devam-gerceklesme">0 / 0</div>
@@ -2026,7 +2393,7 @@
 
             <div class="row g-4 mb-4">
                 <div class="col-md-8">
-                    <div class="p-3 border rounded bg-white shadow-sm">
+                    <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important;">
                         <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-bar-chart-line"></i> Kapasite, Randevu ve Gerçekleşme Dağılımı (Top 10)</h6>
                         <div style="height: 320px; position: relative;">
                             <canvas id="mhrsMainChart"></canvas>
@@ -2034,7 +2401,7 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="p-3 border rounded bg-white shadow-sm">
+                    <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important;">
                         <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-star"></i> En Çok Randevu Alınan Branşlar</h6>
                         <div id="mhrs-top-branches" style="max-height: 320px; overflow-y: auto;">
                             <div class="text-muted small text-center py-5">Veri yükleniyor...</div>
@@ -2043,10 +2410,10 @@
                 </div>
             </div>
 
-            <div class="border rounded p-3 bg-white shadow-sm">
+            <div class="border rounded p-3 bg-white shadow-sm" style="border-radius:14px !important;">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-table"></i> Detaylı MHRS Performans Tablosu</h6>
-                    <button class="btn btn-sm btn-outline-success" onclick="window.exportMhrsTableToExcel()"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
+                    <button class="btn btn-sm btn-outline-success" style="border-radius:8px;" onclick="window.exportMhrsTableToExcel()"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
                 </div>
                 <div class="table-responsive" style="max-height: 400px;">
                     <table class="table table-sm table-bordered table-striped table-hover align-middle" id="mhrsDetailTable" style="font-size: 11.5px;">
@@ -2097,8 +2464,8 @@
         });
 
         const ilk_doluluk = total_ilk_acilan > 0 ? (total_ilk_alinan / total_ilk_acilan) * 100 : 0;
+        const widthPercentLimit = 100; // responsive graphic handling
         const devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
-        // DOĞRU HESAPLAMA: Gerçekleşme = Gerçekleşen / Alınan Randevu
         const ilk_gerceklesme = total_ilk_alinan > 0 ? (total_ilk_gerceklesen / total_ilk_alinan) * 100 : 0;
         const devam_gerceklesme = total_devam_alinan > 0 ? (total_devam_gerceklesen / total_devam_alinan) * 100 : 0;
 
@@ -2138,7 +2505,6 @@
                     const toplam_gerceklesen = ilk_ge + dev_ge;
                     
                     const doluluk_orani = toplam_acilan > 0 ? (toplam_alinan / toplam_acilan) * 100 : 0;
-                    // DOĞRU HESAPLAMA: Gerçekleşme = Gerçekleşen / Alınan Randevu
                     const gerceklesme_orani = toplam_alinan > 0 ? (toplam_gerceklesen / toplam_alinan) * 100 : 0;
                     
                     let hekim_sayisi = 0;
@@ -2150,9 +2516,8 @@
                         asistan_sayisi = parseNum(getVal(item, 'asistan_sayisi'));
                         toplam_oda_sayisi = parseNum(getVal(item, 'toplam_aktif_poliklinik_oda_sayisi'));
                     } else {
-                        // ADSM için farklı alan adları olabilir, uygun alanları kullan
                         hekim_sayisi = parseNum(getVal(item, 'aktif_calisan_uzman_doktoralı_sayisi')) + parseNum(getVal(item, 'aktif_calisan_hekim_sayisi_uzman_haric'));
-                        asistan_sayisi = 0; // ADSM'de asistan bilgisi olmayabilir
+                        asistan_sayisi = 0; 
                         toplam_oda_sayisi = parseNum(getVal(item, 'toplam_aktif_poliklinik_oda_sayisi'));
                     }
                     
@@ -2200,7 +2565,7 @@
                 topBranchesEl.innerHTML = sortedBranches.slice(0, 5).map((b, idx) => `
                     <div class="rank-card">
                         <div>
-                            <span class="rank-number" style="background:#f59e0b;">${idx+1}</span>
+                            <span class="rank-number" style="background:#f59e0b; color:white;">${idx+1}</span>
                             <strong>${b.name}</strong>
                         </div>
                         <span class="text-warning fw-bold small">${b.vol.toLocaleString('tr-TR')} Randevu</span>
@@ -2293,8 +2658,8 @@
                         {
                             label: 'Açılan Kapasite',
                             data: chartAcilan,
-                            backgroundColor: 'rgba(54, 162, 235, 0.75)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(79, 70, 229, 0.75)',
+                            borderColor: 'rgba(79, 70, 229, 1)',
                             borderWidth: 1.5,
                             borderRadius: 4
                         },
@@ -2327,7 +2692,7 @@
                         }
                     },
                     plugins: {
-                        legend: { labels: { font: { family: "'Segoe UI', sans-serif", size: 11 } } }
+                        legend: { labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 } } }
                     }
                 }
             });
@@ -2360,15 +2725,15 @@
                     <div class="row g-3 mt-1 mb-4">
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-secondary">Yıl</label>
-                            <select id="bolgeFiltreYil" class="form-select form-select-sm">${yilOptions}</select>
+                            <select id="bolgeFiltreYil" class="form-select form-select-sm" style="border-radius:10px;">${yilOptions}</select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-secondary">Dönem</label>
-                            <select id="bolgeFiltreDonem" class="form-select form-select-sm">${donemOptions}</select>
+                            <select id="bolgeFiltreDonem" class="form-select form-select-sm" style="border-radius:10px;">${donemOptions}</select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
-                            <select id="bolgeFiltreTip" class="form-select form-select-sm">
+                            <select id="bolgeFiltreTip" class="form-select form-select-sm" style="border-radius:10px;">
                                 <option value="">Tümü (Hastane & ADSM)</option>
                                 <option value="Hastane">Hastane</option>
                                 <option value="ADSM">ADSM/ADSH</option>
@@ -2402,7 +2767,7 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Kurum Türü</label>
-                            <select id="karsKurumTip" class="form-select">
+                            <select id="karsKurumTip" class="form-select" style="border-radius:10px;">
                                 <option value="">Tümü</option>
                                 <option value="Hastane">Hastane</option>
                                 <option value="ADSM">ADSM/ADSH</option>
@@ -2410,7 +2775,7 @@
                         </div>
                         <div class="col-md-8">
                             <label class="form-label small fw-bold">Kurum Adı</label>
-                            <select id="karsKurumAdi" class="form-select">
+                            <select id="karsKurumAdi" class="form-select" style="border-radius:10px;">
                                 <option value="">Önce tür seçin</option>
                             </select>
                         </div>
