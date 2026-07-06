@@ -2309,8 +2309,29 @@
             return;
         }
         
-        const yillar = [...new Set(list.map(item => getVal(item, 'yil')).filter(Boolean))].sort((a,b)=>b-a);
-        const aylar = [...new Set(list.map(item => getVal(item, 'ay')).filter(Boolean))].sort((a,b)=>a-b);
+// Geçerli ay isimleri listesi (Hatalı metinleri engellemek için)
+        const GECERLI_AY_ISIMLERI = [
+            "OCAK", "ŞUBAT", "SUBAT", "MART", "NİSAN", "NISAN", "MAYIS", 
+            "HAZİRAN", "HAZIRAN", "TEMMUZ", "AĞUSTOS", "AGUSTOS", 
+            "EYLÜL", "EYLUL", "EKİM", "EKIM", "KASIM", "ARALIK"
+        ];
+
+        // 2312. satır yerine: Yalnızca 4 haneli yılları kabul eder
+        const yillar = [...new Set(list.map(item => getVal(item, 'yil'))
+            .filter(y => y && /^\d{4}$/.test(y.toString().trim()))
+        )].sort((a,b)=>b-a);
+
+        // 2313. satır yerine: Yalnızca gerçek ayları kabul eder
+        const aylar = [...new Set(list.map(item => getVal(item, 'ay'))
+            .filter(a => {
+                if (!a) return false;
+                const temizAy = a.toString().trim().toUpperCase()
+                    .replace(/ı/g, 'I')
+                    .replace(/i/g, 'İ');
+                const sayisalAy = !isNaN(temizAy) && parseInt(temizAy) >= 1 && parseInt(temizAy) <= 12;
+                return GECERLI_AY_ISIMLERI.includes(temizAy) || sayisalAy;
+            })
+        )];
         const kurumlar = [...new Set(list.map(item => getVal(item, 'kurum_adi')).filter(Boolean))].sort();
         const branslar = [...new Set(list.map(item => getVal(item, 'brans')).filter(Boolean))].sort();
         
