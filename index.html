@@ -2853,7 +2853,7 @@
         if (loader) loader.classList.add('active');
 
         // 2. 2.5 saniyelik (2500ms) zorunlu bekleme vaadi oluştur
-        const delayPromise = new Promise(resolve => setTimeout(resolve, 2500));
+        const delayPromise = new Promise(resolve => setTimeout(resolve, 3000));
 
         // 3. Arka planda sayfa geçiş ve navigasyon işlemlerini yap
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
