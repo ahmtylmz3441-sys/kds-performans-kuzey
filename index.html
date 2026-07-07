@@ -2450,7 +2450,7 @@
         }
     };
 
-    window.filterMhrsData = function() {
+   window.filterMhrsData = function() {
         const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
         if (!list || list.length === 0) {
             document.getElementById('mhrsDashboardContent').innerHTML = '<div class="alert alert-warning text-center" style="border-radius:12px;">Seçili veri türü için analiz edilecek ham veri bulunamadı.</div>';
@@ -2609,7 +2609,7 @@
             ? ((total_ilk_alinan + total_devam_alinan) / (total_ilk_acilan + total_devam_acilan)) * 100 
             : 0;
         const ilk_doluluk = total_ilk_acilan > 0 ? (total_ilk_alinan / total_ilk_acilan) * 100 : 0;
-        const devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
+        constamp_devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
         const ilk_gerceklesme = total_ilk_alinan > 0 ? (total_ilk_gerceklesen / total_ilk_alinan) * 100 : 0;
         const devam_gerceklesme = total_devam_alinan > 0 ? (total_devam_gerceklesen / total_devam_alinan) * 100 : 0;
 
@@ -2619,7 +2619,7 @@
         document.getElementById('mhrs-stat-ilk-doluluk').innerText = `${ilk_doluluk.toFixed(1)}%`;
         document.getElementById('mhrs-desc-ilk-doluluk').innerText = `${total_ilk_alinan.toLocaleString('tr-TR')} / ${total_ilk_acilan.toLocaleString('tr-TR')}`;
         
-        document.getElementById('mhrs-stat-devam-doluluk').innerText = `${devam_doluluk.toFixed(1)}%`;
+        document.getElementById('mhrs-stat-devam-doluluk').innerText = `${amp_devam_doluluk.toFixed(1)}%`;
         document.getElementById('mhrs-desc-devam-doluluk').innerText = `${total_devam_alinan.toLocaleString('tr-TR')} / ${total_devam_acilan.toLocaleString('tr-TR')}`;
 
         document.getElementById('mhrs-stat-ilk-gerceklesme').innerText = `${ilk_gerceklesme.toFixed(1)}%`;
@@ -2743,6 +2743,23 @@
             }
         });
 
+        // Grafik isimlerini otomatik kısaltan yardımcı fonksiyon
+        const kisaltKurumAdi = (name) => {
+            if (!name) return "";
+            return name
+                .replace(/Eğitim ve Araştırma Hastanesi/gi, "EAH")
+                .replace(/Devlet Hastanesi/gi, "DH")
+                .replace(/Şehir Hastanesi/gi, "ŞH")
+                .replace(/Kadın Doğum ve Çocuk Hastalıkları/gi, "KDÇ")
+                .replace(/Göğüs Kalp ve Damar Cerrahisi/gi, "GKDC")
+                .replace(/Ağız ve Diş Sağlığı Merkezi/gi, "ADSM")
+                .replace(/Ağız ve Diş Sağlığı Hastanesi/gi, "ADSH")
+                .replace(/Sancaktepe Şehit Prof\.?\s*Dr\.?\s*İlhan Varank/gi, "Sancaktepe Varank")
+                .replace(/Zeynep Kamil Kadın Doğum ve Çocuk/gi, "Zeynep Kamil KDÇ")
+                .replace(/Dr\.?\s*Süleyman Yalçın/gi, "S. Yalçın")
+                .replace(/Fatih Sultan Mehmet/gi, "FSM");
+        };
+
         const chartLabels = [];
         const chartAcilan = [];
         const chartAlinan = [];
@@ -2787,7 +2804,7 @@
                 .slice(0, 10);
                 
             sortedKurumList.forEach(([kName, val]) => {
-                chartLabels.push(kName.replace("Devlet Hastanesi", "DH").replace("Eğitim ve Araştırma Hastanesi", "EAH"));
+                chartLabels.push(kisaltKurumAdi(kName));
                 chartAcilan.push(val.acilan);
                 chartAlinan.push(val.alinan);
                 chartGerceklesen.push(val.gerceklesen);
@@ -2832,11 +2849,17 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { grid: { display: false } },
+                        x: { 
+                            grid: { display: false },
+                            ticks: {
+                                font: { size: 9, family: "'Plus Jakarta Sans', sans-serif" },
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        },
                         y: { 
                             grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
                             ticks: { precision: 0 },
-                            // Üst kısımdaki etiketlerin sığabilmesi için tepe boşluğu ekler
                             grace: '15%' 
                         }
                     },
@@ -2851,7 +2874,6 @@
                         ctx.save();
 
                         chart.data.datasets.forEach((dataset, datasetIndex) => {
-                            // Sadece 1 (Sarı) ve 2 (Yeşil) indeksli veri kümelerine oran yazdırıyoruz
                             if (datasetIndex === 0) return; 
 
                             const meta = chart.getDatasetMeta(datasetIndex);
@@ -2862,29 +2884,24 @@
 
                                 let percentageText = '';
                                 if (datasetIndex === 1 && acilanVal > 0) {
-                                    // Sarı Çubuk: Doluluk Oranı (Alınan / Açılan)
                                     const rate = (alinanVal / acilanVal) * 100;
                                     percentageText = '%' + rate.toFixed(0);
                                 } else if (datasetIndex === 2 && alinanVal > 0) {
-                                    // Yeşil Çubuk: Gerçekleşme Oranı (Gerçekleşen / Alınan)
                                     const rate = (gerceklesenVal / alinanVal) * 100;
                                     percentageText = '%' + rate.toFixed(0);
                                 }
 
                                 if (percentageText && bar.y > 0) {
-                                    ctx.font = 'bold 9px "Plus Jakarta Sans", sans-serif';
-                                    // Okunabilirlik için çubuk rengine yakın hafif koyu tonlar tercih edilmiştir
+                                    ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
                                     ctx.fillStyle = datasetIndex === 1 ? '#b45309' : '#047857'; 
                                     ctx.textAlign = 'center';
                                     ctx.textBaseline = 'middle';
 
                                     const x = bar.x;
-                                    // Çubuğun hemen 12 piksel yukarısına konumlandırma
-                                    const y = bar.y - 12; 
+                                    const y = bar.y - 8; 
 
                                     ctx.save();
                                     ctx.translate(x, y);
-                                    // Metni dikey (90 derece) döndürme işlemi
                                     ctx.rotate(-Math.PI / 2); 
                                     ctx.fillText(percentageText, 0, 0);
                                     ctx.restore();
@@ -2897,157 +2914,8 @@
             });
         }
 
-        // Trend analiz grafiğini çiz
         window.updateMhrsTrendChart();
     };
-
-    window.updateMhrsTrendChart = function() {
-        const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
-        if (!list || list.length === 0) return;
-        
-        const selYil = document.getElementById('mhrs-f-yil')?.value;
-        const selKurum = document.getElementById('mhrs-f-kurum')?.value;
-        const selBrans = document.getElementById('mhrs-f-brans')?.value;
-        const selectedMetric = document.getElementById('mhrs-trend-metric')?.value || 'genel_doluluk';
-        
-        // Ay filtresinden bağımsız şekilde zaman trendi oluşturmak için ay filtresi göz ardı edilir
-        let trendFiltered = list.filter(item => {
-            if (selYil && getVal(item, 'yil') !== selYil) return false;
-            if (selKurum && getVal(item, 'kurum_adi') !== selKurum) return false;
-            if (selBrans && getVal(item, 'brans') !== selBrans) return false;
-            return true;
-        });
-        
-        const monthlyData = {};
-        trendFiltered.forEach(item => {
-            const ay = getVal(item, 'ay');
-            if (!ay) return;
-            
-            const parseNum = (v) => {
-                if (!v) return 0;
-                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
-                return isNaN(n) ? 0 : n;
-            };
-            
-            if (!monthlyData[ay]) {
-                monthlyData[ay] = {
-                    ilk_acilan: 0, ilk_alinan: 0, ilk_gerceklesen: 0,
-                    devam_acilan: 0, devam_alinan: 0, devam_gerceklesen: 0
-                };
-            }
-            
-            monthlyData[ay].ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
-            monthlyData[ay].ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
-            monthlyData[ay].ilk_gerceklesen += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
-            
-            monthlyData[ay].devam_acilan += parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
-            monthlyData[ay].devam_alinan += parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
-            monthlyData[ay].devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
-        });
-        
-        const parseMhrsMonthValue = (ayStr) => {
-            if (!ayStr) return 99;
-            const s = ayStr.toString().trim().toUpperCase().replace(/ı/g,'I').replace(/i/g,'İ');
-            if (!isNaN(s)) return parseInt(s);
-            const mhrsAylarTR = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
-            const mhrsAylarEN = ["OCAK", "SUBAT", "MART", "NISAN", "MAYIS", "HAZIRAN", "TEMMUZ", "AGUSTOS", "EYLUL", "EKIM", "KASIM", "ARALIK"];
-            let idx = mhrsAylarTR.indexOf(s);
-            if (idx === -1) idx = mhrsAylarEN.indexOf(s);
-            return idx !== -1 ? idx + 1 : 99;
-        };
-        
-        const sortedMonthKeys = Object.keys(monthlyData).sort((a, b) => {
-            return parseMhrsMonthValue(a) - parseMhrsMonthValue(b);
-        });
-        
-        const labels = sortedMonthKeys;
-        const dataPoints = sortedMonthKeys.map(key => {
-            const val = monthlyData[key];
-            const t_ilk_ac = val.ilk_acilan;
-            const t_ilk_al = val.ilk_alinan;
-            const t_ilk_ge = val.ilk_gerceklesen;
-            const t_dev_ac = val.devam_acilan;
-            const t_dev_al = val.devam_alinan;
-            const t_dev_ge = val.devam_gerceklesen;
-            
-            if (selectedMetric === 'genel_doluluk') {
-                return (t_ilk_ac + t_dev_ac) > 0 ? (((t_ilk_al + t_dev_al) / (t_ilk_ac + t_dev_ac)) * 100) : 0;
-            } else if (selectedMetric === 'ilk_doluluk') {
-                return t_ilk_ac > 0 ? ((t_ilk_al / t_ilk_ac) * 100) : 0;
-            } else if (selectedMetric === 'devam_doluluk') {
-                return t_dev_ac > 0 ? ((t_dev_al / t_dev_ac) * 100) : 0;
-            } else if (selectedMetric === 'kapasite') {
-                return t_ilk_ac + t_dev_ac;
-            } else if (selectedMetric === 'alinan_randevu') {
-                return t_ilk_al + t_dev_al;
-            } else if (selectedMetric === 'gerceklesen_muayene') {
-                return t_ilk_ge + t_dev_ge;
-            }
-            return 0;
-        });
-        
-        const metricLabels = {
-            genel_doluluk: 'Genel Doluluk Oranı (%)',
-            ilk_doluluk: 'İlk Muayene Doluluk Oranı (%)',
-            devam_doluluk: 'Devam Eden Doluluk Oranı (%)',
-            kapasite: 'Toplam Açılan Kapasite',
-            alinan_randevu: 'Toplam Alınan Randevu',
-            gerceklesen_muayene: 'Toplam Gerçekleşen Muayene'
-        };
-        
-        const isPercentage = selectedMetric.includes('doluluk');
-        
-        const ctx = document.getElementById('mhrsTrendChart')?.getContext('2d');
-        if (ctx) {
-            if (charts.mhrsTrend) charts.mhrsTrend.destroy();
-            charts.mhrsTrend = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: metricLabels[selectedMetric],
-                        data: dataPoints,
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
-                        borderWidth: 2.5,
-                        tension: 0.15,
-                        fill: true,
-                        pointBackgroundColor: '#f59e0b',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 1.5,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { display: false } },
-                        y: {
-                            grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
-                            ticks: {
-                                callback: function(value) {
-                                    return isPercentage ? value.toFixed(1) + '%' : value.toLocaleString('tr-TR');
-                                }
-                            }
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let val = context.raw;
-                                    return context.dataset.label + ': ' + (isPercentage ? val.toFixed(1) + '%' : val.toLocaleString('tr-TR'));
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    };
-
     window.exportMhrsTableToExcel = function() {
         window.exportTableToExcel('mhrsDetailTable', `MHRS_Performans_Raporu_${currentMhrsSubTab}_${currentMhrsVeriTipi}`);
     };
