@@ -2907,7 +2907,8 @@
                 .slice(0, 10);
                 
             sortedKurumList.forEach(([kName, val]) => {
-                chartLabels.push(kisaltKurumAdi(kName));
+                // .split(" ") ekleyerek kelimeleri boşluklardan bölüp alt alta yazdırıyoruz
+                chartLabels.push(kisaltKurumAdi(kName).split(" "));
                 chartAcilan.push(val.acilan);
                 chartAlinan.push(val.alinan);
                 chartGerceklesen.push(val.gerceklesen);
@@ -2951,13 +2952,15 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
+                   scales: {
                         x: { 
                             grid: { display: false },
                             ticks: {
                                 font: { size: 9, weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" },
                                 maxRotation: 0,
-                                minRotation: 0
+                                minRotation: 0,
+                                // Hiçbir hastane adının gizlenmemesini zorunlu kılar
+                                autoSkip: false 
                             }
                         },
                         y: { 
