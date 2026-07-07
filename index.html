@@ -403,7 +403,7 @@
             border-bottom: 1px solid var(--border-color); 
             font-size: 14px;
         }
-        /* 3D Geometrik Küp Loader Tasarımı */
+/* 3D Geometrik Küp Loader Tasarımı */
         .page-loader-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -1211,11 +1211,11 @@
         data?.forEach(i => { itirazPerformansMap[i.performans_id] = true; });
     }
 
-    function degerlendir(gd, trOrt, lazy, puan, gp, performansId = null) {
+    function degerlendir(gd, trOrt, yon, puan, gp, performansId = null) {
         let itirazBadge = (performansId && itirazPerformansMap[performansId]) ? '<span class="badge-itiraz-var">📝 İtiraz var</span>' : '';
         if (gd === null || gd === undefined || trOrt === null || trOrt === undefined) 
             return { class: 'badge-muaf', text: '🔘 Muaf' + itirazBadge };
-        const ilOrtBasari = lazy === 'Pozitif' ? gd >= trOrt : gd <= trOrt;
+        const ilOrtBasari = yon === 'Pozitif' ? gd >= trOrt : gd <= trOrt;
         const puanOrani = (puan / gp) * 100;
         if (ilOrtBasari && puanOrani >= 75) return { class: 'badge-basarili', text: '✅ Mükemmel' + itirazBadge };
         if (ilOrtBasari && puanOrani >= 50) return { class: 'badge-basarili', text: '✅ Başarılı' + itirazBadge };
@@ -1454,7 +1454,7 @@
                             <option value="reddedildi" ${it.durum==='reddedildi'?'selected':''}>❌ Reddedildi</option>
                         </select>
                         <button class="btn btn-sm btn-success w-100 mb-1" style="border-radius:8px;" onclick="window.itirazDurumGuncelle('${it.id}')">Güncelle</button>
-                        <button class="btn btn-sm btn-outline-danger" style="border-radius:8px;" onclick="window.itirazSil('${it.id}')">Sil</button>
+                        <button class="btn btn-sm btn-outline-danger w-100" style="border-radius:8px;" onclick="window.itirazSil('${it.id}')">Sil</button>
                     </div>
                 </div>
             </div>`;
@@ -1707,7 +1707,7 @@
                 
                 if (isNaN(gd) || isNaN(trOrt) || trOrt === 0) return;
                 
-                let @sapmaOrani = 0;
+                let sapmaOrani = 0;
                 let isNegativeDeviation = false;
                 
                 if (r.gosterge_yonu === 'Pozitif') {
@@ -2040,7 +2040,7 @@
         
         HOSPITALS.forEach(h => {
             const yatak = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)"}]);
-            const @bos = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)"}]);
+            const bos = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)"}]);
             
             const dolu = yatak - bos;
             const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(2).replace('.', ',') : "0,00";
@@ -2431,19 +2431,19 @@
             return;
         }
         
-        // Geçerli ay isimleri listesi (Hatalı metinleri engellemek için)
+// Geçerli ay isimleri listesi (Hatalı metinleri engellemek için)
         const GECERLI_AY_ISIMLERI = [
             "OCAK", "ŞUBAT", "SUBAT", "MART", "NİSAN", "NISAN", "MAYIS", 
             "HAZİRAN", "HAZIRAN", "TEMMUZ", "AĞUSTOS", "AGUSTOS", 
             "EYLÜL", "EYLUL", "EKİM", "EKIM", "KASIM", "ARALIK"
         ];
 
-        // Yalnızca 4 haneli yılları kabul eder
+        // 2312. satır yerine: Yalnızca 4 haneli yılları kabul eder
         const yillar = [...new Set(list.map(item => getVal(item, 'yil'))
             .filter(y => y && /^\d{4}$/.test(y.toString().trim()))
         )].sort((a,b)=>b-a);
 
-        // Yalnızca gerçek ayları kabul eder
+        // 2313. satır yerine: Yalnızca gerçek ayları kabul eder
         const aylar = [...new Set(list.map(item => getVal(item, 'ay'))
             .filter(a => {
                 if (!a) return false;
@@ -2482,82 +2482,6 @@
         }
     };
 
-    // ---------- MHRS DÖNEMSEL TREND ANALİZ GRAFİĞİ GÜNCELLEME ----------
-    window.updateMhrsTrendChart = function() {
-        if (!window.mhrsTrendCache) return;
-        const metric = document.getElementById('mhrs-trend-metric')?.value || 'genel_doluluk';
-        const { periods, data } = window.mhrsTrendCache;
-        
-        const labels = periods;
-        const dataPoints = periods.map(p => {
-            const val = data[p];
-            const total_acilan = val.ilk_acilan + val.devam_acilan;
-            const total_alinan = val.ilk_alinan + val.devam_alinan;
-            const total_gerceklesen = val.ilk_gerceklesen + val.devam_gerceklesen;
-            
-            switch(metric) {
-                case 'genel_doluluk':
-                    return total_acilan > 0 ? (total_alinan / total_acilan) * 100 : 0;
-                case 'ilk_doluluk':
-                    return val.ilk_acilan > 0 ? (val.ilk_alinan / val.ilk_acilan) * 100 : 0;
-                case 'devam_doluluk':
-                    return val.devam_acilan > 0 ? (val.devam_alinan / val.devam_acilan) * 100 : 0;
-                case 'acilan_kapasite':
-                    return total_acilan;
-                case 'alinan_randevu':
-                    return total_alinan;
-                case 'gerceklesen_muayene':
-                    return total_gerceklesen;
-                default:
-                    return 0;
-            }
-        });
-
-        let labelText = 'Genel Doluluk (%)';
-        let color = '#4f46e5';
-        if (metric === 'ilk_doluluk') { labelText = 'İlk Muayene Doluluk (%)'; color = '#0ea5e9'; }
-        else if (metric === 'devam_doluluk') { labelText = 'Devam Eden Doluluk (%)'; color = '#10b981'; }
-        else if (metric === 'acilan_kapasite') { labelText = 'Toplam Açılan Kapasite'; color = '#f59e0b'; }
-        else if (metric === 'alinan_randevu') { labelText = 'Toplam Alınan Randevu'; color = '#ec4899'; }
-        else if (metric === 'gerceklesen_muayene') { labelText = 'Toplam Gerçekleşen Muayene'; color = '#8b5cf6'; }
-
-        const ctx = document.getElementById('mhrsTrendChart')?.getContext('2d');
-        if (ctx) {
-            if (charts.mhrsTrend) charts.mhrsTrend.destroy();
-            charts.mhrsTrend = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: labelText,
-                        data: dataPoints.map(v => parseFloat(v.toFixed(1))),
-                        borderColor: color,
-                        backgroundColor: color + '15',
-                        borderWidth: 2.5,
-                        tension: 0.3,
-                        fill: true,
-                        pointBackgroundColor: color,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 } } }
-                    },
-                    scales: {
-                        x: { grid: { display: false } },
-                        y: { 
-                            grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
-                            ticks: { precision: 1 }
-                        }
-                    }
-                }
-            });
-        }
-    };
-
     window.filterMhrsData = function() {
         const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
         if (!list || list.length === 0) {
@@ -2577,99 +2501,35 @@
             if (selBrans && getVal(item, 'brans') !== selBrans) return false;
             return true;
         });
-
-        let total_ilk_acilan = 0;
-        let total_ilk_alinan = 0;
-        let total_ilk_gerceklesen = 0;
-        
-        let total_devam_acilan = 0;
-        let total_devam_alinan = 0;
-        let total_devam_gerceklesen = 0;
-        
-        filtered.forEach(item => {
-            const parseNum = (v) => {
-                if (!v) return 0;
-                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
-                return isNaN(n) ? 0 : n;
-            };
-            
-            total_ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
-            total_ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
-            total_ilk_gerceklesen += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
-            
-            total_devam_acilan += parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
-            total_devam_alinan += parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
-            total_devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
-        });
-
-        // 1. MHRS Doluluk Formül Revizyonları
-        const mhrs_doluluk = (total_ilk_acilan + total_devam_acilan) > 0 ? ((total_ilk_alinan + total_devam_alinan) / (total_ilk_acilan + total_devam_acilan)) * 100 : 0;
-        const ilk_doluluk = total_ilk_acilan > 0 ? (total_ilk_alinan / total_ilk_acilan) * 100 : 0;
-        const devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
-        const ilk_gerceklesme = total_ilk_alinan > 0 ? (total_ilk_gerceklesen / total_ilk_alinan) * 100 : 0;
-        const devam_gerceklesme = total_devam_alinan > 0 ? (total_devam_gerceklesen / total_devam_alinan) * 100 : 0;
         
         document.getElementById('mhrsDashboardContent').innerHTML = `
-            <!-- 5'li Metrik Kart Yapısı -->
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-5 g-3 mb-4">
-                <div class="col">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; height: 100%;">
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
                         <h6 class="text-secondary small fw-bold">🎯 MHRS DOLULUK</h6>
-                        <div class="fs-4 fw-bold text-primary">${mhrs_doluluk.toFixed(1)}%</div>
-                        <div class="text-muted small">${(total_ilk_alinan + total_devam_alinan).toLocaleString('tr-TR')} / ${(total_ilk_acilan + total_devam_acilan).toLocaleString('tr-TR')}</div>
+                        <div class="fs-4 fw-bold text-primary" id="mhrs-stat-ilk-doluluk">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-ilk-doluluk">0 / 0</div>
                     </div>
                 </div>
-                <div class="col">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; height: 100%;">
-                        <h6 class="text-secondary small fw-bold">🔍 İLK MUAYENE DOLULUK</h6>
-                        <div class="fs-4 fw-bold text-info">${ilk_doluluk.toFixed(1)}%</div>
-                        <div class="text-muted small">${total_ilk_alinan.toLocaleString('tr-TR')} / ${total_ilk_acilan.toLocaleString('tr-TR')}</div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; height: 100%;">
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
                         <h6 class="text-secondary small fw-bold">🔄 DEVAM EDEN DOLULUK</h6>
-                        <div class="fs-4 fw-bold text-success">${devam_doluluk.toFixed(1)}%</div>
-                        <div class="text-muted small">${total_devam_alinan.toLocaleString('tr-TR')} / ${total_devam_acilan.toLocaleString('tr-TR')}</div>
+                        <div class="fs-4 fw-bold text-success" id="mhrs-stat-devam-doluluk">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-devam-doluluk">0 / 0</div>
                     </div>
                 </div>
-                <div class="col">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; height: 100%;">
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
                         <h6 class="text-secondary small fw-bold">📈 RANDEVU SADAKAT</h6>
-                        <div class="fs-4 fw-bold text-dark">${ilk_gerceklesme.toFixed(1)}%</div>
-                        <div class="text-muted small">${total_ilk_gerceklesen.toLocaleString('tr-TR')} / ${total_ilk_alinan.toLocaleString('tr-TR')}</div>
+                        <div class="fs-4 fw-bold text-info" id="mhrs-stat-ilk-gerceklesme">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-ilk-gerceklesme">0 / 0</div>
                     </div>
                 </div>
-                <div class="col">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; height: 100%;">
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
                         <h6 class="text-secondary small fw-bold">📊 DEVAM EDEN GERÇEKLEŞME</h6>
-                        <div class="fs-4 fw-bold text-warning">${devam_gerceklesme.toFixed(1)}%</div>
-                        <div class="text-muted small">${total_devam_gerceklesen.toLocaleString('tr-TR')} / ${total_devam_alinan.toLocaleString('tr-TR')}</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Dönemsel Karşılaştırmalı ve Seçilebilir Trend Grafiği -->
-            <div class="row g-4 mb-4">
-                <div class="col-md-12">
-                    <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important;">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                            <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-graph-up"></i> MHRS Dönemsel Trend Analizi</h6>
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="small fw-bold text-secondary mb-0">Gösterge Seç:</label>
-                                <select id="mhrs-trend-metric" class="form-select form-select-sm shadow-sm" style="width: auto;" onchange="window.updateMhrsTrendChart()">
-                                    <option value="genel_doluluk">Genel Doluluk (%)</option>
-                                    <option value="ilk_doluluk">İlk Muayene Doluluk (%)</option>
-                                    <option value="devam_doluluk">Devam Eden Doluluk (%)</option>
-                                    <option value="acilan_kapasite">Toplam Açılan Kapasite</option>
-                                    <option value="alinan_randevu">Toplam Alınan Randevu</option>
-                                    <option value="gerceklesen_muayene">Toplam Gerçekleşen Muayene</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div style="height: 320px; position: relative;">
-                            <canvas id="mhrsTrendChart"></canvas>
-                        </div>
+                        <div class="fs-4 fw-bold text-warning" id="mhrs-stat-devam-gerceklesme">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-devam-gerceklesme">0 / 0</div>
                     </div>
                 </div>
             </div>
@@ -2722,7 +2582,48 @@
             </div>
         `;
 
-        // Detay tablosunun dinamik doldurulması
+        let total_ilk_acilan = 0;
+        let total_ilk_alinan = 0;
+        let total_ilk_gerceklesen = 0;
+        
+        let total_devam_acilan = 0;
+        let total_devam_alinan = 0;
+        let total_devam_gerceklesen = 0;
+        
+        filtered.forEach(item => {
+            const parseNum = (v) => {
+                if (!v) return 0;
+                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                return isNaN(n) ? 0 : n;
+            };
+            
+            total_ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
+            total_ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
+            total_ilk_gerceklesen += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
+            
+            total_devam_acilan += parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
+            total_devam_alinan += parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+            total_devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+        });
+
+        const ilk_doluluk = total_ilk_acilan > 0 ? (total_ilk_alinan / total_ilk_acilan) * 100 : 0;
+        const widthPercentLimit = 100; // responsive graphic handling
+        const devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
+        const ilk_gerceklesme = total_ilk_alinan > 0 ? (total_ilk_gerceklesen / total_ilk_alinan) * 100 : 0;
+        const devam_gerceklesme = total_devam_alinan > 0 ? (total_devam_gerceklesen / total_devam_alinan) * 100 : 0;
+
+        document.getElementById('mhrs-stat-ilk-doluluk').innerText = `${ilk_doluluk.toFixed(1)}%`;
+        document.getElementById('mhrs-desc-ilk-doluluk').innerText = `${total_ilk_alinan.toLocaleString('tr-TR')} / ${total_ilk_acilan.toLocaleString('tr-TR')}`;
+        
+        document.getElementById('mhrs-stat-devam-doluluk').innerText = `${devam_doluluk.toFixed(1)}%`;
+        document.getElementById('mhrs-desc-devam-doluluk').innerText = `${total_devam_alinan.toLocaleString('tr-TR')} / ${total_devam_acilan.toLocaleString('tr-TR')}`;
+
+        document.getElementById('mhrs-stat-ilk-gerceklesme').innerText = `${ilk_gerceklesme.toFixed(1)}%`;
+        document.getElementById('mhrs-desc-ilk-gerceklesme').innerText = `${total_ilk_gerceklesen.toLocaleString('tr-TR')} / ${total_ilk_alinan.toLocaleString('tr-TR')}`;
+
+        document.getElementById('mhrs-stat-devam-gerceklesme').innerText = `${devam_gerceklesme.toFixed(1)}%`;
+        document.getElementById('mhrs-desc-devam-gerceklesme').innerText = `${total_devam_gerceklesen.toLocaleString('tr-TR')} / ${total_devam_alinan.toLocaleString('tr-TR')}`;
+
         const tbody = document.querySelector('#mhrsDetailTable tbody');
         if (tbody) {
             if (filtered.length === 0) {
@@ -2781,7 +2682,6 @@
             }
         }
 
-        // En Çok Randevu Alınan Branşların Hesaplanması
         const bransRandevulari = {};
         filtered.forEach(item => {
             const parseNum = (v) => {
@@ -2817,68 +2717,6 @@
             }
         }
 
-        // Trend Grafiği Veri Agregasyonu (Ay-Yıl Bazlı)
-        const AY_SIRASI = {
-            "OCAK": 1, "ŞUBAT": 2, "SUBAT": 2, "MART": 3, "NİSAN": 4, "NISAN": 4, 
-            "MAYIS": 5, "HAZİRAN": 6, "HAZIRAN": 6, "TEMMUZ": 7, "AĞUSTOS": 8, "AGUSTOS": 8, 
-            "EYLÜL": 9, "EYLUL": 9, "EKİM": 10, "EKIM": 10, "KASIM": 11, "ARALIK": 12
-        };
-
-        const trendFiltered = list.filter(item => {
-            if (selYil && getVal(item, 'yil') !== selYil) return false;
-            if (selKurum && getVal(item, 'kurum_adi') !== selKurum) return false;
-            if (selBrans && getVal(item, 'brans') !== selBrans) return false;
-            return true;
-        });
-
-        const periodAggregates = {};
-        trendFiltered.forEach(item => {
-            const y = getVal(item, 'yil');
-            const a = getVal(item, 'ay');
-            if (!y || !a) return;
-            const key = `${y} - ${a}`;
-            
-            if (!periodAggregates[key]) {
-                periodAggregates[key] = {
-                    yil: y,
-                    ay: a,
-                    ilk_acilan: 0, ilk_alinan: 0, ilk_gerceklesen: 0,
-                    devam_acilan: 0, devam_alinan: 0, devam_gerceklesen: 0
-                };
-            }
-            
-            const parseNum = (v) => {
-                if (!v) return 0;
-                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
-                return isNaN(n) ? 0 : n;
-            };
-
-            periodAggregates[key].ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
-            periodAggregates[key].ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
-            periodAggregates[key].ilk_gerceklesen += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
-            periodAggregates[key].devam_acilan += parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
-            periodAggregates[key].devam_alinan += parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
-            periodAggregates[key].devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
-        });
-
-        const sortedPeriods = Object.keys(periodAggregates).sort((p1, p2) => {
-            const obj1 = periodAggregates[p1];
-            const obj2 = periodAggregates[p2];
-            if (obj1.yil !== obj2.yil) return parseInt(obj1.yil) - parseInt(obj2.yil);
-            const idx1 = AY_SIRASI[obj1.ay.toUpperCase()] || 0;
-            const idx2 = AY_SIRASI[obj2.ay.toUpperCase()] || 0;
-            return idx1 - idx2;
-        });
-
-        window.mhrsTrendCache = {
-            periods: sortedPeriods,
-            data: periodAggregates
-        };
-
-        // Trend Grafiğini Çiz
-        window.updateMhrsTrendChart();
-
-        // Top 10 Dağılım Grafiğinin Çizilmesi
         const kurumAggregates = {};
         filtered.forEach(item => {
             const parseNum = (v) => {
@@ -3004,13 +2842,17 @@
         }
     };
 
-    // ---------- SAYFA GEÇIŞLERI ----------
+    window.exportMhrsTableToExcel = function() {
+        window.exportTableToExcel('mhrsDetailTable', `MHRS_Performans_Raporu_${currentMhrsSubTab}_${currentMhrsVeriTipi}`);
+    };
+
+   // ---------- SAYFA GEÇIŞLERI ----------
     window.gitSayfa = async function(sayfa, el) {
         // 1. Geometrik Küp Loader'ı görünür yap
         const loader = document.getElementById('page-loader');
         if (loader) loader.classList.add('active');
 
-        // 2. 3 saniyelik (3000ms) zorunlu bekleme vaadi oluştur
+        // 2. 2.5 saniyelik (2500ms) zorunlu bekleme vaadi oluştur
         const delayPromise = new Promise(resolve => setTimeout(resolve, 3000));
 
         // 3. Arka planda sayfa geçiş ve navigasyon işlemlerini yap
@@ -3112,7 +2954,7 @@
         } catch (err) {
             console.error("Yükleme hatası:", err);
         } finally {
-            // 4. Veri yükleme tamamlansa dahi en az 3 saniyelik sürenin dolmasını bekle
+            // 4. Veri yükleme tamamlansa dahi en az 2.5 saniyelik sürenin dolmasını bekle
             await delayPromise;
             if (loader) loader.classList.remove('active');
         }
