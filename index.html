@@ -2743,23 +2743,48 @@
             }
         });
 
-        // Hastane isimlerini düzenli kısaltacak eşleştirme fonksiyonu
+       // Türkçe karakter ve büyük harf uyumlu akıllı kurum kısaltma fonksiyonu
         const kisaltKurumAdi = (name) => {
             if (!name) return "";
+            
+            // Türkçe karakterleri bozmadan standart büyük harfe çevirme fonksiyonu
+            const trToUpper = (str) => {
+                return (str || "").toString()
+                    .replace(/i/g, "İ")
+                    .replace(/ı/g, "I")
+                    .replace(/ğ/g, "Ğ")
+                    .replace(/ü/g, "Ü")
+                    .replace(/ş/g, "Ş")
+                    .replace(/ö/g, "Ö")
+                    .replace(/ç/g, "Ç")
+                    .toUpperCase();
+            };
+
+            const up = trToUpper(name);
+
+            // Google tablonuzdaki büyük harfli kayıtları eşleştiriyoruz
+            if (up.includes("VARANK")) return "Sancaktepe Varank EAH";
+            if (up.includes("ÜMRANİYE") || up.includes("UMRANİYE")) return "Ümraniye EAH";
+            if (up.includes("SÜLEYMAN YALÇIN") || up.includes("SULEYMAN YALCIN")) return "Göztepe S. Yalçın ŞH";
+            if (up.includes("HAYDARPAŞA") || up.includes("HAYDARPASA") || up.includes("NUMUNE")) return "Haydarpaşa Numune EAH";
+            if (up.includes("ABDÜLHAMİD") || up.includes("ABDULHAMID") || up.includes("HAMİD") || up.includes("HAMID")) return "Sultan Abdülhamid EAH";
+            if (up.includes("FATİH") || up.includes("FATIH")) return "FSM EAH";
+            if (up.includes("BEYKOZ")) return "Beykoz DH";
+            if (up.includes("ZEYNEP KAMİL") || up.includes("ZEYNEP KAMIL") || up.includes("KAMİL") || up.includes("KAMIL")) return "Zeynep Kamil KDÇ";
+            if (up.includes("ÜSKÜDAR") || up.includes("USKUDAR")) return "Üsküdar DH";
+            if (up.includes("SİYAMİ ERSEK") || up.includes("SIYAMI ERSEK") || up.includes("ERSEK")) return "Siyami Ersek GKDC EAH";
+            if (up.includes("ÇEKMEKÖY") || up.includes("CEKMEKOY")) return "Çekmeköy DH";
+            if (up.includes("FERİHA ÖZ") || up.includes("FERIHA OZ")) return "Feriha Öz ADH";
+
+            // Eğer listede yoksa genel kısaltma kurallarını uygula
             return name
                 .replace(/Eğitim ve Araştırma Hastanesi/gi, "EAH")
+                .replace(/EĞİTİM VE ARAŞTIRMA HASTANESİ/g, "EAH")
                 .replace(/Devlet Hastanesi/gi, "DH")
+                .replace(/DEVLET HASTANESİ/g, "DH")
                 .replace(/Şehir Hastanesi/gi, "ŞH")
-                .replace(/Kadın Doğum ve Çocuk Hastalıkları/gi, "KDÇ")
-                .replace(/Göğüs Kalp ve Damar Cerrahisi/gi, "GKDC")
-                .replace(/Ağız ve Diş Sağlığı Merkezi/gi, "ADSM")
-                .replace(/Ağız ve Diş Sağlığı Hastanesi/gi, "ADSH")
-                .replace(/Sancaktepe Şehit Prof\.?\s*Dr\.?\s*İlhan Varank/gi, "Sancaktepe Varank")
-                .replace(/Zeynep Kamil Kadın Doğum ve Çocuk/gi, "Zeynep Kamil KDÇ")
-                .replace(/Dr\.?\s*Süleyman Yalçın/gi, "S. Yalçın")
-                .replace(/Fatih Sultan Mehmet/gi, "FSM");
+                .replace(/ŞEHİR HASTANESİ/g, "ŞH");
         };
-
         const chartLabels = [];
         const chartAcilan = [];
         const chartAlinan = [];
