@@ -880,6 +880,8 @@
 
     // MHRS Veri Deposu
     let mhrsData = { H: { MESAİ_İÇİ: [], MESAİ_DIŞI: [], MESAİ_KAYDIRMA: [] }, A: { MESAİ_İÇİ: [], MESAİ_DIŞI: [], MESAİ_KAYDIRMA: [] } };
+    // MHRS Trend ve Karşılaştırma kartının anlık durum yöneticisi
+    let mhrsTrendState = { mode: 'trend', selectedKurum: '', selectedMetric: 'genel_doluluk', compareAy1: '', compareAy2: '', compareKurum: '' };
     let currentMhrsSubTab = 'H';
     let currentMhrsVeriTipi = 'MESAİ_İÇİ';
 
@@ -2450,6 +2452,78 @@
         }
     };
 
+   window.setMhrsTrendMode = function(mode) {
+        mhrsTrendState.mode = mode;
+        document.querySelectorAll('[id^="mhrs-trend-mode-"]').forEach(btn => btn.classList.remove('active', 'btn-warning', 'text-white'));
+        document.querySelectorAll('[id^="mhrs-trend-mode-"]').forEach(btn => btn.classList.add('btn-outline-warning'));
+        
+        const activeBtn = document.getElementById(`mhrs-trend-mode-${mode}`);
+        if(activeBtn) {
+            activeBtn.classList.remove('btn-outline-warning');
+            activeBtn.classList.add('active', 'btn-warning', 'text-white');
+        }
+        window.renderMhrsTrendControls();
+        window.updateMhrsTrendChart();
+    };
+
+    window.renderMhrsTrendControls = function() {
+        const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
+        const container = document.getElementById('mhrs-trend-controls');
+        if(!container) return;
+        
+        const kurumlar = [...new Set(list.map(item => getVal(item, 'kurum_adi')).filter(Boolean))].sort();
+        const aylar = [...new Set(list.map(item => getVal(item, 'ay')).filter(Boolean))];
+        
+        if (mhrsTrendState.mode === 'trend') {
+            container.innerHTML = `
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-secondary">Trend Analiz Metriği</label>
+                    <select id="mhrs-trend-metric" class="form-select form-select-sm" onchange="mhrsTrendState.selectedMetric = this.value; window.updateMhrsTrendChart();">
+                        <option value="genel_doluluk" ${mhrsTrendState.selectedMetric === 'genel_doluluk' ? 'selected' : ''}>Genel Doluluk Oranı (%)</option>
+                        <option value="ilk_doluluk" ${mhrsTrendState.selectedMetric === 'ilk_doluluk' ? 'selected' : ''}>İlk Muayene Doluluk Oranı (%)</option>
+                        <option value="devam_doluluk" ${mhrsTrendState.selectedMetric === 'devam_doluluk' ? 'selected' : ''}>Devam Eden Doluluk Oranı (%)</option>
+                        <option value="kapasite" ${mhrsTrendState.selectedMetric === 'kapasite' ? 'selected' : ''}>Toplam Açılan Kapasite</option>
+                        <option value="alinan_randevu" ${mhrsTrendState.selectedMetric === 'alinan_randevu' ? 'selected' : ''}>Toplam Alınan Randevu</option>
+                        <option value="gerceklesen_muayene" ${mhrsTrendState.selectedMetric === 'gerceklesen_muayene' ? 'selected' : ''}>Toplam Gerçekleşen Muayene</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-secondary">Odaklanılacak Kurum</label>
+                    <select id="mhrs-trend-kurum" class="form-select form-select-sm" onchange="mhrsTrendState.selectedKurum = this.value; window.updateMhrsTrendChart();">
+                        <option value="">Tümü (Bölge Geneli)</option>
+                        ${kurumlar.map(k => `<option value="${k}" ${mhrsTrendState.selectedKurum === k ? 'selected' : ''}>${k}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+        } else {
+            if (!mhrsTrendState.compareKurum && kurumlar.length > 0) mhrsTrendState.compareKurum = kurumlar[0];
+            if (!mhrsTrendState.compareAy1 && aylar.length > 0) mhrsTrendState.compareAy1 = aylar[0];
+            if (!mhrsTrendState.compareAy2 && aylar.length > 1) mhrsTrendState.compareAy2 = aylar[1];
+            else if (!mhrsTrendState.compareAy2 && aylar.length > 0) mhrsTrendState.compareAy2 = aylar[0];
+            
+            container.innerHTML = `
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-secondary">Karşılaştırılacak Kurum</label>
+                    <select id="mhrs-comp-kurum" class="form-select form-select-sm" onchange="mhrsTrendState.compareKurum = this.value; window.updateMhrsTrendChart();">
+                        ${kurumlar.map(k => `<option value="${k}" ${mhrsTrendState.compareKurum === k ? 'selected' : ''}>${k}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-secondary">1. Karşılaştırma Dönemi (Ay)</label>
+                    <select id="mhrs-comp-ay1" class="form-select form-select-sm" onchange="mhrsTrendState.compareAy1 = this.value; window.updateMhrsTrendChart();">
+                        ${aylar.map(a => `<option value="${a}" ${mhrsTrendState.compareAy1 === a ? 'selected' : ''}>${a}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-secondary">2. Karşılaştırma Dönemi (Ay)</label>
+                    <select id="mhrs-comp-ay2" class="form-select form-select-sm" onchange="mhrsTrendState.compareAy2 = this.value; window.updateMhrsTrendChart();">
+                        ${aylar.map(a => `<option value="${a}" ${mhrsTrendState.compareAy2 === a ? 'selected' : ''}>${a}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+        }
+    };
+
     window.filterMhrsData = function() {
         const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
         if (!list || list.length === 0) {
@@ -2502,7 +2576,7 @@
                 </div>
                 <div class="col">
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; min-height:110px;">
-                        <h6 class="text-secondary small fw-bold">📊 DEVAM EDEN GERÇEKLEŞME</h6>
+                        <h6 class="text-secondary small fw-bold">📊 DEVAM GERÇEKLEŞME</h6>
                         <div class="fs-4 fw-bold text-warning" id="mhrs-stat-devam-gerceklesme">0%</div>
                         <div class="text-muted small" id="mhrs-desc-devam-gerceklesme">0 / 0</div>
                     </div>
@@ -2528,23 +2602,20 @@
                 </div>
             </div>
 
-            <!-- Yeni Trend Analiz Kartı -->
+            <!-- Yenilenmiş Gelişmiş Esnek Analiz Paneli -->
             <div class="row g-4 mb-4">
                 <div class="col-12">
-                    <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important;">
+                    <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important; border-top: 4px solid #f59e0b !important;">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                            <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-graph-up"></i> MHRS Dönemsel Performans Trend Analizi (Aylık)</h6>
-                            <div style="min-width: 240px;">
-                                <select id="mhrs-trend-metric" class="form-select form-select-sm shadow-sm" onchange="window.updateMhrsTrendChart()">
-                                    <option value="genel_doluluk">Genel Doluluk Oranı (%)</option>
-                                    <option value="ilk_doluluk">İlk Muayene Doluluk Oranı (%)</option>
-                                    <option value="devam_doluluk">Devam Eden Doluluk Oranı (%)</option>
-                                    <option value="kapasite">Toplam Açılan Kapasite</option>
-                                    <option value="alinan_randevu">Toplam Alınan Randevu</option>
-                                    <option value="gerceklesen_muayene">Toplam Gerçekleşen Muayene</option>
-                                </select>
+                            <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-graph-up"></i> MHRS Dönemsel Performans Trend & Karşılaştırma Analizi</h6>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm ${mhrsTrendState.mode === 'trend' ? 'btn-warning text-white active' : 'btn-outline-warning'}" id="mhrs-trend-mode-trend" onclick="window.setMhrsTrendMode('trend')"><i class="bi bi-graph-up-arrow"></i> Trend Akışı</button>
+                                <button class="btn btn-sm ${mhrsTrendState.mode === 'compare' ? 'btn-warning text-white active' : 'btn-outline-warning'}" id="mhrs-trend-mode-compare" onclick="window.setMhrsTrendMode('compare')"><i class="bi bi-arrow-left-right"></i> İki Ay Karşılaştır</button>
                             </div>
                         </div>
+                        
+                        <div id="mhrs-trend-controls" class="row g-3 mb-3 p-3 bg-light rounded border mx-0"></div>
+
                         <div style="height: 280px; position: relative;">
                             <canvas id="mhrsTrendChart"></canvas>
                         </div>
@@ -2743,26 +2814,16 @@
             }
         });
 
-       // Türkçe karakter ve büyük harf uyumlu akıllı kurum kısaltma fonksiyonu
+        // Türkçe karakter ve büyük harf uyumlu akıllı kurum kısaltma fonksiyonu
         const kisaltKurumAdi = (name) => {
             if (!name) return "";
-            
-            // Türkçe karakterleri bozmadan standart büyük harfe çevirme fonksiyonu
             const trToUpper = (str) => {
                 return (str || "").toString()
-                    .replace(/i/g, "İ")
-                    .replace(/ı/g, "I")
-                    .replace(/ğ/g, "Ğ")
-                    .replace(/ü/g, "Ü")
-                    .replace(/ş/g, "Ş")
-                    .replace(/ö/g, "Ö")
-                    .replace(/ç/g, "Ç")
-                    .toUpperCase();
+                    .replace(/i/g, "İ").replace(/ı/g, "I").replace(/ğ/g, "Ğ")
+                    .replace(/ü/g, "Ü").replace(/ş/g, "Ş").replace(/ö/g, "Ö")
+                    .replace(/ç/g, "Ç").toUpperCase();
             };
-
             const up = trToUpper(name);
-
-            // Google tablonuzdaki büyük harfli kayıtları eşleştiriyoruz
             if (up.includes("VARANK")) return "Sancaktepe Varank EAH";
             if (up.includes("ÜMRANİYE") || up.includes("UMRANİYE")) return "Ümraniye EAH";
             if (up.includes("SÜLEYMAN YALÇIN") || up.includes("SULEYMAN YALCIN")) return "Göztepe S. Yalçın ŞH";
@@ -2775,16 +2836,12 @@
             if (up.includes("SİYAMİ ERSEK") || up.includes("SIYAMI ERSEK") || up.includes("ERSEK")) return "Siyami Ersek GKDC EAH";
             if (up.includes("ÇEKMEKÖY") || up.includes("CEKMEKOY")) return "Çekmeköy DH";
             if (up.includes("FERİHA ÖZ") || up.includes("FERIHA OZ")) return "Feriha Öz ADH";
-
-            // Eğer listede yoksa genel kısaltma kurallarını uygula
             return name
-                .replace(/Eğitim ve Araştırma Hastanesi/gi, "EAH")
-                .replace(/EĞİTİM VE ARAŞTIRMA HASTANESİ/g, "EAH")
-                .replace(/Devlet Hastanesi/gi, "DH")
-                .replace(/DEVLET HASTANESİ/g, "DH")
-                .replace(/Şehir Hastanesi/gi, "ŞH")
-                .replace(/ŞEHİR HASTANESİ/g, "ŞH");
+                .replace(/Eğitim ve Araştırma Hastanesi/gi, "EAH").replace(/EĞİTİM VE ARAŞTIRMA HASTANESİ/g, "EAH")
+                .replace(/Devlet Hastanesi/gi, "DH").replace(/DEVLET HASTANESİ/g, "DH")
+                .replace(/Şehir Hastanesi/gi, "ŞH").replace(/ŞEHİR HASTANESİ/g, "ŞH");
         };
+
         const chartLabels = [];
         const chartAcilan = [];
         const chartAlinan = [];
@@ -2829,7 +2886,6 @@
                 .slice(0, 10);
                 
             sortedKurumList.forEach(([kName, val]) => {
-                // Burada yeni akıllı kısaltma fonksiyonunu kullanıyoruz
                 chartLabels.push(kisaltKurumAdi(kName));
                 chartAcilan.push(val.acilan);
                 chartAlinan.push(val.alinan);
@@ -2918,14 +2974,12 @@
                                 }
 
                                 if (percentageText && bar.y > 0) {
-                                    // Yüzde oran yazısı 11px olarak büyütüldü
                                     ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
                                     ctx.fillStyle = datasetIndex === 1 ? '#b45309' : '#047857'; 
                                     ctx.textAlign = 'center';
                                     ctx.textBaseline = 'middle';
 
                                     const x = bar.x;
-                                    // Çubuğa daha yakın durması için yükseklik bar.y - 7 değerine çekildi
                                     const y = bar.y - 7; 
 
                                     ctx.save();
@@ -2941,113 +2995,94 @@
                 }]
             });
         }
+        
+        window.renderMhrsTrendControls();
         window.updateMhrsTrendChart();
     };
+
     window.updateMhrsTrendChart = function() {
         const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
         if (!list || list.length === 0) return;
         
         const selYil = document.getElementById('mhrs-f-yil')?.value;
-        const selKurum = document.getElementById('mhrs-f-kurum')?.value;
         const selBrans = document.getElementById('mhrs-f-brans')?.value;
-        const selectedMetric = document.getElementById('mhrs-trend-metric')?.value || 'genel_doluluk';
+        const ctx = document.getElementById('mhrsTrendChart')?.getContext('2d');
+        if (!ctx) return;
         
-        // Ay filtresinden bağımsız şekilde zaman trendi oluşturmak için ay filtresi göz ardı edilir
-        let trendFiltered = list.filter(item => {
-            if (selYil && getVal(item, 'yil') !== selYil) return false;
-            if (selKurum && getVal(item, 'kurum_adi') !== selKurum) return false;
-            if (selBrans && getVal(item, 'brans') !== selBrans) return false;
-            return true;
-        });
-        
-        const monthlyData = {};
-        trendFiltered.forEach(item => {
-            const ay = getVal(item, 'ay');
-            if (!ay) return;
+        const parseNum = (v) => {
+            if (!v) return 0;
+            return parseFloat(v.toString().replace(/\./g, '').replace(',', '.')) || 0;
+        };
+
+        if (mhrsTrendState.mode === 'trend') {
+            const activeKurum = mhrsTrendState.selectedKurum || ''; 
             
-            const parseNum = (v) => {
-                if (!v) return 0;
-                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
-                return isNaN(n) ? 0 : n;
+            let trendFiltered = list.filter(item => {
+                if (selYil && getVal(item, 'yil') !== selYil) return false;
+                if (activeKurum && getVal(item, 'kurum_adi') !== activeKurum) return false;
+                if (selBrans && getVal(item, 'brans') !== selBrans) return false;
+                return true;
+            });
+            
+            const monthlyData = {};
+            trendFiltered.forEach(item => {
+                const ay = getVal(item, 'ay');
+                if (!ay) return;
+                
+                if (!monthlyData[ay]) {
+                    monthlyData[ay] = { ilk_acilan: 0, ilk_alinan: 0, ilk_gerceklesen: 0, devam_acilan: 0, devam_alinan: 0, devam_gerceklesen: 0 };
+                }
+                monthlyData[ay].ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
+                monthlyData[ay].ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
+                monthlyData[ay].ilk_gerceklesen += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
+                monthlyData[ay].devam_acilan += parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
+                monthlyData[ay].devam_alinan += parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+                monthlyData[ay].devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+            });
+            
+            const parseMhrsMonthValue = (ayStr) => {
+                if (!ayStr) return 99;
+                const s = ayStr.toString().trim().toUpperCase().replace(/ı/g,'I').replace(/i/g,'İ');
+                if (!isNaN(s)) return parseInt(s);
+                const mhrsAylarTR = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
+                const mhrsAylarEN = ["OCAK", "SUBAT", "MART", "NISAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AGUSTOS", "EYLUL", "EKIM", "KASIM", "ARALIK"];
+                let idx = mhrsAylarTR.indexOf(s);
+                if (idx === -1) idx = mhrsAylarEN.indexOf(s);
+                return idx !== -1 ? idx + 1 : 99;
             };
             
-            if (!monthlyData[ay]) {
-                monthlyData[ay] = {
-                    ilk_acilan: 0, ilk_alinan: 0, ilk_gerceklesen: 0,
-                    devam_acilan: 0, devam_alinan: 0, devam_gerceklesen: 0
-                };
-            }
+            const sortedMonthKeys = Object.keys(monthlyData).sort((a, b) => parseMhrsMonthValue(a) - parseMhrsMonthValue(b));
             
-            monthlyData[ay].ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
-            monthlyData[ay].ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
-            monthlyData[ay].ilk_gerceklesen += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
+            const selectedMetric = mhrsTrendState.selectedMetric;
+            const dataPoints = sortedMonthKeys.map(key => {
+                const val = monthlyData[key];
+                if (selectedMetric === 'genel_doluluk') return (val.ilk_acilan + val.devam_acilan) > 0 ? (((val.ilk_alinan + val.devam_alinan) / (val.ilk_acilan + val.devam_acilan)) * 100) : 0;
+                if (selectedMetric === 'ilk_doluluk') return val.ilk_acilan > 0 ? ((val.ilk_alinan / val.ilk_acilan) * 100) : 0;
+                if (selectedMetric === 'devam_doluluk') return val.devam_acilan > 0 ? ((val.devam_alinan / val.devam_acilan) * 100) : 0;
+                if (selectedMetric === 'kapasite') return val.ilk_acilan + val.devam_acilan;
+                if (selectedMetric === 'alinan_randevu') return val.ilk_alinan + val.devam_alinan;
+                if (selectedMetric === 'gerceklesen_muayene') return val.ilk_gerceklesen + val.devam_gerceklesen;
+                return 0;
+            });
             
-            monthlyData[ay].devam_acilan += parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
-            monthlyData[ay].devam_alinan += parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
-            monthlyData[ay].devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
-        });
-        
-        const parseMhrsMonthValue = (ayStr) => {
-            if (!ayStr) return 99;
-            const s = ayStr.toString().trim().toUpperCase().replace(/ı/g,'I').replace(/i/g,'İ');
-            if (!isNaN(s)) return parseInt(s);
-            const mhrsAylarTR = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
-            const mhrsAylarEN = ["OCAK", "SUBAT", "MART", "NISAN", "MAYIS", "HAZIRAN", "TEMMUZ", "AGUSTOS", "EYLUL", "EKIM", "KASIM", "ARALIK"];
-            let idx = mhrsAylarTR.indexOf(s);
-            if (idx === -1) idx = mhrsAylarEN.indexOf(s);
-            return idx !== -1 ? idx + 1 : 99;
-        };
-        
-        const sortedMonthKeys = Object.keys(monthlyData).sort((a, b) => {
-            return parseMhrsMonthValue(a) - parseMhrsMonthValue(b);
-        });
-        
-        const labels = sortedMonthKeys;
-        const dataPoints = sortedMonthKeys.map(key => {
-            const val = monthlyData[key];
-            const t_ilk_ac = val.ilk_acilan;
-            const t_ilk_al = val.ilk_alinan;
-            const t_ilk_ge = val.ilk_gerceklesen;
-            const t_dev_ac = val.devam_acilan;
-            const t_dev_al = val.devam_alinan;
-            const t_dev_ge = val.devam_gerceklesen;
-            
-            if (selectedMetric === 'genel_doluluk') {
-                return (t_ilk_ac + t_dev_ac) > 0 ? (((t_ilk_al + t_dev_al) / (t_ilk_ac + t_dev_ac)) * 100) : 0;
-            } else if (selectedMetric === 'ilk_doluluk') {
-                return t_ilk_ac > 0 ? ((t_ilk_al / t_ilk_ac) * 100) : 0;
-            } else if (selectedMetric === 'devam_doluluk') {
-                return t_dev_ac > 0 ? ((t_dev_al / t_dev_ac) * 100) : 0;
-            } else if (selectedMetric === 'kapasite') {
-                return t_ilk_ac + t_dev_ac;
-            } else if (selectedMetric === 'alinan_randevu') {
-                return t_ilk_al + t_dev_al;
-            } else if (selectedMetric === 'gerceklesen_muayene') {
-                return t_ilk_ge + t_dev_ge;
-            }
-            return 0;
-        });
-        
-        const metricLabels = {
-            genel_doluluk: 'Genel Doluluk Oranı (%)',
-            ilk_doluluk: 'İlk Muayene Doluluk Oranı (%)',
-            devam_doluluk: 'Devam Eden Doluluk Oranı (%)',
-            kapasite: 'Toplam Açılan Kapasite',
-            alinan_randevu: 'Toplam Alınan Randevu',
-            gerceklesen_muayene: 'Toplam Gerçekleşen Muayene'
-        };
-        
-        const isPercentage = selectedMetric.includes('doluluk');
-        
-        const ctx = document.getElementById('mhrsTrendChart')?.getContext('2d');
-        if (ctx) {
+            const metricLabelMap = {
+                genel_doluluk: "Genel Doluluk Oranı (%)",
+                ilk_doluluk: "İlk Muayene Doluluk Oranı (%)",
+                devam_doluluk: "Devam Eden Doluluk Oranı (%)",
+                kapasite: "Toplam Açılan Kapasite",
+                alinan_randevu: "Toplam Alınan Randevu",
+                gerceklesen_muayene: "Toplam Gerçekleşen Muayene"
+            };
+
+            const isPercentage = selectedMetric.includes('doluluk');
+
             if (charts.mhrsTrend) charts.mhrsTrend.destroy();
             charts.mhrsTrend = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: sortedMonthKeys,
                     datasets: [{
-                        label: metricLabels[selectedMetric],
+                        label: metricLabelMap[selectedMetric],
                         data: dataPoints,
                         borderColor: '#f59e0b',
                         backgroundColor: 'rgba(245, 158, 11, 0.08)',
@@ -3057,39 +3092,95 @@
                         pointBackgroundColor: '#f59e0b',
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 1.5,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+                        pointRadius: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { grid: { display: false } },
                         y: {
-                            grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
                             ticks: {
                                 callback: function(value) {
                                     return isPercentage ? value.toFixed(1) + '%' : value.toLocaleString('tr-TR');
                                 }
                             }
                         }
-                    },
+                    }
+                }
+            });
+            
+        } else {
+            // İki Ay Karşılaştırma Modu
+            const activeKurum = mhrsTrendState.compareKurum;
+            const ay1 = mhrsTrendState.compareAy1;
+            const ay2 = mhrsTrendState.compareAy2;
+            
+            const getDataForMonth = (ay) => {
+                let monthFiltered = list.filter(item => {
+                    if (selYil && getVal(item, 'yil') !== selYil) return false;
+                    if (activeKurum && getVal(item, 'kurum_adi') !== activeKurum) return false;
+                    if (ay && getVal(item, 'ay') !== ay) return false;
+                    if (selBrans && getVal(item, 'brans') !== selBrans) return false;
+                    return true;
+                });
+                
+                let ac = 0, al = 0, ge = 0;
+                monthFiltered.forEach(item => {
+                    ac += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
+                    al += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+                    ge += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+                });
+                return { ac, al, ge, doluluk: ac > 0 ? (al/ac)*100 : 0, gerceklesme: al > 0 ? (ge/al)*100 : 0 };
+            };
+            
+            const d1 = getDataForMonth(ay1);
+            const d2 = getDataForMonth(ay2);
+            
+            if (charts.mhrsTrend) charts.mhrsTrend.destroy();
+            charts.mhrsTrend = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Açılan Kapasite', 'Alınan Randevu', 'Gerçekleşen Muayene'],
+                    datasets: [
+                        {
+                            label: `${ay1 || '1. Dönem'}`,
+                            data: [d1.ac, d1.al, d1.ge],
+                            backgroundColor: 'rgba(79, 70, 229, 0.75)',
+                            borderColor: 'rgba(79, 70, 229, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        },
+                        {
+                            label: `${ay2 || '2. Dönem'}`,
+                            data: [d2.ac, d2.al, d2.ge],
+                            backgroundColor: 'rgba(245, 158, 11, 0.75)',
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
+                        legend: { labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 } } },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
-                                    let val = context.raw;
-                                    return context.dataset.label + ': ' + (isPercentage ? val.toFixed(1) + '%' : val.toLocaleString('tr-TR'));
+                                footer: function() {
+                                    return `Doluluklar: ${ay1}: %${d1.doluluk.toFixed(1)} vs ${ay2}: %${d2.doluluk.toFixed(1)}\nSadakatler: ${ay1}: %${d1.gerceklesme.toFixed(1)} vs ${ay2}: %${d2.gerceklesme.toFixed(1)}`;
                                 }
                             }
                         }
+                    },
+                    scales: {
+                        y: { ticks: { callback: v => v.toLocaleString('tr-TR') } }
                     }
                 }
             });
         }
     };
-
     window.exportMhrsTableToExcel = function() {
         window.exportTableToExcel('mhrsDetailTable', `MHRS_Performans_Raporu_${currentMhrsSubTab}_${currentMhrsVeriTipi}`);
     };
