@@ -1614,7 +1614,7 @@
             charts.gosterge = new Chart(document.getElementById('gostergeChart'), { 
                 type: 'bar', 
                 data: { 
-                    labels, 
+                    labels: labels, 
                     datasets: datasets 
                 }, 
                 options: { 
@@ -2025,7 +2025,7 @@
             const dolu = yatak - bos;
             const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(2).replace('.', ',') : "0,00";
             
-            const bekleyen = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, h}, {colIdx: 3, val: "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"}]);
+            const bekleyen = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"}]);
             const yatirilan = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)"}]);
             const disKurum = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)"}]);
             
@@ -2050,7 +2050,7 @@
                     <td class="text-center">${dolu}</td>
                     <td class="text-center">${bos}</td>
                     <td class="text-center fw-bold text-primary">${oranStr}%</td>
-                    <td class="text-center">${bekleyen}</td>
+                    <td class="text-center">${grid_bekleyen = bekleyen}</td>
                     <td class="text-center">${yatirilan}</td>
                     <td class="text-center">${disKurum}</td>
                     <td class="text-center text-secondary">${taburcu}</td>
@@ -2952,7 +2952,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                   scales: {
+                    scales: {
                         x: { 
                             grid: { display: false },
                             ticks: {
