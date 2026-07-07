@@ -2025,7 +2025,7 @@
             const dolu = yatak - bos;
             const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(2).replace('.', ',') : "0,00";
             
-            const bekleyen = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"}]);
+            const bekleyen = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, h}, {colIdx: 3, val: "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"}]);
             const yatirilan = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)"}]);
             const disKurum = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)"}]);
             
@@ -2452,7 +2452,7 @@
         }
     };
 
-   window.setMhrsTrendMode = function(mode) {
+    window.setMhrsTrendMode = function(mode) {
         mhrsTrendState.mode = mode;
         document.querySelectorAll('[id^="mhrs-trend-mode-"]').forEach(btn => btn.classList.remove('active', 'btn-warning', 'text-white'));
         document.querySelectorAll('[id^="mhrs-trend-mode-"]').forEach(btn => btn.classList.add('btn-outline-warning'));
@@ -2471,8 +2471,23 @@
         const container = document.getElementById('mhrs-trend-controls');
         if(!container) return;
         
+        const GECERLI_AY_ISIMLERI = [
+            "OCAK", "ŞUBAT", "SUBAT", "MART", "NİSAN", "NISAN", "MAYIS", 
+            "HAZİRAN", "HAZIRAN", "TEMMUZ", "AĞUSTOS", "AGUSTOS", 
+            "EYLÜL", "EYLUL", "EKİM", "EKIM", "KASIM", "ARALIK"
+        ];
+
         const kurumlar = [...new Set(list.map(item => getVal(item, 'kurum_adi')).filter(Boolean))].sort();
-        const aylar = [...new Set(list.map(item => getVal(item, 'ay')).filter(Boolean))];
+        const aylar = [...new Set(list.map(item => getVal(item, 'ay'))
+            .filter(a => {
+                if (!a) return false;
+                const temizAy = a.toString().trim().toUpperCase()
+                    .replace(/ı/g, 'I')
+                    .replace(/i/g, 'İ');
+                const sayisalAy = !isNaN(temizAy) && parseInt(temizAy) >= 1 && parseInt(temizAy) <= 12;
+                return GECERLI_AY_ISIMLERI.includes(temizAy) || sayisalAy;
+            })
+        )];
         
         if (mhrsTrendState.mode === 'trend') {
             container.innerHTML = `
@@ -2602,7 +2617,7 @@
                 </div>
             </div>
 
-            <!-- Yenilenmiş Gelişmiş Esnek Analiz Paneli -->
+            <!-- Gelişmiş Esnek Analiz Paneli -->
             <div class="row g-4 mb-4">
                 <div class="col-12">
                     <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important; border-top: 4px solid #f59e0b !important;">
@@ -2614,7 +2629,7 @@
                             </div>
                         </div>
                         
-                        <div id="mhrs-trend-controls" class="row g-3 mb-3 p-3 bg-light rounded border mx-0"></div>
+                        <div id="mhrs-trend-controls" class="row g-3 mb-3 p-3 bg-light rounded border mx-0 align-items-end"></div>
 
                         <div style="height: 280px; position: relative;">
                             <canvas id="mhrsTrendChart"></canvas>
@@ -2640,8 +2655,10 @@
                                 <th class="text-center">Açılan Kapasite</th>
                                 <th class="text-center">Alınan Randevu</th>
                                 <th class="text-center">Gerçekleşen Muayene</th>
-                                <th class="text-center">Randevu Doluluk (%)</th>
-                                <th class="text-center">Muayene Gerçekleşme (%)</th>
+                                <th class="text-center">Genel Doluluk (%)</th>
+                                <th class="text-center">İlk Muayene Doluluk (%)</th>
+                                <th class="text-center">Devam Eden Doluluk (%)</th>
+                                <th class="text-center">Randevu Sadakat (%)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2702,7 +2719,7 @@
         const tbody = document.querySelector('#mhrsDetailTable tbody');
         if (tbody) {
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Seçili filtrelere uygun veri bulunamadı.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted">Seçili filtrelere uygun veri bulunamadı.</td></tr>';
             } else {
                 tbody.innerHTML = filtered.map(item => {
                     const parseNum = (v) => {
@@ -2723,6 +2740,8 @@
                     const toplam_gerceklesen = ilk_ge + dev_ge;
                     
                     const doluluk_orani = toplam_acilan > 0 ? (toplam_alinan / toplam_acilan) * 100 : 0;
+                    const ilk_doluluk_orani = ilk_ac > 0 ? (ilk_al / ilk_ac) * 100 : 0;
+                    const dev_doluluk_orani = dev_ac > 0 ? (dev_al / dev_ac) * 100 : 0;
                     const gerceklesme_orani = toplam_alinan > 0 ? (toplam_gerceklesen / toplam_alinan) * 100 : 0;
                     
                     let hekim_sayisi = 0;
@@ -2750,6 +2769,8 @@
                             <td class="text-center">${toplam_alinan.toLocaleString('tr-TR')}</td>
                             <td class="text-center">${toplam_gerceklesen.toLocaleString('tr-TR')}</td>
                             <td class="text-center fw-bold text-primary">${doluluk_orani.toFixed(1)}%</td>
+                            <td class="text-center fw-bold text-info">${ilk_doluluk_orani.toFixed(1)}%</td>
+                            <td class="text-center fw-bold text-secondary">${dev_doluluk_orani.toFixed(1)}%</td>
                             <td class="text-center fw-bold text-success">${gerceklesme_orani.toFixed(1)}%</td>
                         </tr>
                     `;
@@ -2934,9 +2955,9 @@
                         x: { 
                             grid: { display: false },
                             ticks: {
-                                font: { size: 9, family: "'Plus Jakarta Sans', sans-serif" },
-                                maxRotation: 45,
-                                minRotation: 45
+                                font: { size: 9, weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" },
+                                maxRotation: 0,
+                                minRotation: 0
                             }
                         },
                         y: { 
