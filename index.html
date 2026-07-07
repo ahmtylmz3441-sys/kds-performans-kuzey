@@ -2794,7 +2794,7 @@
             });
         }
 
-        const ctx = document.getElementById('mhrsMainChart')?.getContext('2d');
+       const ctx = document.getElementById('mhrsMainChart')?.getContext('2d');
         if (ctx) {
             if (charts.mhrsMain) charts.mhrsMain.destroy();
             charts.mhrsMain = new Chart(ctx, {
@@ -2835,16 +2835,67 @@
                         x: { grid: { display: false } },
                         y: { 
                             grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
-                            ticks: { precision: 0 }
+                            ticks: { precision: 0 },
+                            // Üst kısımdaki etiketlerin sığabilmesi için tepe boşluğu ekler
+                            grace: '15%' 
                         }
                     },
                     plugins: {
                         legend: { labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 } } }
                     }
-                }
+                },
+                plugins: [{
+                    id: 'verticalBarPercentages',
+                    afterDatasetsDraw(chart) {
+                        const { ctx } = chart;
+                        ctx.save();
+
+                        chart.data.datasets.forEach((dataset, datasetIndex) => {
+                            // Sadece 1 (Sarı) ve 2 (Yeşil) indeksli veri kümelerine oran yazdırıyoruz
+                            if (datasetIndex === 0) return; 
+
+                            const meta = chart.getDatasetMeta(datasetIndex);
+                            meta.data.forEach((bar, index) => {
+                                const acilanVal = chart.data.datasets[0].data[index] || 0;
+                                const alinanVal = chart.data.datasets[1].data[index] || 0;
+                                const gerceklesenVal = chart.data.datasets[2].data[index] || 0;
+
+                                let percentageText = '';
+                                if (datasetIndex === 1 && acilanVal > 0) {
+                                    // Sarı Çubuk: Doluluk Oranı (Alınan / Açılan)
+                                    const rate = (alinanVal / acilanVal) * 100;
+                                    percentageText = '%' + rate.toFixed(0);
+                                } else if (datasetIndex === 2 && alinanVal > 0) {
+                                    // Yeşil Çubuk: Gerçekleşme Oranı (Gerçekleşen / Alınan)
+                                    const rate = (gerceklesenVal / alinanVal) * 100;
+                                    percentageText = '%' + rate.toFixed(0);
+                                }
+
+                                if (percentageText && bar.y > 0) {
+                                    ctx.font = 'bold 9px "Plus Jakarta Sans", sans-serif';
+                                    // Okunabilirlik için çubuk rengine yakın hafif koyu tonlar tercih edilmiştir
+                                    ctx.fillStyle = datasetIndex === 1 ? '#b45309' : '#047857'; 
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+
+                                    const x = bar.x;
+                                    // Çubuğun hemen 12 piksel yukarısına konumlandırma
+                                    const y = bar.y - 12; 
+
+                                    ctx.save();
+                                    ctx.translate(x, y);
+                                    // Metni dikey (90 derece) döndürme işlemi
+                                    ctx.rotate(-Math.PI / 2); 
+                                    ctx.fillText(percentageText, 0, 0);
+                                    ctx.restore();
+                                }
+                            });
+                        });
+                        ctx.restore();
+                    }
+                }]
             });
         }
-
         // Trend analiz grafiğini çiz
         window.updateMhrsTrendChart();
     };
