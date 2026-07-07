@@ -2743,6 +2743,23 @@
             }
         });
 
+        // Hastane isimlerini düzenli kısaltacak eşleştirme fonksiyonu
+        const kisaltKurumAdi = (name) => {
+            if (!name) return "";
+            return name
+                .replace(/Eğitim ve Araştırma Hastanesi/gi, "EAH")
+                .replace(/Devlet Hastanesi/gi, "DH")
+                .replace(/Şehir Hastanesi/gi, "ŞH")
+                .replace(/Kadın Doğum ve Çocuk Hastalıkları/gi, "KDÇ")
+                .replace(/Göğüs Kalp ve Damar Cerrahisi/gi, "GKDC")
+                .replace(/Ağız ve Diş Sağlığı Merkezi/gi, "ADSM")
+                .replace(/Ağız ve Diş Sağlığı Hastanesi/gi, "ADSH")
+                .replace(/Sancaktepe Şehit Prof\.?\s*Dr\.?\s*İlhan Varank/gi, "Sancaktepe Varank")
+                .replace(/Zeynep Kamil Kadın Doğum ve Çocuk/gi, "Zeynep Kamil KDÇ")
+                .replace(/Dr\.?\s*Süleyman Yalçın/gi, "S. Yalçın")
+                .replace(/Fatih Sultan Mehmet/gi, "FSM");
+        };
+
         const chartLabels = [];
         const chartAcilan = [];
         const chartAlinan = [];
@@ -2787,14 +2804,15 @@
                 .slice(0, 10);
                 
             sortedKurumList.forEach(([kName, val]) => {
-                chartLabels.push(kName.replace("Devlet Hastanesi", "DH").replace("Eğitim ve Araştırma Hastanesi", "EAH"));
+                // Burada yeni akıllı kısaltma fonksiyonunu kullanıyoruz
+                chartLabels.push(kisaltKurumAdi(kName));
                 chartAcilan.push(val.acilan);
                 chartAlinan.push(val.alinan);
                 chartGerceklesen.push(val.gerceklesen);
             });
         }
 
-       const ctx = document.getElementById('mhrsMainChart')?.getContext('2d');
+        const ctx = document.getElementById('mhrsMainChart')?.getContext('2d');
         if (ctx) {
             if (charts.mhrsMain) charts.mhrsMain.destroy();
             charts.mhrsMain = new Chart(ctx, {
@@ -2832,11 +2850,17 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { grid: { display: false } },
+                        x: { 
+                            grid: { display: false },
+                            ticks: {
+                                font: { size: 9, family: "'Plus Jakarta Sans', sans-serif" },
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        },
                         y: { 
                             grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
                             ticks: { precision: 0 },
-                            // Üst kısımdaki etiketlerin sığabilmesi için tepe boşluğu ekler
                             grace: '15%' 
                         }
                     },
@@ -2851,7 +2875,6 @@
                         ctx.save();
 
                         chart.data.datasets.forEach((dataset, datasetIndex) => {
-                            // Sadece 1 (Sarı) ve 2 (Yeşil) indeksli veri kümelerine oran yazdırıyoruz
                             if (datasetIndex === 0) return; 
 
                             const meta = chart.getDatasetMeta(datasetIndex);
@@ -2862,29 +2885,26 @@
 
                                 let percentageText = '';
                                 if (datasetIndex === 1 && acilanVal > 0) {
-                                    // Sarı Çubuk: Doluluk Oranı (Alınan / Açılan)
                                     const rate = (alinanVal / acilanVal) * 100;
                                     percentageText = '%' + rate.toFixed(0);
                                 } else if (datasetIndex === 2 && alinanVal > 0) {
-                                    // Yeşil Çubuk: Gerçekleşme Oranı (Gerçekleşen / Alınan)
                                     const rate = (gerceklesenVal / alinanVal) * 100;
                                     percentageText = '%' + rate.toFixed(0);
                                 }
 
                                 if (percentageText && bar.y > 0) {
-                                    ctx.font = 'bold 9px "Plus Jakarta Sans", sans-serif';
-                                    // Okunabilirlik için çubuk rengine yakın hafif koyu tonlar tercih edilmiştir
+                                    // Yüzde oran yazısı 11px olarak büyütüldü
+                                    ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
                                     ctx.fillStyle = datasetIndex === 1 ? '#b45309' : '#047857'; 
                                     ctx.textAlign = 'center';
                                     ctx.textBaseline = 'middle';
 
                                     const x = bar.x;
-                                    // Çubuğun hemen 12 piksel yukarısına konumlandırma
-                                    const y = bar.y - 12; 
+                                    // Çubuğa daha yakın durması için yükseklik bar.y - 7 değerine çekildi
+                                    const y = bar.y - 7; 
 
                                     ctx.save();
                                     ctx.translate(x, y);
-                                    // Metni dikey (90 derece) döndürme işlemi
                                     ctx.rotate(-Math.PI / 2); 
                                     ctx.fillText(percentageText, 0, 0);
                                     ctx.restore();
@@ -2896,10 +2916,8 @@
                 }]
             });
         }
-        // Trend analiz grafiğini çiz
         window.updateMhrsTrendChart();
     };
-
     window.updateMhrsTrendChart = function() {
         const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
         if (!list || list.length === 0) return;
