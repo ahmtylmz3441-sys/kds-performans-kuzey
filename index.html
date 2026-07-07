@@ -2892,7 +2892,7 @@
             });
             
             const sortedBransList = Object.entries(bransAggregates)
-                .sort((a,b)=>b[1].alinan - a[1].alinan)
+                .sort((a,b)=>b[1].acilan - a[1].acilan) // Branşları kapasiteye göre sıralar
                 .slice(0, 10);
                 
             sortedBransList.forEach(([bName, val]) => {
@@ -2903,7 +2903,7 @@
             });
         } else {
             const sortedKurumList = Object.entries(kurumAggregates)
-                .sort((a,b)=>b[1].alinan - a[1].alinan)
+                .sort((a,b)=>b[1].acilan - a[1].acilan) // Kapasiteye göre sıralar
                 .slice(0, 10);
                 
             sortedKurumList.forEach(([kName, val]) => {
