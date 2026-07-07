@@ -403,20 +403,20 @@
             border-bottom: 1px solid var(--border-color); 
             font-size: 14px;
         }
-/* 3D Geometrik Küp Loader Tasarımı */
+        /* 3D Geometrik Küp Loader Tasarımı */
         .page-loader-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(15, 23, 42, 0.65); 
             backdrop-filter: blur(6px);
             z-index: 99999; 
-            display: none; /* JS ile kontrol edilecektir */
+            display: none; 
             align-items: center; 
             justify-content: center; 
             transition: all 0.3s ease;
         }
         .modal-overlay, .modal-container {
-            z-index: 100000; /* Gösterge modallarının üstte kalması için */
+            z-index: 100000; 
         }
         .page-padding {
             position: relative;
@@ -937,7 +937,6 @@
         btn.innerText = "Sorgulanıyor...";
 
         try {
-            // 1. Supabase 'profiles' tablosundan sadece e-posta ve şifre ile sorgulama yapıyoruz
             const { data, error } = await _supabase
                 .from('profiles')
                 .select('*')
@@ -947,7 +946,6 @@
 
             if (error) throw error;
 
-            // 2. Türkçe karakterleri ve harf büyüklüklerini tamamen standartlaştıran yardımcı fonksiyon
             const trTemizle = (str) => {
                 return (str || "").toString().toLowerCase()
                     .replace(/ı/g, 'i')
@@ -956,13 +954,11 @@
                     .replace(/ş/g, 's')
                     .replace(/ö/g, 'o')
                     .replace(/ç/g, 'c')
-                    .replace(/i̇/g, 'i') // İ harfindeki çift nokta uyumsuzlukları için
+                    .replace(/i̇/g, 'i') 
                     .trim();
             };
 
-            // 3. Veritabanındaki ad soyad ile kullanıcının yazdığı adı Türkçe engellerine takılmadan eşleştiriyoruz
             if (data && trTemizle(data.ad_soyad) === trTemizle(name)) {
-                // Giriş başarılı
                 sessionStorage.setItem('khhb_auth_user', data.ad_soyad);
                 sessionStorage.setItem('khhb_auth_email', data.email);
                 sessionStorage.setItem('khhb_auth_role', data.rol || 'Kullanıcı');
@@ -970,7 +966,6 @@
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('activeUserName').innerHTML = `<i class="bi bi-person-check-fill text-success"></i> ${data.ad_soyad} (${data.rol || 'Kullanıcı'})`;
                 
-                // Rol bazlı menü kontrolünü uygula
                 uygulaYetkilendirme(data.rol);
             } else {
                 errorEl.innerText = "Giriş bilgileri hatalı ya da yetkiniz bulunmuyor.";
@@ -996,7 +991,6 @@
         document.getElementById('loginError').style.display = "none";
         document.getElementById('login-screen').style.display = 'flex';
         
-        // Yetkiyi temizle
         uygulaYetkilendirme(null);
     }
 
@@ -1036,7 +1030,6 @@
         const activeEmail = sessionStorage.getItem('khhb_auth_email');
         
         try {
-            // 1. Mevcut şifreyi doğrula
             const { data: user, error: checkError } = await _supabase
                 .from('profiles')
                 .select('*')
@@ -1052,7 +1045,6 @@
                 return;
             }
             
-            // 2. Şifreyi güncelle
             const { error: updateError } = await _supabase
                 .from('profiles')
                 .update({ sifre: newPass })
@@ -1151,14 +1143,12 @@
         
         try {
             if(id) {
-                // Güncelleme
                 const { error } = await _supabase
                     .from('profiles')
                     .update({ ad_soyad: name, email: email, rol: rol, sifre: sifre })
                     .eq('id', id);
                 if (error) throw error;
             } else {
-                // Yeni Kayıt
                 const { error } = await _supabase
                     .from('profiles')
                     .insert({ ad_soyad: name, email: email, rol: rol, sifre: sifre });
@@ -1281,11 +1271,10 @@
         if(yilSelect) {
             yilSelect.innerHTML = yillar.map(y => `<option value="${y}">${y}</option>`).join('');
             if (yillar.length > 0) {
-                yilSelect.value = yillar[0]; // En güncel yıl varsayılan seçilir
+                yilSelect.value = yillar[0]; 
             }
         }
         
-        // En güncel yıla ait en son aktif dönemi tespit et
         const enSonYil = yillar[0];
         const enSonYilinDonemleri = [...new Set(donemlerData.filter(d => d.yil === enSonYil).map(d => d.donem))].sort((a,b)=>b-a);
         const enSonDonem = enSonYilinDonemleri[0];
@@ -1294,7 +1283,7 @@
         if(donemSelect) {
             donemSelect.innerHTML = donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
             if (enSonDonem) {
-                donemSelect.value = enSonDonem; // En güncel dönemi varsayılan olarak seç
+                donemSelect.value = enSonDonem; 
             }
         }
     }
@@ -1383,7 +1372,6 @@
         
         const { data: toplam = null } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('yil', yil).eq('donem', donem).maybeSingle() || {};
         
-        // "Excel'e Aktar" butonu tablonun hemen üstüne eklendi
         let html = `
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div class="fw-bold fs-5">📊 ${kurum} - ${formatDonemAdi(donem)} ${yil} Analiz Raporu</div>
@@ -1454,7 +1442,7 @@
                             <option value="reddedildi" ${it.durum==='reddedildi'?'selected':''}>❌ Reddedildi</option>
                         </select>
                         <button class="btn btn-sm btn-success w-100 mb-1" style="border-radius:8px;" onclick="window.itirazDurumGuncelle('${it.id}')">Güncelle</button>
-                        <button class="btn btn-sm btn-outline-danger w-100" style="border-radius:8px;" onclick="window.itirazSil('${it.id}')">Sil</button>
+                        <button class="btn btn-sm btn-outline-danger" style="border-radius:8px;" onclick="window.itirazSil('${it.id}')">Sil</button>
                     </div>
                 </div>
             </div>`;
@@ -1536,7 +1524,7 @@
                     <div class="kds-card">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
                             <div>
-                                <h6 class="mb-0">🎯 Kurumsal Karne & Hedef Sapma Analizi (Kritik Eşik Kontrolü)</h6>
+                                <h6>🎯 Kurumsal Karne & Hedef Sapma Analizi (Kritik Eşik Kontrolü)</h6>
                                 <p class="text-muted small mb-0">Türkiye ortalamasından en negatif yönde sapan kurum ve göstergelerin dökümüdür.</p>
                             </div>
                             <div class="d-flex gap-2">
@@ -1570,10 +1558,8 @@
                 </div>
             </div>`;
         
-        // İlk açılışta tüm göstergeleri yükle
         await gostergeListesiniYukle('');
         
-        // Kurum türü değiştiğinde ilgili göstergeleri dinamik olarak getir
         document.getElementById('raporKurumTipi').onchange = async (e) => {
             await gostergeListesiniYukle(e.target.value);
         };
@@ -1595,7 +1581,6 @@
             data?.forEach(r => { if(!sonuc[r.kurum_adi]) sonuc[r.kurum_adi] = {}; sonuc[r.kurum_adi][`d${r.donem}`] = r.gd; });
             const labels = Object.keys(sonuc).slice(0,10);
             
-            // DİNAMİK DATASET YAPILANDIRMASI
             const donemler = [...new Set(data?.map(r => r.donem).filter(d => d))].sort((a,b)=>a-b);
             const colors = [
                 { bg: 'rgba(79, 70, 229, 0.75)', border: 'rgba(79, 70, 229, 1)' },
@@ -1631,7 +1616,7 @@
                     datasets: datasets 
                 }, 
                 options: { 
-                    indexAxis: 'y', // Yatay Görünüm
+                    indexAxis: 'y', 
                     responsive: true, 
                     maintainAspectRatio: false,
                     plugins: {
@@ -1711,13 +1696,11 @@
                 let isNegativeDeviation = false;
                 
                 if (r.gosterge_yonu === 'Pozitif') {
-                    // Gösterge Pozitif yönde ise ve Gösterge Değeri Türkiye ortalamasının altında ise negatif sapmadır.
                     if (gd < trOrt) {
                         sapmaOrani = ((trOrt - gd) / trOrt) * 100;
                         isNegativeDeviation = true;
                     }
                 } else if (r.gosterge_yonu === 'Negatif') {
-                    // Gösterge Negatif yönde ise ve Gösterge Değeri Türkiye ortalamasının üzerinde ise negatif sapmadır.
                     if (gd > trOrt) {
                         sapmaOrani = ((gd - trOrt) / trOrt) * 100;
                         isNegativeDeviation = true;
@@ -1735,14 +1718,12 @@
                 }
             });
             
-            // En yüksek negatif sapma oranına göre sırala
             sapmalar.sort((a, b) => b.sapma_orani - a.sapma_orani);
             
-            // İlk 15 sonucu göster
             const listelenen = sapmalar.slice(0, 15);
             
             if (listelenen.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success fw-semibold">Mükemmel! Türkiye ortalamasının gerisinde kalan negatif sapmalı kurum bulunamadı.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success fw-semibold">Türkiye ortalamasının gerisinde kalan negatif sapmalı kurum bulunamadı.</td></tr>';
                 return;
             }
             
@@ -1913,7 +1894,6 @@
             googleSheetsData.rawDATA = parseCSV(dataText);
             googleSheetsData.rawRapor = parseCSV(raporText);
             
-            // Aktif alt sekmeyi çizdir
             renderETabloActiveView();
             
         } catch(err) {
@@ -1929,7 +1909,6 @@
         }
     }
 
-    // Alt sekmeler arası geçiş
     window.switchETabloSubTab = function(tabName) {
         currentETabloSubTab = tabName;
         document.querySelectorAll('#e-tablo .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -1972,7 +1951,6 @@
         });
     }
 
-    // ---------- SUMIFS TAKLİTÇİSİ (JS TABANLI HESAPLAMA) ----------
     function sumifs(rows, sumColIdx, criteriaPairs) {
         let total = 0;
         for(let i = 1; i < rows.length; i++) {
@@ -2349,7 +2327,6 @@
         } else {
             document.getElementById('subtab-mhrs-a-btn').classList.add('active');
         }
-        // Veri türünü de sıfırla
         currentMhrsVeriTipi = document.getElementById('mhrs-f-tip')?.value || 'MESAİ_İÇİ';
         window.populateMhrsFilters();
         window.filterMhrsData();
@@ -2359,8 +2336,6 @@
         showLoading('mhrsDashboardContent', 'MHRS verileri canlı olarak Google Sheets dosyasından çekiliyor, lütfen bekleyiniz...');
         
         const spreadsheetId = '1QhpIfSB6jd44_0J36ltXK3Wb5zq5-KbfYMgNB-zv9UA';
-        
-        // Veri türleri ve tablo isimleri
         const veriTipleri = ['MESAİ_İÇİ', 'MESAİ_DIŞI', 'MESAİ_KAYDIRMA'];
         const sheets = {
             H: veriTipleri.map(t => ({ name: `H_${t}`, key: t })),
@@ -2368,7 +2343,6 @@
         };
         
         try {
-            // Tüm sekmeleri paralel çek
             const fetchPromises = [];
             const fetchMap = {};
             
@@ -2387,7 +2361,6 @@
             
             await Promise.all(fetchPromises);
             
-            // Verileri dönüştür
             for (const [tabloTipi, sheetList] of Object.entries(sheets)) {
                 for (const sheet of sheetList) {
                     const key = `${tabloTipi}_${sheet.key}`;
@@ -2402,7 +2375,6 @@
                 }
             }
             
-            // İlk filtreleme ve gösterim
             currentMhrsVeriTipi = document.getElementById('mhrs-f-tip')?.value || 'MESAİ_İÇİ';
             window.populateMhrsFilters();
             window.filterMhrsData();
@@ -2423,7 +2395,6 @@
     window.populateMhrsFilters = function() {
         const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
         if (!list || list.length === 0) {
-            // Filtreleri temizle
             ['mhrs-f-yil', 'mhrs-f-ay', 'mhrs-f-kurum', 'mhrs-f-brans'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.innerHTML = '<option value="">-</option>';
@@ -2431,19 +2402,16 @@
             return;
         }
         
-// Geçerli ay isimleri listesi (Hatalı metinleri engellemek için)
         const GECERLI_AY_ISIMLERI = [
             "OCAK", "ŞUBAT", "SUBAT", "MART", "NİSAN", "NISAN", "MAYIS", 
             "HAZİRAN", "HAZIRAN", "TEMMUZ", "AĞUSTOS", "AGUSTOS", 
             "EYLÜL", "EYLUL", "EKİM", "EKIM", "KASIM", "ARALIK"
         ];
 
-        // 2312. satır yerine: Yalnızca 4 haneli yılları kabul eder
         const yillar = [...new Set(list.map(item => getVal(item, 'yil'))
             .filter(y => y && /^\d{4}$/.test(y.toString().trim()))
         )].sort((a,b)=>b-a);
 
-        // 2313. satır yerine: Yalnızca gerçek ayları kabul eder
         const aylar = [...new Set(list.map(item => getVal(item, 'ay'))
             .filter(a => {
                 if (!a) return false;
@@ -2503,31 +2471,38 @@
         });
         
         document.getElementById('mhrsDashboardContent').innerHTML = `
-            <div class="row g-3 mb-4">
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
-                        <h6 class="text-secondary small fw-bold">🎯 MHRS DOLULUK</h6>
-                        <div class="fs-4 fw-bold text-primary" id="mhrs-stat-ilk-doluluk">0%</div>
+            <div class="row g-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-md-5">
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; min-height:110px;">
+                        <h6 class="text-secondary small fw-bold">🎯 GENEL MHRS DOLULUK</h6>
+                        <div class="fs-4 fw-bold text-primary" id="mhrs-stat-genel-doluluk">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-genel-doluluk">0 / 0</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; min-height:110px;">
+                        <h6 class="text-secondary small fw-bold">🎯 İLK MUAYENE DOLULUK</h6>
+                        <div class="fs-4 fw-bold text-indigo" id="mhrs-stat-ilk-doluluk">0%</div>
                         <div class="text-muted small" id="mhrs-desc-ilk-doluluk">0 / 0</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; min-height:110px;">
                         <h6 class="text-secondary small fw-bold">🔄 DEVAM EDEN DOLULUK</h6>
                         <div class="fs-4 fw-bold text-success" id="mhrs-stat-devam-doluluk">0%</div>
                         <div class="text-muted small" id="mhrs-desc-devam-doluluk">0 / 0</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; min-height:110px;">
                         <h6 class="text-secondary small fw-bold">📈 RANDEVU SADAKAT</h6>
                         <div class="fs-4 fw-bold text-info" id="mhrs-stat-ilk-gerceklesme">0%</div>
                         <div class="text-muted small" id="mhrs-desc-ilk-gerceklesme">0 / 0</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
-                        <h6 class="text-secondary small fw-bold">📊 DEVAM EDEN GERÇEKLEŞME</h6>
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important; min-height:110px;">
+                        <h6 class="text-secondary small fw-bold">📊 DEVAM GERÇEKLEŞME</h6>
                         <div class="fs-4 fw-bold text-warning" id="mhrs-stat-devam-gerceklesme">0%</div>
                         <div class="text-muted small" id="mhrs-desc-devam-gerceklesme">0 / 0</div>
                     </div>
@@ -2548,6 +2523,30 @@
                         <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-star"></i> En Çok Randevu Alınan Branşlar</h6>
                         <div id="mhrs-top-branches" style="max-height: 320px; overflow-y: auto;">
                             <div class="text-muted small text-center py-5">Veri yükleniyor...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Yeni Trend Analiz Kartı -->
+            <div class="row g-4 mb-4">
+                <div class="col-12">
+                    <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important;">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-graph-up"></i> MHRS Dönemsel Performans Trend Analizi (Aylık)</h6>
+                            <div style="min-width: 240px;">
+                                <select id="mhrs-trend-metric" class="form-select form-select-sm shadow-sm" onchange="window.updateMhrsTrendChart()">
+                                    <option value="genel_doluluk">Genel Doluluk Oranı (%)</option>
+                                    <option value="ilk_doluluk">İlk Muayene Doluluk Oranı (%)</option>
+                                    <option value="devam_doluluk">Devam Eden Doluluk Oranı (%)</option>
+                                    <option value="kapasite">Toplam Açılan Kapasite</option>
+                                    <option value="alinan_randevu">Toplam Alınan Randevu</option>
+                                    <option value="gerceklesen_muayene">Toplam Gerçekleşen Muayene</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="height: 280px; position: relative;">
+                            <canvas id="mhrsTrendChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -2606,11 +2605,16 @@
             total_devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
         });
 
+        const genel_doluluk = (total_ilk_acilan + total_devam_acilan) > 0 
+            ? ((total_ilk_alinan + total_devam_alinan) / (total_ilk_acilan + total_devam_acilan)) * 100 
+            : 0;
         const ilk_doluluk = total_ilk_acilan > 0 ? (total_ilk_alinan / total_ilk_acilan) * 100 : 0;
-        const widthPercentLimit = 100; // responsive graphic handling
         const devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
         const ilk_gerceklesme = total_ilk_alinan > 0 ? (total_ilk_gerceklesen / total_ilk_alinan) * 100 : 0;
         const devam_gerceklesme = total_devam_alinan > 0 ? (total_devam_gerceklesen / total_devam_alinan) * 100 : 0;
+
+        document.getElementById('mhrs-stat-genel-doluluk').innerText = `${genel_doluluk.toFixed(1)}%`;
+        document.getElementById('mhrs-desc-genel-doluluk').innerText = `${(total_ilk_alinan + total_devam_alinan).toLocaleString('tr-TR')} / ${(total_ilk_acilan + total_devam_acilan).toLocaleString('tr-TR')}`;
 
         document.getElementById('mhrs-stat-ilk-doluluk').innerText = `${ilk_doluluk.toFixed(1)}%`;
         document.getElementById('mhrs-desc-ilk-doluluk').innerText = `${total_ilk_alinan.toLocaleString('tr-TR')} / ${total_ilk_acilan.toLocaleString('tr-TR')}`;
@@ -2840,22 +2844,169 @@
                 }
             });
         }
+
+        // Trend analiz grafiğini çiz
+        window.updateMhrsTrendChart();
+    };
+
+    window.updateMhrsTrendChart = function() {
+        const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
+        if (!list || list.length === 0) return;
+        
+        const selYil = document.getElementById('mhrs-f-yil')?.value;
+        const selKurum = document.getElementById('mhrs-f-kurum')?.value;
+        const selBrans = document.getElementById('mhrs-f-brans')?.value;
+        const selectedMetric = document.getElementById('mhrs-trend-metric')?.value || 'genel_doluluk';
+        
+        // Ay filtresinden bağımsız şekilde zaman trendi oluşturmak için ay filtresi göz ardı edilir
+        let trendFiltered = list.filter(item => {
+            if (selYil && getVal(item, 'yil') !== selYil) return false;
+            if (selKurum && getVal(item, 'kurum_adi') !== selKurum) return false;
+            if (selBrans && getVal(item, 'brans') !== selBrans) return false;
+            return true;
+        });
+        
+        const monthlyData = {};
+        trendFiltered.forEach(item => {
+            const ay = getVal(item, 'ay');
+            if (!ay) return;
+            
+            const parseNum = (v) => {
+                if (!v) return 0;
+                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                return isNaN(n) ? 0 : n;
+            };
+            
+            if (!monthlyData[ay]) {
+                monthlyData[ay] = {
+                    ilk_acilan: 0, ilk_alinan: 0, ilk_gerceklesen: 0,
+                    devam_acilan: 0, devam_alinan: 0, devam_gerceklesen: 0
+                };
+            }
+            
+            monthlyData[ay].ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
+            monthlyData[ay].ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
+            monthlyData[ay].ilk_gerceklesen += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
+            
+            monthlyData[ay].devam_acilan += parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
+            monthlyData[ay].devam_alinan += parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+            monthlyData[ay].devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+        });
+        
+        const parseMhrsMonthValue = (ayStr) => {
+            if (!ayStr) return 99;
+            const s = ayStr.toString().trim().toUpperCase().replace(/ı/g,'I').replace(/i/g,'İ');
+            if (!isNaN(s)) return parseInt(s);
+            const mhrsAylarTR = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
+            const mhrsAylarEN = ["OCAK", "SUBAT", "MART", "NISAN", "MAYIS", "HAZIRAN", "TEMMUZ", "AGUSTOS", "EYLUL", "EKIM", "KASIM", "ARALIK"];
+            let idx = mhrsAylarTR.indexOf(s);
+            if (idx === -1) idx = mhrsAylarEN.indexOf(s);
+            return idx !== -1 ? idx + 1 : 99;
+        };
+        
+        const sortedMonthKeys = Object.keys(monthlyData).sort((a, b) => {
+            return parseMhrsMonthValue(a) - parseMhrsMonthValue(b);
+        });
+        
+        const labels = sortedMonthKeys;
+        const dataPoints = sortedMonthKeys.map(key => {
+            const val = monthlyData[key];
+            const t_ilk_ac = val.ilk_acilan;
+            const t_ilk_al = val.ilk_alinan;
+            const t_ilk_ge = val.ilk_gerceklesen;
+            const t_dev_ac = val.devam_acilan;
+            const t_dev_al = val.devam_alinan;
+            const t_dev_ge = val.devam_gerceklesen;
+            
+            if (selectedMetric === 'genel_doluluk') {
+                return (t_ilk_ac + t_dev_ac) > 0 ? (((t_ilk_al + t_dev_al) / (t_ilk_ac + t_dev_ac)) * 100) : 0;
+            } else if (selectedMetric === 'ilk_doluluk') {
+                return t_ilk_ac > 0 ? ((t_ilk_al / t_ilk_ac) * 100) : 0;
+            } else if (selectedMetric === 'devam_doluluk') {
+                return t_dev_ac > 0 ? ((t_dev_al / t_dev_ac) * 100) : 0;
+            } else if (selectedMetric === 'kapasite') {
+                return t_ilk_ac + t_dev_ac;
+            } else if (selectedMetric === 'alinan_randevu') {
+                return t_ilk_al + t_dev_al;
+            } else if (selectedMetric === 'gerceklesen_muayene') {
+                return t_ilk_ge + t_dev_ge;
+            }
+            return 0;
+        });
+        
+        const metricLabels = {
+            genel_doluluk: 'Genel Doluluk Oranı (%)',
+            ilk_doluluk: 'İlk Muayene Doluluk Oranı (%)',
+            devam_doluluk: 'Devam Eden Doluluk Oranı (%)',
+            kapasite: 'Toplam Açılan Kapasite',
+            alinan_randevu: 'Toplam Alınan Randevu',
+            gerceklesen_muayene: 'Toplam Gerçekleşen Muayene'
+        };
+        
+        const isPercentage = selectedMetric.includes('doluluk');
+        
+        const ctx = document.getElementById('mhrsTrendChart')?.getContext('2d');
+        if (ctx) {
+            if (charts.mhrsTrend) charts.mhrsTrend.destroy();
+            charts.mhrsTrend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: metricLabels[selectedMetric],
+                        data: dataPoints,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                        borderWidth: 2.5,
+                        tension: 0.15,
+                        fill: true,
+                        pointBackgroundColor: '#f59e0b',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
+                            ticks: {
+                                callback: function(value) {
+                                    return isPercentage ? value.toFixed(1) + '%' : value.toLocaleString('tr-TR');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let val = context.raw;
+                                    return context.dataset.label + ': ' + (isPercentage ? val.toFixed(1) + '%' : val.toLocaleString('tr-TR'));
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     };
 
     window.exportMhrsTableToExcel = function() {
         window.exportTableToExcel('mhrsDetailTable', `MHRS_Performans_Raporu_${currentMhrsSubTab}_${currentMhrsVeriTipi}`);
     };
 
-   // ---------- SAYFA GEÇIŞLERI ----------
+    // ---------- SAYFA GEÇIŞLERI ----------
     window.gitSayfa = async function(sayfa, el) {
-        // 1. Geometrik Küp Loader'ı görünür yap
         const loader = document.getElementById('page-loader');
         if (loader) loader.classList.add('active');
 
-        // 2. 2.5 saniyelik (2500ms) zorunlu bekleme vaadi oluştur
         const delayPromise = new Promise(resolve => setTimeout(resolve, 3000));
 
-        // 3. Arka planda sayfa geçiş ve navigasyon işlemlerini yap
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(sayfa).classList.add('active');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -2865,7 +3016,6 @@
         filterBar.style.display = (sayfa === 'kurum-bazli') ? 'flex' : 'none';
         
         try {
-            // İlgili sayfanın arka plan veri yükleme işlemlerini başlat
             if(sayfa === 'genel-bakis') await dashboard();
             
             if(sayfa === 'tum-bolge') {
@@ -2954,7 +3104,6 @@
         } catch (err) {
             console.error("Yükleme hatası:", err);
         } finally {
-            // 4. Veri yükleme tamamlansa dahi en az 2.5 saniyelik sürenin dolmasını bekle
             await delayPromise;
             if (loader) loader.classList.remove('active');
         }
@@ -2962,7 +3111,6 @@
 
     // ---------- BAŞLATMA ----------
     (async function init() {
-        // Oturum kontrolü
         const activeUser = sessionStorage.getItem('khhb_auth_user');
         const activeRole = sessionStorage.getItem('khhb_auth_role');
         if (activeUser) {
@@ -2999,7 +3147,6 @@
             });
         });
         
-        // Sayfa ilk açıldığında Genel Bakışı tetikle
         await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
     })();
 </script>
