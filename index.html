@@ -2609,7 +2609,7 @@
             ? ((total_ilk_alinan + total_devam_alinan) / (total_ilk_acilan + total_devam_acilan)) * 100 
             : 0;
         const ilk_doluluk = total_ilk_acilan > 0 ? (total_ilk_alinan / total_ilk_acilan) * 100 : 0;
-        constamp_devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
+        const devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
         const ilk_gerceklesme = total_ilk_alinan > 0 ? (total_ilk_gerceklesen / total_ilk_alinan) * 100 : 0;
         const devam_gerceklesme = total_devam_alinan > 0 ? (total_devam_gerceklesen / total_devam_alinan) * 100 : 0;
 
@@ -2619,7 +2619,7 @@
         document.getElementById('mhrs-stat-ilk-doluluk').innerText = `${ilk_doluluk.toFixed(1)}%`;
         document.getElementById('mhrs-desc-ilk-doluluk').innerText = `${total_ilk_alinan.toLocaleString('tr-TR')} / ${total_ilk_acilan.toLocaleString('tr-TR')}`;
         
-        document.getElementById('mhrs-stat-devam-doluluk').innerText = `${amp_devam_doluluk.toFixed(1)}%`;
+        document.getElementById('mhrs-stat-devam-doluluk').innerText = `${devam_doluluk.toFixed(1)}%`;
         document.getElementById('mhrs-desc-devam-doluluk').innerText = `${total_devam_alinan.toLocaleString('tr-TR')} / ${total_devam_acilan.toLocaleString('tr-TR')}`;
 
         document.getElementById('mhrs-stat-ilk-gerceklesme').innerText = `${ilk_gerceklesme.toFixed(1)}%`;
@@ -2743,7 +2743,6 @@
             }
         });
 
-        // Grafik isimlerini otomatik kısaltan yardımcı fonksiyon
         const kisaltKurumAdi = (name) => {
             if (!name) return "";
             return name
