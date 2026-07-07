@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>🏥 VERİ ANALİZ - Gelişmiş</title>
+    <!-- Google Fonts - Modern Tipografi -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -25,6 +27,7 @@
             --warning: #f59e0b;
             --danger: #ef4444;
         }
+        
         body { 
             background: var(--bg); 
             font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; 
@@ -32,7 +35,10 @@
             margin: 0; 
             overflow: hidden; 
         }
+        
         .app-wrapper { display: flex; height: 100vh; }
+        
+        /* Sol Menü (Sidebar) Tasarımı */
         .sidebar { 
             width: 280px; 
             background: var(--sidebar-bg); 
@@ -49,7 +55,9 @@
             letter-spacing: -0.5px;
             background: rgba(0,0,0,0.15);
         }
-        .nav-container { padding: 15px 12px; }
+        .nav-container {
+            padding: 15px 12px;
+        }
         .nav-item { 
             padding: 12px 16px; 
             color: #94a3b8; 
@@ -63,6 +71,10 @@
             font-weight: 500;
             font-size: 14px;
         }
+        .nav-item i {
+            font-size: 18px;
+            transition: all 0.2s;
+        }
         .nav-item:hover { 
             background: rgba(255, 255, 255, 0.04); 
             color: #f1f5f9; 
@@ -72,7 +84,14 @@
             color: white; 
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
         }
+        .nav-item.active i {
+            color: white;
+        }
+        
+        /* Sağ Panel */
         .main-content { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        
+        /* Üst Header */
         .top-header { 
             background: white; 
             padding: 20px 32px; 
@@ -81,6 +100,13 @@
             align-items: center; 
             border-bottom: 1px solid var(--border-color); 
         }
+        .top-header h5 {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+        }
+        
+        /* Filtre Alanı */
         .filter-bar { 
             background: #fff; 
             padding: 16px 32px; 
@@ -92,6 +118,7 @@
             position: sticky; 
             top: 0; 
             z-index: 100; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         }
         .filter-group { display: flex; flex-direction: column; min-width: 150px; flex-shrink: 0; }
         .filter-group label {
@@ -100,6 +127,7 @@
             color: var(--text-secondary);
             margin-bottom: 6px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .filter-group select, .filter-group input { 
             padding: 10px 14px; 
@@ -108,7 +136,15 @@
             font-size: 13px; 
             background: #f8fafc; 
             width: 100%; 
+            color: var(--text-main);
             font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .filter-group select:focus, .filter-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
         .btn-sm-custom { 
             padding: 11px 24px; 
@@ -119,24 +155,57 @@
             border: none; 
             color: white; 
             cursor: pointer; 
+            transition: all 0.2s ease; 
+            white-space: nowrap; 
+            flex-shrink: 0; 
             box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
         }
+        .btn-sm-custom:hover { 
+            background: var(--accent-hover); 
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(79, 70, 229, 0.3);
+        }
+        .btn-sm-custom:active {
+            transform: translateY(0);
+        }
+        
         .page-padding { padding: 32px; }
         .page { display: none; }
         .page.active { display: block; }
+        
+        /* Modern Kart Tasarımı */
         .kds-card { 
             background: var(--card-bg); 
             border-radius: 16px; 
             padding: 24px; 
             box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03); 
             border: 1px solid var(--border-color);
+            height: 100%; 
             margin-bottom: 24px; 
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .kds-card:hover {
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+        }
+        .kds-card h6 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .stat-val { 
             font-size: 2.5rem; 
             font-weight: 800; 
+            letter-spacing: -1px;
             color: var(--text-main);
         }
+        
+        /* Yenilenmiş Butonlar */
         .itiraz-btn { 
             background: rgba(245, 158, 11, 0.1); 
             border: 1px solid rgba(245, 158, 11, 0.3); 
@@ -146,21 +215,38 @@
             font-size: 12px; 
             font-weight: 600;
             cursor: pointer; 
+            transition: all 0.2s; 
         }
+        .itiraz-btn:hover { 
+            background: var(--warning);
+            color: white;
+            transform: translateY(-1px);
+        }
+        
+        /* Modernized Badges (Yarı Saydam Soft Tasarım) */
         .badge-muaf { background: #f1f5f9; color: #475569; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #cbd5e1; }
         .badge-basarili { background: #ecfdf5; color: #047857; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #a7f3d0; }
         .badge-kritik { background: #fef2f2; color: #b91c1c; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #fca5a5; }
         .badge-orta { background: #fffbeb; color: #b45309; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #fde68a; }
         .badge-itiraz-var { background: #fffbeb; color: #b45309; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-left: 8px; border: 1px solid #fde68a; }
+        
+        /* Derece Kartları */
         .rank-card { 
             background: #f8fafc; 
             border-radius: 12px; 
             padding: 14px 18px; 
             margin-bottom: 10px; 
+            transition: all 0.2s ease; 
             display: flex; 
             align-items: center; 
             justify-content: space-between; 
             border: 1px solid var(--border-color);
+        }
+        .rank-card:hover {
+            background: white;
+            border-color: var(--accent);
+            transform: translateX(3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         }
         .rank-number { 
             width: 32px; 
@@ -175,7 +261,11 @@
             font-weight: 700; 
             margin-right: 12px; 
         }
+        
+        /* Grafikler */
         .chart-container { position: relative; height: 400px; margin-top: 20px; }
+        
+        /* Şık Modallar & Cam Efekti */
         .modal-overlay { 
             display: none; 
             position: fixed; 
@@ -185,6 +275,7 @@
             z-index:1000; 
             align-items:center; 
             justify-content:center; 
+            transition: all 0.3s ease;
         }
         .modal-overlay.active { display: flex; }
         .modal-container { 
@@ -198,6 +289,11 @@
             position: relative; 
             box-shadow: 0 20px 50px rgba(0,0,0,0.15);
             border: 1px solid var(--border-color);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal-container {
+            transform: scale(1);
         }
         .modal-close { 
             position: absolute; 
@@ -210,10 +306,17 @@
             border-radius: 50%;
             font-size: 20px; 
             cursor: pointer; 
+            color: var(--text-secondary); 
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.2s;
         }
+        .modal-close:hover {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
+        
         .donem-checkbox-group { 
             display: block; 
             margin: 20px 0; 
@@ -221,17 +324,25 @@
             background: #f8fafc; 
             border-radius: 14px; 
             border: 1px dashed var(--border-color); 
+            min-height: 110px; 
+            transition: all 0.3s ease; 
         }
+        
+        /* Canlı E-Tablo / MHRS Alt Sekme Butonları */
         .sub-tab-btn { 
             background: #f8fafc; 
             color: var(--text-secondary); 
             font-size: 13px; 
             font-weight: 600; 
             cursor: pointer; 
+            transition: all 0.2s ease; 
             outline: none; 
             padding: 12px;
         }
+        .sub-tab-btn:hover { background: #f1f5f9; color: var(--text-main); }
         .sub-tab-btn.active { background: var(--accent); color: white !important; }
+
+        /* Gelişmiş Şifreli Giriş Ekranı */
         #login-screen { 
             position: fixed; 
             top: 0; 
@@ -251,18 +362,81 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.3); 
             width: 100%; 
             max-width: 440px; 
+            border: 1px solid rgba(255,255,255,0.1);
         }
+        .login-card .form-control {
+            padding: 12px 16px;
+            border-radius: 12px;
+            border-color: #cbd5e1;
+            font-size: 14px;
+        }
+        .login-card .form-control:focus {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+            border-color: var(--accent);
+        }
+        .login-card .input-group-text {
+            background-color: #f8fafc;
+            border-color: #cbd5e1;
+            color: var(--text-secondary);
+            border-radius: 12px 0 0 12px;
+        }
+        
+        /* Tablo Stilleri */
+        .table {
+            border-color: var(--border-color);
+        }
+        .table th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            padding: 14px;
+        }
+        .table td {
+            padding: 14px;
+            font-size: 13px;
+        }
+        
+        /* Detay satırları */
+        .gosterge-detay { 
+            padding: 12px 0; 
+            border-bottom: 1px solid var(--border-color); 
+            font-size: 14px;
+        }
+/* 3D Geometrik Küp Loader Tasarımı */
         .page-loader-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(15, 23, 42, 0.65); 
             backdrop-filter: blur(6px);
             z-index: 99999; 
-            display: none; 
+            display: none; /* JS ile kontrol edilecektir */
             align-items: center; 
             justify-content: center; 
+            transition: all 0.3s ease;
         }
-        .page-loader-overlay.active { display: flex; }
+        .modal-overlay, .modal-container {
+            z-index: 100000; /* Gösterge modallarının üstte kalması için */
+        }
+        .page-padding {
+            position: relative;
+        }
+        .modal-overlay {
+            z-index: 100000 !important;
+        }
+        .modal-container {
+            z-index: 100001 !important;
+        }
+        .modal-close {
+            z-index: 100002 !important;
+        }
+        .page-loader-overlay.active {
+            display: flex;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 3D Geometrik Kapsayıcı */
         .geometric-loader {
             position: relative;
             width: 180px;
@@ -272,44 +446,61 @@
             justify-content: center;
             perspective: 600px;
         }
+
+        /* Ortak Keskin Geometrik Katman Özellikleri */
         .geo-cube {
             position: absolute;
             border: 2px solid transparent;
             border-radius: 4px;
         }
+
+        /* 1. Dış Katman: İndigo Kare */
         .cube-1 {
             width: 150px;
             height: 150px;
             border-color: #4f46e5;
             animation: rotateCubeX 2.5s infinite ease-in-out;
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.2);
         }
+
+        /* 2. Orta Katman: Zümrüt Yeşili Kare */
         .cube-2 {
             width: 120px;
             height: 120px;
             border-color: #10b981;
             animation: rotateCubeY 2.5s infinite ease-in-out;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
         }
+
+        /* 3. İç Katman: Kehribar Sarısı Kare */
         .cube-3 {
             width: 90px;
             height: 90px;
             border-color: #f59e0b;
             animation: rotateCubeZ 2.5s infinite ease-in-out;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
         }
+
+        /* GEOMETRİK 3D ANİMASYONLAR */
         @keyframes rotateCubeX {
             0% { transform: rotateX(0deg) rotateY(0deg); }
             50% { transform: rotateX(180deg) rotateY(0deg); }
             100% { transform: rotateX(180deg) rotateY(180deg); }
         }
+
         @keyframes rotateCubeY {
             0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(45deg); }
             50% { transform: rotateX(0deg) rotateY(180deg) rotateZ(225deg); }
             100% { transform: rotateX(180deg) rotateY(180deg) rotateZ(405deg); }
         }
+
         @keyframes rotateCubeZ {
             0% { transform: rotateZ(0deg); }
             50% { transform: rotateZ(-180deg); }
             100% { transform: rotateZ(-360deg); }
         }
+
+        /* Merkezdeki Sabit Yükleniyor Yazısı */
         .loader-center-text {
             font-size: 10px;
             font-weight: 700;
@@ -317,11 +508,20 @@
             text-transform: uppercase;
             color: #f1f5f9;
             z-index: 10;
+            pointer-events: none;
+            text-shadow: 0 0 8px rgba(15, 23, 42, 0.9);
+            animation: pulseText 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulseText {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
     </style>
 </head>
 <body>
 
+<!-- Şifreli Giriş Ekranı -->
 <div id="login-screen">
     <div class="login-card">
         <div class="text-center mb-4">
@@ -434,10 +634,12 @@
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
                         <div>
                             <h5 class="fw-bold mb-0 text-warning"><i class="bi bi-calendar2-week"></i> MHRS Canlı Performans & Analiz Paneli</h5>
-                            <p class="text-muted small mb-0">Google Sheets üzerinden MHRS canlı verilerini analiz eder.</p>
+                            <p class="text-muted small mb-0">Google Sheets üzerinden MHRS mesai içi, dışı ve kaydırma verilerini canlı analiz eder.</p>
                         </div>
                         <button class="btn btn-sm btn-warning text-white fw-semibold px-3 py-2" style="border-radius:10px;" onclick="initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
                     </div>
+
+                    <!-- İç Sekmeler -->
                     <ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
                         <li style="flex:1;">
                             <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-mhrs-h-btn" onclick="window.switchMhrsSubTab('H')">🏥 Hastane</button>
@@ -446,6 +648,8 @@
                             <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-a-btn" onclick="window.switchMhrsSubTab('A')">🏛️ ADSM/ADSH</button>
                         </li>
                     </ul>
+
+                    <!-- Filtreler -->
                     <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
                         <div class="col-md-2">
                             <label class="form-label small fw-bold text-secondary">Veri Türü</label>
@@ -472,7 +676,10 @@
                             <select id="mhrs-f-brans" class="form-select form-select-sm shadow-sm" onchange="window.filterMhrsData()"></select>
                         </div>
                     </div>
-                    <div id="mhrsDashboardContent"></div>
+
+                    <div id="mhrsDashboardContent">
+                        <!-- Veriler Dinamik Olarak Buraya Yüklenecektir -->
+                    </div>
                 </div>
             </section>
             <section id="kullanici-yonetimi" class="page">
@@ -492,7 +699,9 @@
                                     <th class="text-center" style="width: 200px;">İşlemler</th>
                                 </tr>
                             </thead>
-                            <tbody id="kullaniciListesiGövde"></tbody>
+                            <tbody id="kullaniciListesiGövde">
+                                <!-- Dinamik Dolacak -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -502,21 +711,27 @@
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
                         <div>
                             <h5 class="fw-bold mb-0 text-success"><i class="bi bi-file-earmark-spreadsheet"></i> E-Tablo Canlı Hesaplama & Analiz Paneli</h5>
+                            <p class="text-muted small mb-0">E-Tablonuzdaki DATA sekmesini formüllerle dinamik işleyerek özet ve trend grafikleri oluşturur.</p>
                         </div>
                         <button class="btn btn-sm btn-success px-3 py-2" style="border-radius:10px;" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
                     </div>
+                    
+                    <!-- İç Sekmeler -->
                     <ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
                         <li style="flex:1;">
-                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-rapor-btn" onclick="window.switchETabloSubTab('rapor')">📋 Günlük Rapor (Son Gün)</button>
+                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-rapor-btn" onclick="window.switchETabloSubTab('rapor')">📋 Günlük Durum Raporu (Son Gün)</button>
                         </li>
                         <li style="flex:1;">
-                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analiz-btn" onclick="window.switchETabloSubTab('analiz')">📊 İnteraktif Trend</button>
+                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analiz-btn" onclick="window.switchETabloSubTab('analiz')">📊 İnteraktif Trend Analizi</button>
                         </li>
                         <li style="flex:1;">
                             <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-raw-btn" onclick="window.switchETabloSubTab('raw')">🔍 Ham DATA Tablosu</button>
                         </li>
                     </ul>
-                    <div id="eTabloDashboardContent"></div>
+                    
+                    <div id="eTabloDashboardContent">
+                        <!-- Veriler Dinamik Olarak Buraya Yüklenecektir -->
+                    </div>
                 </div>
             </section>
         </div>
@@ -531,6 +746,7 @@
     </div>
 </div>
 
+<!-- Şifre Değiştirme Modalı -->
 <div id="sifreDegistirModal" class="modal-overlay" onclick="window.sifreModalDisKlikKapat(event)">
     <div class="modal-container" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="kapatSifreModal()">&times;</button>
@@ -553,6 +769,7 @@
     </div>
 </div>
 
+<!-- Kullanıcı Ekle/Düzenle Modalı -->
 <div id="kullaniciModal" class="modal-overlay" onclick="window.kullaniciModalDisKlikKapat(event)">
     <div class="modal-container" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="kapatKullaniciModal()">&times;</button>
@@ -583,50 +800,125 @@
 </div>
 
 <script>
+    // ---------- SUPABASE KONFIG ----------
     const SUPABASE_URL = "https://alisjxtoivkeyeyyuikr.supabase.co";
     const SUPABASE_KEY = "sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // ---------- SÜTUN ADLARI YAPILANDIRMASI ----------
     const DB_FIELDS = {
-        toplamPuanlar: { kurumAdi: 'kurum_adi', kurumTipi: 'kurum_tipi', donem: 'donem', toplamPuan: 'toplam_puan', rolOrtalamasi: 'rol_ortalamasi' },
-        performans: { id: 'id', kurumAdi: 'kurum_adi', kurumTipi: 'kurum_tipi', gostergeKodu: 'gosterge_kodu', gostergeAdi: 'gosterge_adi', gostergeYonu: 'gosterge_yonu', gd: 'gd', trOrt: 'tr_ort', puan: 'puan', gp: 'gp', yil: 'yil', donem: 'donem' },
-        itirazlar: { id: 'id', performansId: 'performans_id', itirazMetni: 'itiraz_metni', durum: 'durum', tarih: 'olusturma_tarihi' }
+        toplamPuanlar: {
+            kurumAdi: 'kurum_adi',
+            kurumTipi: 'kurum_tipi',
+            donem: 'donem',
+            toplamPuan: 'toplam_puan',
+            rolOrtalamasi: 'rol_ortalamasi'
+        },
+        performans: {
+            id: 'id',
+            kurumAdi: 'kurum_adi',
+            kurumTipi: 'kurum_tipi',
+            gostergeKodu: 'gosterge_kodu',
+            gostergeAdi: 'gosterge_adi',
+            gostergeYonu: 'gosterge_yonu',
+            gd: 'gd',
+            trOrt: 'tr_ort',
+            puan: 'puan',
+            gp: 'gp',
+            yil: 'yil',
+            donem: 'donem'
+        },
+        itirazlar: {
+            id: 'id',
+            performansId: 'performans_id',
+            itirazMetni: 'itiraz_metni',
+            durum: 'durum',
+            tarih: 'olusturma_tarihi'
+        }
     };
 
+    // ---------- ANALİZ SABİTLERİ (KULLANICIDAN ALINAN TANIMLAR) ----------
     const HOSPITALS = [
-        "Beykoz DH", "Çekmeköy DH", "Dr. Siyami Ersek GKDC EAH", "Fatih Sultan Mehmet EAH", 
-        "Göztepe ŞH", "Haydarpaşa Numune EAH", "Prof. Dr. Feriha Öz ADH", "Sancaktepe EAH", 
-        "Sultan 2. Abdulhamid Han EAH", "Ümraniye EAH", "Üsküdar DH"
+        "Beykoz DH",
+        "Çekmeköy DH",
+        "Dr. Siyami Ersek GKDC EAH",
+        "Fatih Sultan Mehmet EAH",
+        "Göztepe ŞH",
+        "Haydarpaşa Numune EAH",
+        "Prof. Dr. Feriha Öz ADH",
+        "Sancaktepe EAH",
+        "Sultan 2. Abdulhamid Han EAH",
+        "Ümraniye EAH",
+        "Üsküdar DH"
     ];
 
     const VARIABLES = [
-        "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)", "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)",
-        "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)", "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)",
-        "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)", "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)",
-        "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)", "SERVİS YATAK SAYISI TOPLAMI (AKTİF)",
-        "SERVİS BOŞ YATAK SAYISI TOPLAMI (24:00'DE ANLIK)", "ACİLDE SERVİS YATIŞ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"
+        "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)",
+        "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)",
+        "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)",
+        "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)",
+        "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)",
+        "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)",
+        "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)",
+        "SERVİS YATAK SAYISI TOPLAMI (AKTİF)",
+        "SERVİS BOŞ YATAK SAYISI TOPLAMI (24:00'DE ANLIK)",
+        "ACİLDE SERVİS YATIŞ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"
     ];
 
+    // ---------- GLOBAL DEĞİŞKENLER ----------
     let charts = {};
     let itirazPerformansMap = {};
     let mevcutYillarDonemler = { yillar: [], donemler: [] };
-    const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+    const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Aralık", "Eylül", "Ekim", "Kasım", "Aralık"];
     
-    let googleSheetsData = { rawDATA: [], rawRapor: [] };
+    // Google Sheets Veri Deposu
+    let googleSheetsData = {
+        rawDATA: [],
+        rawRapor: []
+    };
     let currentETabloSubTab = 'rapor';
 
+    // MHRS Veri Deposu
     let mhrsData = { H: { MESAİ_İÇİ: [], MESAİ_DIŞI: [], MESAİ_KAYDIRMA: [] }, A: { MESAİ_İÇİ: [], MESAİ_DIŞI: [], MESAİ_KAYDIRMA: [] } };
     let currentMhrsSubTab = 'H';
     let currentMhrsVeriTipi = 'MESAİ_İÇİ';
 
+    // ---------- ROL BAZLI YETKİLENDİRME (RBAC) FONKSİYONU ----------
     function uygulaYetkilendirme(role) {
         const itirazNavItem = document.querySelector('.nav-item[data-page="itirazlar"]');
         const kullaniciNavItem = document.querySelector('.nav-item[data-page="kullanici-yonetimi"]');
         const isAdmin = role && role.toLowerCase().trim() === 'admin';
-        if (itirazNavItem) itirazNavItem.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
-        if (kullaniciNavItem) kullaniciNavItem.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
+        
+        if (itirazNavItem) {
+            itirazNavItem.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
+        }
+        if (kullaniciNavItem) {
+            kullaniciNavItem.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
+        }
     }
 
+    // ---------- EXCEL DIŞA AKTARMA (TÜRKÇE KARAKTER DUYARLI) ----------
+    window.exportTableToExcel = function(tableId, filename = 'rapor') {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        
+        let html = table.outerHTML;
+        const uri = 'data:application/vnd.ms-excel;base64,';
+        const template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>{table}</table></body></html>';
+        
+        const base64 = function(s) { return window.btoa(unescape(encodeURIComponent(s))) };
+        const format = function(s, c) { return s.replace(/{(\w+)}/g, function(m, p) { return c[p]; }) };
+        
+        const ctx = { worksheet: 'Rapor', table: html };
+        const link = document.createElement("a");
+        link.download = `${filename}.xls`;
+        link.href = uri + base64(format(template, ctx));
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // ---------- SUPABASE GÜVENLİ GİRİŞ İŞLEMLERİ (PROFILES TABLOSU İLE) ----------
     async function handleLogin() {
         const name = document.getElementById('loginName').value.trim();
         const email = document.getElementById('loginEmail').value.trim();
@@ -638,36 +930,55 @@
             errorEl.style.display = "block";
             return;
         }
+
         errorEl.style.display = "none";
         const btn = document.getElementById('loginSubmitBtn');
         btn.disabled = true;
         btn.innerText = "Sorgulanıyor...";
 
         try {
-            const { data, error } = await _supabase.from('profiles').select('*').eq('email', email).eq('sifre', password).maybeSingle();
+            // 1. Supabase 'profiles' tablosundan sadece e-posta ve şifre ile sorgulama yapıyoruz
+            const { data, error } = await _supabase
+                .from('profiles')
+                .select('*')
+                .eq('email', email)
+                .eq('sifre', password)
+                .maybeSingle();
+
             if (error) throw error;
 
+            // 2. Türkçe karakterleri ve harf büyüklüklerini tamamen standartlaştıran yardımcı fonksiyon
             const trTemizle = (str) => {
                 return (str || "").toString().toLowerCase()
-                    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
-                    .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
-                    .replace(/i̇/g, 'i').trim();
+                    .replace(/ı/g, 'i')
+                    .replace(/ğ/g, 'g')
+                    .replace(/ü/g, 'u')
+                    .replace(/ş/g, 's')
+                    .replace(/ö/g, 'o')
+                    .replace(/ç/g, 'c')
+                    .replace(/i̇/g, 'i') // İ harfindeki çift nokta uyumsuzlukları için
+                    .trim();
             };
 
+            // 3. Veritabanındaki ad soyad ile kullanıcının yazdığı adı Türkçe engellerine takılmadan eşleştiriyoruz
             if (data && trTemizle(data.ad_soyad) === trTemizle(name)) {
+                // Giriş başarılı
                 sessionStorage.setItem('khhb_auth_user', data.ad_soyad);
                 sessionStorage.setItem('khhb_auth_email', data.email);
                 sessionStorage.setItem('khhb_auth_role', data.rol || 'Kullanıcı');
+                
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('activeUserName').innerHTML = `<i class="bi bi-person-check-fill text-success"></i> ${data.ad_soyad} (${data.rol || 'Kullanıcı'})`;
+                
+                // Rol bazlı menü kontrolünü uygula
                 uygulaYetkilendirme(data.rol);
             } else {
-                errorEl.innerText = "Giriş bilgileri hatalı veya yetkiniz yok.";
+                errorEl.innerText = "Giriş bilgileri hatalı ya da yetkiniz bulunmuyor.";
                 errorEl.style.display = "block";
             }
         } catch(err) {
             console.error("Giriş hatası:", err);
-            errorEl.innerText = "Sorgulama hatası oluştu.";
+            errorEl.innerText = "Sorgulama sırasında hata oluştu. Supabase bağlantısını ve 'profiles' tablonuzu kontrol edin.";
             errorEl.style.display = "block";
         } finally {
             btn.disabled = false;
@@ -684,9 +995,12 @@
         document.getElementById('loginPassword').value = "";
         document.getElementById('loginError').style.display = "none";
         document.getElementById('login-screen').style.display = 'flex';
+        
+        // Yetkiyi temizle
         uygulaYetkilendirme(null);
     }
 
+    // ---------- KULLANICI KENDİ ŞİFRESİNİ DEĞİŞTİRME MODÜLÜ ----------
     window.acSifreDegistirModal = () => {
         document.getElementById('oldPassword').value = "";
         document.getElementById('newPassword').value = "";
@@ -709,7 +1023,7 @@
         successEl.style.display = "none";
         
         if(!oldPass || !newPass || !newPassConfirm) {
-            errorEl.innerText = "Lütfen tüm alanları doldurunuz.";
+            errorEl.innerText = "Lütfen tüm şifre alanlarını doldurunuz.";
             errorEl.style.display = "block";
             return;
         }
@@ -718,29 +1032,49 @@
             errorEl.style.display = "block";
             return;
         }
+        
         const activeEmail = sessionStorage.getItem('khhb_auth_email');
+        
         try {
-            const { data: user, error: checkError } = await _supabase.from('profiles').select('*').eq('email', activeEmail).eq('sifre', oldPass).maybeSingle();
+            // 1. Mevcut şifreyi doğrula
+            const { data: user, error: checkError } = await _supabase
+                .from('profiles')
+                .select('*')
+                .eq('email', activeEmail)
+                .eq('sifre', oldPass)
+                .maybeSingle();
+            
             if (checkError) throw checkError;
+            
             if (!user) {
                 errorEl.innerText = "Mevcut şifreniz hatalı.";
                 errorEl.style.display = "block";
                 return;
             }
-            const { error: updateError } = await _supabase.from('profiles').update({ sifre: newPass }).eq('email', activeEmail);
+            
+            // 2. Şifreyi güncelle
+            const { error: updateError } = await _supabase
+                .from('profiles')
+                .update({ sifre: newPass })
+                .eq('email', activeEmail);
+            
             if (updateError) throw updateError;
+            
             successEl.innerText = "Şifreniz başarıyla güncellendi.";
             successEl.style.display = "block";
             setTimeout(() => { kapatSifreModal(); }, 1500);
+            
         } catch(err) {
-            console.error(err);
-            errorEl.innerText = "Şifre güncellenirken hata oluştu.";
+            console.error("Şifre güncelleme hatası:", err);
+            errorEl.innerText = "Şifre güncellenirken bir hata oluştu.";
             errorEl.style.display = "block";
         }
     }
 
+    // ---------- KULLANICI YÖNETİM PANELİ (ADMİNLER İÇİN) ----------
     window.kullaniciModalDisKlikKapat = (e) => { if(e.target.id === 'kullaniciModal') kapatKullaniciModal(); };
     window.kapatKullaniciModal = () => document.getElementById('kullaniciModal').classList.remove('active');
+    
     window.acYeniKullaniciModal = () => {
         document.getElementById('kullaniciModalBaslik').innerText = "👤 Yeni Kullanıcı Ekle";
         document.getElementById('editUserId').value = "";
@@ -756,13 +1090,20 @@
         const tbody = document.getElementById('kullaniciListesiGövde');
         if(!tbody) return;
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Yükleniyor...</td></tr>';
+        
         try {
-            const { data, error } = await _supabase.from('profiles').select('*').order('ad_soyad');
+            const { data, error } = await _supabase
+                .from('profiles')
+                .select('*')
+                .order('ad_soyad');
+            
             if (error) throw error;
+            
             if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Hiç kullanıcı bulunamadı.</td></tr>';
                 return;
             }
+            
             tbody.innerHTML = data.map(u => `
                 <tr>
                     <td><b>${u.ad_soyad}</b></td>
@@ -775,11 +1116,23 @@
                     </td>
                 </tr>
             `).join('');
+            
         } catch(err) {
-            console.error(err);
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Yükleme hatası.</td></tr>';
+            console.error("Kullanıcı listesi yükleme hatası:", err);
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Kullanıcılar yüklenirken bir hata oluştu.</td></tr>';
         }
     }
+    
+    window.acKullaniciDuzenleModal = (id, name, email, rol, sifre) => {
+        document.getElementById('kullaniciModalBaslik').innerText = "👤 Kullanıcı Bilgilerini Düzenle";
+        document.getElementById('editUserId').value = id;
+        document.getElementById('userAdSoyad').value = name;
+        document.getElementById('userEmail').value = email;
+        document.getElementById('userRol').value = rol || "Kullanıcı";
+        document.getElementById('userSifre').value = sifre || "";
+        document.getElementById('kullaniciFormError').style.display = "none";
+        document.getElementById('kullaniciModal').classList.add('active');
+    };
     
     async function kaydetKullanici() {
         const id = document.getElementById('editUserId').value;
@@ -795,19 +1148,29 @@
             errorEl.style.display = "block";
             return;
         }
+        
         try {
             if(id) {
-                const { error } = await _supabase.from('profiles').update({ ad_soyad: name, email: email, rol: rol, sifre: sifre }).eq('id', id);
+                // Güncelleme
+                const { error } = await _supabase
+                    .from('profiles')
+                    .update({ ad_soyad: name, email: email, rol: rol, sifre: sifre })
+                    .eq('id', id);
                 if (error) throw error;
             } else {
-                const { error } = await _supabase.from('profiles').insert({ ad_soyad: name, email: email, rol: rol, sifre: sifre });
+                // Yeni Kayıt
+                const { error } = await _supabase
+                    .from('profiles')
+                    .insert({ ad_soyad: name, email: email, rol: rol, sifre: sifre });
                 if (error) throw error;
             }
+            
             kapatKullaniciModal();
             await kullanicilariYukle();
+            
         } catch(err) {
-            console.error(err);
-            errorEl.innerText = "Kaydetme hatası.";
+            console.error("Kullanıcı kaydetme hatası:", err);
+            errorEl.innerText = "Kullanıcı kaydedilirken bir hata oluştu.";
             errorEl.style.display = "block";
         }
     }
@@ -815,16 +1178,20 @@
     window.kullaniciSil = async (id, name) => {
         if(confirm(`"${name}" adlı kullanıcıyı tamamen silmek istediğinize emin misiniz?`)) {
             try {
-                const { error } = await _supabase.from('profiles').delete().eq('id', id);
+                const { error } = await _supabase
+                    .from('profiles')
+                    .delete()
+                    .eq('id', id);
                 if (error) throw error;
                 await kullanicilariYukle();
             } catch(err) {
-                console.error(err);
-                alert("Silme hatası.");
+                console.error("Kullanıcı silme hatası:", err);
+                alert("Kullanıcı silinirken bir hata oluştu.");
             }
         }
     };
 
+    // ---------- YARDIMCI FONKSİYONLAR ----------
     const formatDonemAdi = (donem) => AYLAR[donem-1] || `${donem}. Dönem`;
     const showLoading = (elementId, mesaj = "Yükleniyor...") => { const el = document.getElementById(elementId); if(el) el.innerHTML = `<div class="loading">${mesaj}</div>`; };
     
@@ -835,7 +1202,7 @@
             const { data, error } = await query;
             if(error) throw error;
             return data;
-        } catch(err) { console.error(err); return null; }
+        } catch(err) { console.error(`fetchData hatası (${table}):`, err); return null; }
     }
 
     async function itirazDurumlariniYukle() {
@@ -844,9 +1211,10 @@
         data?.forEach(i => { itirazPerformansMap[i.performans_id] = true; });
     }
 
-    function degeri_cozumle(gd, trOrt, yon, puan, gp, performansId = null) {
+    function degerlendir(gd, trOrt, yon, puan, gp, performansId = null) {
         let itirazBadge = (performansId && itirazPerformansMap[performansId]) ? '<span class="badge-itiraz-var">📝 İtiraz var</span>' : '';
-        if (gd === null || gd === undefined || trOrt === null || trOrt === undefined) return { class: 'badge-muaf', text: '🔘 Muaf' + itirazBadge };
+        if (gd === null || gd === undefined || trOrt === null || trOrt === undefined) 
+            return { class: 'badge-muaf', text: '🔘 Muaf' + itirazBadge };
         const ilOrtBasari = yon === 'Pozitif' ? gd >= trOrt : gd <= trOrt;
         const puanOrani = (puan / gp) * 100;
         if (ilOrtBasari && puanOrani >= 75) return { class: 'badge-basarili', text: '✅ Mükemmel' + itirazBadge };
@@ -874,54 +1242,89 @@
 
     window.gostergeDetayGoster = function(id, ad, gd, trOrt, puan, gp, yon, gostergeKodu, kurumTipi) {
         document.getElementById('modalBaslik').innerHTML = `📊 ${gostergeKodu} - ${ad}`;
-        const yonTuru = yon === 'Pozitif' ? '↑ Pozitif' : '↓ Negatif';
+        const yonTuru = yon === 'Pozitif' ? '↑ Pozitif (Artmalı)' : '↓ Negatif (Azalmalı)';
         let html = `<div class="gosterge-detay"><strong>🎯 Hedef Yönü:</strong> ${yonTuru}</div>
                     <div class="gosterge-detay"><strong>📈 Gösterge Değeri (GD):</strong> ${gd ?? '-'}</div>
                     <div class="gosterge-detay"><strong>📊 TR Ortalama:</strong> ${trOrt ?? '-'}</div>
                     <div class="gosterge-detay"><strong>⭐ Alınan Puan / Gösterge Puanı:</strong> ${puan ?? 'null'}/${gp ?? '-'}</div>`;
-        if(itirazPerformansMap[id]) html += `<div class="gosterge-detay alert alert-warning py-1 mt-2"><strong>📝 İtiraz Durumu:</strong> İnceleme sürecinde.</div>`;
+        if(itirazPerformansMap[id]) html += `<div class="gosterge-detay alert alert-warning py-1 mt-2"><strong>📝 İtiraz Durumu:</strong> ⏳ İtiraz yapılmış ve inceleme sürecinde.</div>`;
+        else html += `<div class="gosterge-detay text-muted"><strong>📝 İtiraz Durumu:</strong> Henüz bir itiraz kaydı yok.</div>`;
         const pdfUrl = pdfUrlGetir(gostergeKodu, kurumTipi);
         if(pdfUrl) {
             const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-            html += `<div class="gosterge-detay mt-3">
-                    <iframe src="${viewerUrl}" style="width:100%; height:320px; border:1px solid #ddd; border-radius:8px;"></iframe>
-                    <a href="${pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary w-100 mt-2">Kılavuzu Yeni Sekmede Aç</a></div>`;
+            html += `<div class="gosterge-detay mt-3"><strong>📄 Gösterge Kılavuz Dokümanı:</strong>
+                    <iframe src="${viewerUrl}" style="width:100%; height:320px; border:1px solid #ddd; border-radius:8px; margin-top:5px;"></iframe>
+                    <a href="${pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary w-100 mt-2">🔗 Kılavuzu Yeni Sekmede Aç</a></div>`;
         }
         document.getElementById('modalIcerik').innerHTML = html;
         document.getElementById('gostergeModal').classList.add('active');
     };
     
     window.kapatModal = () => document.getElementById('gostergeModal').classList.remove('active');
-    window.modalDisKlikKapat = (e) => { if(e.target.id === 'gostergeModal') kapatModal(); };
+    
+    window.modalDisKlikKapat = function(e) { 
+        if(e.target.id === 'gostergeModal') {
+            kapatModal(); 
+        }
+    };
 
+    // ---------- DİNAMİK YIL/DÖNEM FİLTRELERİNİ DOLDUR ----------
     async function dinamikFiltreleriDoldur() {
-        const { data } = await _supabase.from('toplam_puanlar').select('donem, yil');
-        if(!data) return;
-        const yillar = [...new Set(data.map(d => d.yil).filter(y => y))].sort((a,b)=>b-a);
-        const donemler = [...new Set(data.map(d => d.donem).filter(d => d))].sort((a,b)=>a-b);
+        const { data: donemlerData } = await _supabase.from('toplam_puanlar').select('donem, yil');
+        if(!donemlerData) return;
+        const yillar = [...new Set(donemlerData.map(d => d.yil).filter(y => y))].sort((a,b)=>b-a);
+        const donemler = [...new Set(donemlerData.map(d => d.donem).filter(d => d))].sort((a,b)=>a-b);
+        
         mevcutYillarDonemler = { yillar, donemler };
 
         const yilSelect = document.getElementById('f-yil');
-        if(yilSelect && yillar.length > 0) {
+        if(yilSelect) {
             yilSelect.innerHTML = yillar.map(y => `<option value="${y}">${y}</option>`).join('');
-            yilSelect.value = yillar[0];
+            if (yillar.length > 0) {
+                yilSelect.value = yillar[0]; // En güncel yıl varsayılan seçilir
+            }
         }
+        
+        // En güncel yıla ait en son aktif dönemi tespit et
         const enSonYil = yillar[0];
-        const enSonDonem = [...new Set(data.filter(d => d.yil === enSonYil).map(d => d.donem))].sort((a,b)=>b-a)[0];
+        const enSonYilinDonemleri = [...new Set(donemlerData.filter(d => d.yil === enSonYil).map(d => d.donem))].sort((a,b)=>b-a);
+        const enSonDonem = enSonYilinDonemleri[0];
 
         const donemSelect = document.getElementById('f-donem');
-        if(donemSelect && enSonDonem) {
+        if(donemSelect) {
             donemSelect.innerHTML = donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
-            donemSelect.value = enSonDonem;
+            if (enSonDonem) {
+                donemSelect.value = enSonDonem; // En güncel dönemi varsayılan olarak seç
+            }
         }
     }
 
+    // ---------- GENEL BAKIŞ ----------
     async function dashboard() {
-        showLoading('top-hastane'); showLoading('top-adsm');
-        let yil = document.getElementById('f-yil')?.value;
-        let donem = document.getElementById('f-donem')?.value;
-        const data = await fetchData('toplam_puanlar', '*', { yil, donem });
-        if(!data?.length) return;
+        showLoading('top-hastane', 'Yükleniyor...');
+        showLoading('top-adsm', 'Yükleniyor...');
+        
+        let seciliYil = document.getElementById('f-yil')?.value;
+        let seciliDonem = document.getElementById('f-donem')?.value;
+        
+        if(!seciliYil || !seciliDonem) {
+            const { data: enSon } = await _supabase.from('toplam_puanlar').select('yil, donem').order('yil', {ascending:false}).order('donem', {ascending:false}).limit(1).maybeSingle();
+            seciliYil = enSon?.yil || '2026';
+            seciliDonem = enSon?.donem || '2';
+            
+            if(document.getElementById('f-yil')) document.getElementById('f-yil').value = seciliYil;
+            if(document.getElementById('f-donem')) document.getElementById('f-donem').value = seciliDonem;
+        }
+
+        const data = await fetchData('toplam_puanlar', '*', { yil: seciliYil, donem: seciliDonem });
+        if(!data?.length) {
+            document.getElementById('s-toplam').innerText = '0';
+            document.getElementById('s-h-ort').innerText = '0.0';
+            document.getElementById('s-a-ort').innerText = '0.0';
+            document.getElementById('top-hastane').innerHTML = '<div class="text-muted small">Seçili dönemde veri bulunamadı.</div>';
+            document.getElementById('top-adsm').innerHTML = '<div class="text-muted small">Seçili dönemde veri bulunamadı.</div>';
+            return;
+        }
         
         document.getElementById('s-toplam').innerText = data.length;
         const hastane = data.filter(x => x.kurum_tipi === 'Hastane');
@@ -937,22 +1340,31 @@
         document.getElementById('top-adsm').innerHTML = topA.map((k,i)=>`<div class="rank-card"><div><span class="rank-number">${i+1}</span> <strong>${k.kurum_adi}</strong></div><span class="text-primary fw-bold">${k.toplam_puan} Puan</span></div>`).join('');
     }
 
+    // ---------- TÜM BÖLGE ----------
     window.bolgeListesi = async function() {
         const seciliYil = document.getElementById('bolgeFiltreYil')?.value;
         const seciliDonem = document.getElementById('bolgeFiltreDonem')?.value;
         let tip = document.getElementById('bolgeFiltreTip')?.value;
+        
         if(!seciliYil || !seciliDonem) return;
         
         let query = _supabase.from('toplam_puanlar').select('*').eq('yil', seciliYil).eq('donem', seciliDonem);
         if(tip === 'Hastane') query = query.eq('kurum_tipi', 'Hastane');
         if(tip === 'ADSM') query = query.in('kurum_tipi', ['ADSM', 'ADSH']);
         
-        const { data } = await query.order('toplam_puan', { ascending: false });
+        const { data, error } = await query.order('toplam_puan', { ascending: false });
         const tbody = document.querySelector('#table-bolge tbody');
         if(!tbody) return;
+        
+        if(error || !data?.length) { 
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Seçilen dönem ve filtrelere uygun veri bulunamadı.</td></tr>`; 
+            return; 
+        }
+        
         tbody.innerHTML = data.map(d => `<tr><td><b>${d.kurum_adi}</b></td><td>${d.kurum_tipi}</td><td class="fw-bold text-primary">${d.toplam_puan}</td><td>${d.rol_ortalamasi}</td><td>${parseFloat(d.toplam_puan) >= parseFloat(d.rol_ortalamasi) ? '<span class="badge-basarili">✅ Başarılı</span>' : '<span class="badge-kritik">❌ Altında</span>'}</td></tr>`).join('');
     };
 
+    // ---------- KURUM BAZLI ----------
     window.kurumAnaliz = async function() {
         const kurum = document.getElementById('f-kurum').value;
         const yil = document.getElementById('f-yil').value;
@@ -961,24 +1373,29 @@
         await itirazDurumlariniYukle();
         
         const { data: perfRaw } = await _supabase.from('performans').select('*').eq('kurum_adi', kurum).eq('yil', yil).eq('donem', donem);
-        if(!perfRaw?.length) { document.getElementById('kurumAnalizIcerik').innerHTML = `<div class="text-center py-4 text-muted">Bu dönem için veri bulunamadı.</div>`; return; }
+        if(!perfRaw?.length) { document.getElementById('kurumAnalizIcerik').innerHTML = `<div class="text-center py-4 text-muted">Bu dönem için kuruma ait performans verisi bulunamadı.</div>`; return; }
         
         const perf = perfRaw.sort((a,b) => {
-            return (parseInt(a.gosterge_kodu?.split('-')[2]) || 0) - (parseInt(b.gosterge_kodu?.split('-')[2]) || 0);
+            const numA = parseInt(a.gosterge_kodu?.split('-')[2]) || 0;
+            const numB = parseInt(b.gosterge_kodu?.split('-')[2]) || 0;
+            return numA - numB;
         });
         
         const { data: toplam = null } = await _supabase.from('toplam_puanlar').select('toplam_puan,rol_ortalamasi').eq('kurum_adi', kurum).eq('yil', yil).eq('donem', donem).maybeSingle() || {};
+        
+        // "Excel'e Aktar" butonu tablonun hemen üstüne eklendi
         let html = `
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div class="fw-bold fs-5">📊 ${kurum} - ${formatDonemAdi(donem)} ${yil} Analiz Raporu</div>
-                <button class="btn btn-sm btn-outline-success" onclick="window.exportTableToExcel('kurumAnalizTablo', 'Rapor')">Excel'e Aktar</button>
+                <button class="btn btn-sm btn-outline-success" style="border-radius:10px;" onclick="window.exportTableToExcel('kurumAnalizTablo', '${kurum.replace(/\\s+/g, '_')}_Analiz_Raporu')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
             </div>
         `;
-        if(toplam) html += `<div class="alert alert-info py-2 mb-3">🏆 <b>Toplam Puanı:</b> <span class="fs-5 fw-bold text-primary">${toplam.toplam_puan}</span> | <b>Rol Ortalaması:</b> ${toplam.rol_ortalamasi}</div>`;
+        if(toplam) html += `<div class="alert alert-info py-2 mb-3" style="border-radius: 12px;">🏆 <b>Toplam Puanı:</b> <span class="fs-5 fw-bold text-primary">${toplam.toplam_puan}</span> | <b>Rol Ortalaması:</b> ${toplam.rol_ortalamasi}</div>`;
+        
         html += `<div class="table-responsive"><table id="kurumAnalizTablo" class="table table-hover align-middle"><thead><tr><th>Gösterge Adı</th><th>Beklenen Yön</th><th>GD</th><th>TR Ort</th><th>Puan / GP</th><th>Değerlendirme</th><th>İşlem</th></tr></thead><tbody>`;
         
         for(const r of perf) {
-            const durum = degeri_cozumle(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp, r.id);
+            const durum = degerlendir(r.gd, r.tr_ort, r.gosterge_yonu, r.puan, r.gp, r.id);
             html += `<tr>
                 <td><a href="#" class="text-decoration-none fw-semibold" onclick="window.gostergeDetayGoster('${r.id}','${r.gosterge_adi.replace(/'/g, "\\'")}', '${r.gd}', '${r.tr_ort}', '${r.puan}', '${r.gp}', '${r.gosterge_yonu}', '${r.gosterge_kodu}', '${r.kurum_tipi}'); return false;">${r.gosterge_kodu} - ${r.gosterge_adi}</a></td>
                 <td>${yonOku(r.gosterge_yonu)}</td><td><b>${r.gd??'-'}</b></td><td>${r.tr_ort??'-'}</td><td>${r.puan??'null'}/${r.gp}</td>
@@ -990,11 +1407,12 @@
         document.getElementById('kurumAnalizIcerik').innerHTML = html;
     };
 
+    // ---------- İTİRAZLAR ----------
     window.itirazEkle = async function(pid, kurum, gosterge, yil, donem) {
-        const metin = prompt(`İtiraz Gerekçenizi Yazınız:`);
+        const metin = prompt(`${kurum}\n${gosterge}\n${yil}/${donem}\nİtiraz Gerekçenizi Yazınız:`);
         if(!metin) return;
         const { error } = await _supabase.from('itirazlar').insert({ performans_id: pid, itiraz_metni: metin, durum: 'beklemede' });
-        alert(error ? "Hata" : "✅ Başarıyla kaydedildi.");
+        alert(error ? "Hata: " + error.message : "✅ İtiraz başarıyla kaydedildi.");
         if(!error) { await itirazDurumlariniYukle(); window.kurumAnaliz(); }
     };
 
@@ -1005,7 +1423,7 @@
     };
 
     window.itirazSil = async function(id) {
-        if(confirm('Silmek istiyor musunuz?')) {
+        if(confirm('İtiraz kaydını silmek istediğinize emin misiniz?')) {
             await _supabase.from('itirazlar').delete().eq('id', id);
             window.itirazlariGoster();
         }
@@ -1014,7 +1432,7 @@
     window.itirazlariGoster = async function() {
         const { data: itirazlar } = await _supabase.from('itirazlar').select('*').order('olusturma_tarihi', {ascending: false});
         const div = document.getElementById('itirazListe');
-        if(!itirazlar?.length) { div.innerHTML = 'Aktif itiraz bulunamadı.'; return; }
+        if(!itirazlar?.length) { div.innerHTML = '<div class="alert alert-info" style="border-radius:12px;">Sistemde kayıtlı aktif itiraz bulunmamaktadır.</div>'; return; }
         
         const { data: performanslar } = await _supabase.from('performans').select('*').in('id', itirazlar.map(i=>i.performans_id));
         const perfMap = Object.fromEntries(performanslar?.map(p=>[p.id, p]) || []);
@@ -1022,31 +1440,35 @@
         div.innerHTML = itirazlar.map(it => {
             const p = perfMap[it.performans_id];
             if(!p) return '';
-            return `<div class="card mb-3 p-3 border-start border-4 border-warning bg-white shadow-sm">
+            return `<div class="card mb-3 p-3 border-start border-4 border-warning bg-white shadow-sm" style="border-radius:12px;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <div class="fw-bold text-primary">🏥 ${p.kurum_adi}</div>
-                        <div class="text-secondary small">📊 ${p.gosterge_adi}</div>
-                        <div class="mt-2 p-2 bg-light rounded text-dark"><strong>Gerekçe:</strong> ${it.itiraz_metni}</div>
+                        <div class="text-secondary small">📊 ${p.gosterge_adi} - <span class="badge bg-light text-dark">${formatDonemAdi(p.donem)} ${p.yil}</span></div>
+                        <div class="mt-2 p-2 bg-light rounded text-dark fs-7"><strong>📝 Gerekçe:</strong> ${it.itiraz_metni}</div>
                     </div>
                     <div style="min-width:140px;">
-                        <select id="durum_${it.id}" class="form-select form-select-sm mb-2">
+                        <select id="durum_${it.id}" class="form-select form-select-sm mb-2" style="border-radius:8px;">
                             <option value="beklemede" ${it.durum==='beklemede'?'selected':''}>⏳ Beklemede</option>
                             <option value="onaylandi" ${it.durum==='onaylandi'?'selected':''}>✅ Onaylandı</option>
                             <option value="reddedildi" ${it.durum==='reddedildi'?'selected':''}>❌ Reddedildi</option>
                         </select>
-                        <button class="btn btn-sm btn-success w-100 mb-1" onclick="window.itirazDurumGuncelle('${it.id}')">Güncelle</button>
-                        <button class="btn btn-sm btn-outline-danger w-100" onclick="window.itirazSil('${it.id}')">Sil</button>
+                        <button class="btn btn-sm btn-success w-100 mb-1" style="border-radius:8px;" onclick="window.itirazDurumGuncelle('${it.id}')">Güncelle</button>
+                        <button class="btn btn-sm btn-outline-danger w-100" style="border-radius:8px;" onclick="window.itirazSil('${it.id}')">Sil</button>
                     </div>
                 </div>
             </div>`;
         }).join('');
     };
 
+    // ---------- GÖSTERGE LİSTESİNİ DİNAMİK YÜKLE ----------
     async function gostergeListesiniYukle(kurumTipi) {
         let q = _supabase.from('performans').select('gosterge_adi, gosterge_kodu');
-        if(kurumTipi === 'Hastane') q = q.eq('kurum_tipi', 'Hastane');
-        else if(kurumTipi === 'ADSM') q = q.in('kurum_tipi', ['ADSM', 'ADSH']);
+        if(kurumTipi === 'Hastane') {
+            q = q.eq('kurum_tipi', 'Hastane');
+        } else if(kurumTipi === 'ADSM') {
+            q = q.in('kurum_tipi', ['ADSM', 'ADSH']);
+        }
         const { data } = await q;
         const unique = [];
         const seen = new Set();
@@ -1057,15 +1479,23 @@
                 unique.push({ adi: item.gosterge_adi, kodu: item.gosterge_kodu, label: label });
             }
         });
-        unique.sort((a,b) => (parseInt(a.kodu?.split('-')[2]) || 0) - (parseInt(b.kodu?.split('-')[2]) || 0));
+        unique.sort((a,b) => {
+            const numA = parseInt(a.kodu?.split('-')[2]) || 0;
+            const numB = parseInt(b.kodu?.split('-')[2]) || 0;
+            return numA - numB;
+        });
+        
         const selectEl = document.getElementById('raporGosterge');
         if (selectEl) {
-            selectEl.innerHTML = '<option value="">Gösterge Seçiniz</option>' + unique.map(g => `<option value="${g.adi}">${g.label}</option>`).join('');
+            selectEl.innerHTML = '<option value="">Analiz Edilecek Gösterge Seçin</option>' + 
+                unique.map(g => `<option value="${g.adi}">${g.label}</option>`).join('');
         }
     }
 
+    // ---------- RAPORLAR SAYFASI ----------
     async function raporlar() {
         const container = document.getElementById('raporlar');
+        
         const globalYil = document.getElementById('f-yil')?.value || mevcutYillarDonemler.yillar[0];
         const globalDonem = document.getElementById('f-donem')?.value || mevcutYillarDonemler.donemler[0];
 
@@ -1080,115 +1510,259 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
-                                <select id="raporKurumTipi" class="form-select form-select-sm">
-                                    <option value="">Tümü</option>
+                                <select id="raporKurumTipi" class="form-select form-select-sm" style="border-radius:10px;">
+                                    <option value="">Tümü (Hastane & ADSM)</option>
                                     <option value="Hastane">Hastane</option>
                                     <option value="ADSM">ADSM / ADSH</option>
                                 </select>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label small fw-bold text-secondary">Analiz Edilecek Gösterge</label>
-                                <select id="raporGosterge" class="form-select form-select-sm"></select>
+                                <select id="raporGosterge" class="form-select form-select-sm" style="border-radius:10px;">
+                                    <option value="">Gösterge Seçiniz</option>
+                                </select>
                             </div>
                             <div class="col-md-3 d-flex align-items-end">
-                                <button class="btn-sm-custom w-100" id="trendGosterBtn">📊 Grafiği Çiz</button>
+                                <button class="btn-sm-custom w-100" id="trendGosterBtn">📊 Grafiği Çiz (Soldan Sağa)</button>
                             </div>
                         </div>
-                        <div class="chart-container"><canvas id="gostergeChart"></canvas></div>
+                        <div class="chart-container">
+                            <canvas id="gostergeChart"></canvas>
+                        </div>
                     </div>
                 </div>
+                
                 <div class="col-12">
                     <div class="kds-card">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                            <h6>🎯 Kurumsal Karne & Hedef Sapma Analizi</h6>
+                            <div>
+                                <h6 class="mb-0">🎯 Kurumsal Karne & Hedef Sapma Analizi (Kritik Eşik Kontrolü)</h6>
+                                <p class="text-muted small mb-0">Türkiye ortalamasından en negatif yönde sapan kurum ve göstergelerin dökümüdür.</p>
+                            </div>
                             <div class="d-flex gap-2">
-                                <select id="sapmaFiltreYil" class="form-select form-select-sm">${yilOptions}</select>
-                                <select id="sapmaFiltreDonem" class="form-select form-select-sm">${donemOptions}</select>
+                                <div class="filter-group text-start" style="min-width:100px;">
+                                    <label class="small fw-bold text-secondary">Yıl</label>
+                                    <select id="sapmaFiltreYil" class="form-select form-select-sm" style="border-radius:8px;">${yilOptions}</select>
+                                </div>
+                                <div class="filter-group text-start" style="min-width:110px;">
+                                    <label class="small fw-bold text-secondary">Dönem</label>
+                                    <select id="sapmaFiltreDonem" class="form-select form-select-sm" style="border-radius:8px;">${donemOptions}</select>
+                                </div>
                             </div>
                         </div>
                         <div class="table-responsive">
                             <table class="table table-sm table-hover" id="sapmaTablo">
                                 <thead>
-                                    <tr><th>Kurum Adı</th><th>Gösterge Adı</th><th class="text-center">GD</th><th class="text-center">TR Ort</th><th class="text-center">Sapma</th></tr>
+                                    <tr>
+                                        <th>Kurum Adı</th>
+                                        <th>Gösterge Adı</th>
+                                        <th class="text-center">Kurum Verisi (GD)</th>
+                                        <th class="text-center">TR Ortalaması</th>
+                                        <th class="text-center">Sapma Oranı</th>
+                                    </tr>
                                 </thead>
-                                <tbody></tbody>
+                                <tbody>
+                                    <tr><td colspan="5" class="text-center text-muted">Yükleniyor...</td></tr>
+                                </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>`;
         
+        // İlk açılışta tüm göstergeleri yükle
         await gostergeListesiniYukle('');
-        document.getElementById('raporKurumTipi').onchange = async (e) => { await gostergeListesiniYukle(e.target.value); };
+        
+        // Kurum türü değiştiğinde ilgili göstergeleri dinamik olarak getir
+        document.getElementById('raporKurumTipi').onchange = async (e) => {
+            await gostergeListesiniYukle(e.target.value);
+        };
+        
         document.getElementById('trendGosterBtn').onclick = async () => {
             const gosterge = document.getElementById('raporGosterge').value;
             const kurumTipi = document.getElementById('raporKurumTipi').value;
             if(!gosterge) return;
             
             let query = _supabase.from('performans').select('kurum_adi, gd, donem, kurum_tipi').eq('gosterge_adi', gosterge);
-            if(kurumTipi === 'Hastane') query = query.eq('kurum_tipi', 'Hastane');
-            else if(kurumTipi === 'ADSM') query = query.in('kurum_tipi', ['ADSM', 'ADSH']);
+            if(kurumTipi === 'Hastane') {
+                query = query.eq('kurum_tipi', 'Hastane');
+            } else if(kurumTipi === 'ADSM') {
+                query = query.in('kurum_tipi', ['ADSM', 'ADSH']);
+            }
             const { data } = await query;
             
             const sonuc = {};
             data?.forEach(r => { if(!sonuc[r.kurum_adi]) sonuc[r.kurum_adi] = {}; sonuc[r.kurum_adi][`d${r.donem}`] = r.gd; });
             const labels = Object.keys(sonuc).slice(0,10);
+            
+            // DİNAMİK DATASET YAPILANDIRMASI
             const donemler = [...new Set(data?.map(r => r.donem).filter(d => d))].sort((a,b)=>a-b);
+            const colors = [
+                { bg: 'rgba(79, 70, 229, 0.75)', border: 'rgba(79, 70, 229, 1)' },
+                { bg: 'rgba(245, 158, 11, 0.75)', border: 'rgba(245, 158, 11, 1)' },
+                { bg: 'rgba(16, 185, 129, 0.75)', border: 'rgba(16, 185, 129, 1)' },
+                { bg: 'rgba(239, 68, 68, 0.75)', border: 'rgba(239, 68, 68, 1)' },
+                { bg: 'rgba(139, 92, 246, 0.75)', border: 'rgba(139, 92, 246, 1)' },
+                { bg: 'rgba(236, 72, 153, 0.75)', border: 'rgba(236, 72, 153, 1)' },
+                { bg: 'rgba(20, 184, 166, 0.75)', border: 'rgba(20, 184, 166, 1)' }
+            ];
             
             const datasets = donemler.map((d, index) => {
+                const color = colors[index % colors.length];
                 const monthLabel = AYLAR[d - 1] || `${d}. Dönem`;
+                const dData = labels.map(l => sonuc[l]?.[`d${d}`] !== undefined ? sonuc[l][`d${d}`] : null);
+                
                 return {
                     label: `${monthLabel} GD`,
-                    data: labels.map(l => sonuc[l]?.[`d${d}`] !== undefined ? sonuc[l][`d${d}`] : null),
-                    backgroundColor: 'rgba(79, 70, 229, 0.75)',
-                    borderWidth: 1
+                    data: dData,
+                    backgroundColor: color.bg,
+                    borderColor: color.border,
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    hoverBackgroundColor: color.bg.replace('0.75', '0.95')
                 };
             });
             
             if(charts.gosterge) charts.gosterge.destroy();
             charts.gosterge = new Chart(document.getElementById('gostergeChart'), { 
                 type: 'bar', 
-                data: { labels, datasets }, 
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false } 
+                data: { 
+                    labels, 
+                    datasets: datasets 
+                }, 
+                options: { 
+                    indexAxis: 'y', // Yatay Görünüm
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                font: {
+                                    family: "'Plus Jakarta Sans', sans-serif",
+                                    size: 11
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                borderDash: [5, 5]
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
+                } 
             });
         };
 
         document.getElementById('sapmaFiltreYil').onchange = () => hedefSapmaAnaliziYukle();
         document.getElementById('sapmaFiltreDonem').onchange = () => hedefSapmaAnaliziYukle();
+
         await hedefSapmaAnaliziYukle();
     }
 
+    // ---------- RAPORLAR: HEDEF SAPMA ANALİZİ YÜKLEME FONKSİYONU ----------
     async function hedefSapmaAnaliziYukle() {
         const tbody = document.querySelector('#sapmaTablo tbody');
         if(!tbody) return;
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Yükleniyor...</td></tr>';
+        
         const yil = document.getElementById('sapmaFiltreYil')?.value;
         const donem = document.getElementById('sapmaFiltreDonem')?.value;
-        if(!yil || !donem) return;
+        
+        if(!yil || !donem) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Lütfen yıl ve dönem seçiniz.</td></tr>';
+            return;
+        }
         
         try {
-            const { data, error } = await _supabase.from('performans').select('*').eq('yil', yil).eq('donem', donem);
+            const { data, error } = await _supabase
+                .from('performans')
+                .select('*')
+                .eq('yil', yil)
+                .eq('donem', donem);
+            
             if (error) throw error;
+            
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Seçili dönem için veri bulunamadı.</td></tr>';
+                return;
+            }
+            
             const sapmalar = [];
+            
             data.forEach(r => {
                 const gd = parseFloat(r.gd);
                 const trOrt = parseFloat(r.tr_ort);
+                
                 if (isNaN(gd) || isNaN(trOrt) || trOrt === 0) return;
-                let sapma = 0;
-                let neg = false;
-                if (r.gosterge_yonu === 'Pozitif' && gd < trOrt) { sapma = ((trOrt - gd) / trOrt) * 100; neg = true; }
-                else if (r.gosterge_yonu === 'Negatif' && gd > trOrt) { sapma = ((gd - trOrt) / trOrt) * 100; neg = true; }
-                if (neg && sapma > 0) {
-                    sapmalar.push({ kurum_adi: r.kurum_adi, gosterge_adi: r.gosterge_kodu ? `${r.gosterge_kodu} - ${r.gosterge_adi}` : r.gosterge_adi, gd, tr_ort: trOrt, sapma_orani: sapmaOrani = sapma });
+                
+                let sapmaOrani = 0;
+                let isNegativeDeviation = false;
+                
+                if (r.gosterge_yonu === 'Pozitif') {
+                    // Gösterge Pozitif yönde ise ve Gösterge Değeri Türkiye ortalamasının altında ise negatif sapmadır.
+                    if (gd < trOrt) {
+                        sapmaOrani = ((trOrt - gd) / trOrt) * 100;
+                        isNegativeDeviation = true;
+                    }
+                } else if (r.gosterge_yonu === 'Negatif') {
+                    // Gösterge Negatif yönde ise ve Gösterge Değeri Türkiye ortalamasının üzerinde ise negatif sapmadır.
+                    if (gd > trOrt) {
+                        sapmaOrani = ((gd - trOrt) / trOrt) * 100;
+                        isNegativeDeviation = true;
+                    }
+                }
+                
+                if (isNegativeDeviation && sapmaOrani > 0) {
+                    sapmalar.push({
+                        kurum_adi: r.kurum_adi,
+                        gosterge_adi: r.gosterge_kodu ? `${r.gosterge_kodu} - ${r.gosterge_adi}` : r.gosterge_adi,
+                        gd: gd,
+                        tr_ort: trOrt,
+                        sapma_orani: sapmaOrani
+                    });
                 }
             });
+            
+            // En yüksek negatif sapma oranına göre sırala
             sapmalar.sort((a, b) => b.sapma_orani - a.sapma_orani);
-            const list = sapmalar.slice(0, 15);
-            if(list.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Kritik sapma bulunamadı.</td></tr>'; return; }
-            tbody.innerHTML = list.map(s => `<tr><td><b>${s.kurum_adi}</b></td><td>${s.gosterge_adi}</td><td class="text-center">${s.gd}</td><td class="text-center">${s.tr_ort}</td><td class="text-center text-danger fw-bold">-%${s.sapma_orani.toFixed(1)}</td></tr>`).join('');
-        } catch(e){ console.error(e); }
+            
+            // İlk 15 sonucu göster
+            const listelenen = sapmalar.slice(0, 15);
+            
+            if (listelenen.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success fw-semibold">Mükemmel! Türkiye ortalamasının gerisinde kalan negatif sapmalı kurum bulunamadı.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = listelenen.map(s => `
+                <tr>
+                    <td><b>${s.kurum_adi}</b></td>
+                    <td>${s.gosterge_adi}</td>
+                    <td class="text-center fw-semibold text-dark">${s.gd}</td>
+                    <td class="text-center text-secondary">${s.tr_ort}</td>
+                    <td class="text-center text-danger fw-bold">-%${s.sapma_orani.toFixed(1)}</td>
+                </tr>
+            `).join('');
+            
+        } catch(err) {
+            console.error("Sapma analizi yükleme hatası:", err);
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Veriler hesaplanırken teknik bir hata oluştu.</td></tr>';
+        }
     }
 
+    // ---------- DÖNEMSEL KARŞILAŞTIRMA ----------
     window.karsilastirmaKurumListesiGuncelle = async function() {
         const tip = document.getElementById('karsKurumTip').value;
         let q = _supabase.from('toplam_puanlar').select('kurum_adi');
@@ -1197,16 +1771,32 @@
         const { data } = await q;
         const tekil = [...new Set((data||[]).map(d=>d.kurum_adi))].sort();
         document.getElementById('karsKurumAdi').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k=>`<option value="${k}">${k}</option>`).join('');
+        
+        document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-muted small text-center py-3"><i class="bi bi-info-circle"></i> Lütfen önce yukarıdan bir kurum seçiniz.</div>';
     };
 
     window.karsilastirmaDonemListesiGuncelle = async function() {
         const kurum = document.getElementById('karsKurumAdi').value;
-        if(!kurum) return;
+        if(!kurum) { 
+            document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-muted small text-center py-3"><i class="bi bi-info-circle"></i> Lütfen önce yukarıdan bir kurum seçiniz.</div>'; 
+            return; 
+        }
+        
         const { data } = await _supabase.from('toplam_puanlar').select('donem').eq('kurum_adi', kurum).order('donem');
         const donemler = [...new Set((data||[]).map(d=>d.donem))].sort((a,b)=>a-b);
+        
+        if(donemler.length === 0) {
+            document.getElementById('karsDonemCheckboxlarInner').innerHTML = '<div class="text-danger small text-center py-3"><i class="bi bi-exclamation-triangle"></i> Bu kuruma ait aktif dönem bulunamadı.</div>';
+            return;
+        }
+
         let html = `<div class="d-flex flex-wrap gap-2">`;
         donemler.forEach(d => {
-            html += `<label class="bg-white px-3 py-2 border rounded d-flex align-items-center gap-2"><input type="checkbox" class="donem-checkbox" value="${d}" checked> <span>${formatDonemAdi(d)}</span></label>`;
+            html += `
+            <label class="bg-white px-3 py-2 border rounded d-flex align-items-center gap-2 shadow-sm" style="cursor:pointer; user-select:none; transition:0.2s; border-radius:10px;">
+                <input type="checkbox" class="donem-checkbox form-check-input m-0" value="${d}" checked> 
+                <span class="fs-7 fw-semibold text-dark">${formatDonemAdi(d)}</span>
+            </label>`;
         });
         html += `</div>`;
         document.getElementById('karsDonemCheckboxlarInner').innerHTML = html;
@@ -1215,7 +1805,7 @@
     window.donemselKarsilastir = async function() {
         const kurum = document.getElementById('karsKurumAdi').value;
         const seciliDonemler = Array.from(document.querySelectorAll('.donem-checkbox:checked')).map(cb=>parseInt(cb.value)).sort((a,b)=>a-b);
-        if(!kurum || seciliDonemler.length===0) return;
+        if(!kurum || seciliDonemler.length===0) { alert('Lütfen bir kurum ve en az bir dönem seçin.'); return; }
         
         await itirazDurumlariniYukle();
         const toplamlar = {};
@@ -1224,47 +1814,122 @@
             toplamlar[d] = data || { toplam_puan: '-', rol_ortalamasi: '-' };
         }
         
-        const { data: tumGostergeler } = await _supabase.from('performans').select('*').eq('kurum_adi', kurum).in('donem', seciliDonemler);
+        const { data: tumGostergeler } = await _supabase.from('performans').select('id, gosterge_kodu, gosterge_adi, gosterge_yonu, donem, gd, tr_ort, puan, gp, kurum_tipi').eq('kurum_adi', kurum).in('donem', seciliDonemler);
         const gostergeMap = new Map();
         tumGostergeler?.forEach(g => { 
             if(!gostergeMap.has(g.gosterge_kodu)) {
-                gostergeMap.set(g.gosterge_kodu, { id: g.id, kod: g.gosterge_kodu, ad: g.gosterge_adi, yon: g.gosterge_yonu, gp: g.gp, puan: g.puan, kurum_tipi: g.kurum_tipi, gd: g.gd, tr_ort: g.tr_ort }); 
+                gostergeMap.set(g.gosterge_kodu, { 
+                    id: g.id,
+                    kod: g.gosterge_kodu, 
+                    ad: g.gosterge_adi, 
+                    yon: g.gosterge_yonu,
+                    gp: g.gp,
+                    puan: g.puan,
+                    kurum_tipi: g.kurum_tipi,
+                    gd: g.gd,
+                    tr_ort: g.tr_ort
+                }); 
+            } else {
+                const existing = gostergeMap.get(g.gosterge_kodu);
+                existing.id = g.id;
+                existing.gp = g.gp;
+                existing.puan = g.puan;
+                existing.gd = g.gd;
+                existing.tr_ort = g.tr_ort;
+                existing.kurum_tipi = g.kurum_tipi;
             }
         });
         const gostergeler = Array.from(gostergeMap.values()).sort((a,b)=> (parseInt(a.kod.split('-')[2]) || 0) - (parseInt(b.kod.split('-')[2]) || 0));
+        
         const gostergeDegerler = {};
         tumGostergeler?.forEach(g => { gostergeDegerler[`${g.gosterge_kodu}_${g.donem}`] = { gd: g.gd, tr_ort: g.tr_ort }; });
         
         let html = `
-            <div class="d-flex justify-content-between align-items-center mb-3"><h6>📊 Karşılaştırma Matrisi</h6></div>
-            <div class="table-responsive"><table id="karsilastirmaTablo" class="table table-bordered align-middle"><thead><tr><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th>${formatDonemAdi(d)}</th>`).join('')}</tr></thead><tbody>
-            <tr class="table-info fw-bold"><td>🏆 TOPLAM PUAN</td>${seciliDonemler.map(d=>`<td class="text-primary fs-5">${toplamlar[d].toplam_puan}</td>`).join('')}</tr>`;
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-table"></i> Karşılaştırma Sonuç Matrisi</h6>
+                <button class="btn btn-sm btn-outline-success" style="border-radius:10px;" onclick="window.exportTableToExcel('karsilastirmaTablo', '${kurum.replace(/\\s+/g, '_')}_Donemsel_Karsilastirma')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
+            </div>
+            <div class="table-responsive"><table id="karsilastirmaTablo" class="table table-bordered bg-white align-middle"><thead><tr class="table-light"><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th>${formatDonemAdi(d)} <br><small class="text-muted">(GD / TR Ort)</small></th>`).join('')}</tr></thead><tbody>
+            <tr class="table-info fw-bold text-dark"><td>🏆 TOPLAM PUAN</td>${seciliDonemler.map(d=>`<td class="text-primary fs-5">${toplamlar[d].toplam_puan}</td>`).join('')}</tr>
+            <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td>${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
+        
         for(let g of gostergeler) {
-            html += `<tr><td>${g.kod} - ${g.ad}</td>`;
+            html += `<tr>
+                <td>
+                    <a href="#" class="text-decoration-none fw-semibold text-dark" onclick="window.gostergeDetayGoster('${g.id}','${g.ad.replace(/'/g, "\\'")}', '${g.gd ?? ''}', '${g.tr_ort ?? ''}', '${g.puan ?? ''}', '${g.gp ?? ''}', '${g.yon}', '${g.kod}', '${g.kurum_tipi}'); return false;">
+                        <small class="text-muted font-monospace">${g.kod}</small> - ${g.ad}
+                    </a>
+                </td>`;
             for(let d of seciliDonemler) {
                 const val = gostergeDegerler[`${g.kod}_${d}`];
-                html += `<td>${val && val.gd!==null ? `<b>${val.gd}</b> / ${val.tr_ort}` : '-'}</td>`;
+                html += `<td>${val && val.gd!==null ? `<b>${val.gd}</b> <span class="text-muted">/ ${val.tr_ort}</span>` : '- / -'}</td>`;
             }
             html += `</tr>`;
         }
         html += `</tbody></table></div>`;
+        
+        const puanlar = seciliDonemler.map(d => toplamlar[d].toplam_puan !== '-' ? toplamlar[d].toplam_puan : 0);
+        html += `<div class="mt-4 p-3 bg-white border rounded" style="border-radius:12px;"><h6>📈 Dönemsel Toplam Puan Trend Grafiği</h6><div style="height:220px; position:relative;"><canvas id="karsilastirmaChart"></canvas></div></div>`;
+        
         document.getElementById('karsilastirmaSonuc').innerHTML = html;
+        
+        setTimeout(() => {
+            const ctx = document.getElementById('karsilastirmaChart')?.getContext('2d');
+            if(ctx) {
+                if(window.karsChart) window.karsChart.destroy();
+                window.karsChart = new Chart(ctx, { 
+                    type: 'line', 
+                    data: { 
+                        labels: seciliDonemler.map(d=>formatDonemAdi(d)), 
+                        datasets: [{ label: 'Kurum Toplam Puanı', data: puanlar, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', tension: 0.1, fill: true }] 
+                    }, 
+                    options: { responsive: true, maintainAspectRatio: false } 
+                });
+            }
+        }, 100);
     };
 
+    // ---------- GOOGLE E-TABLO CANLI VERI VE ANALIZ ENTEGRASYONU ----------
     async function initETabloDashboard() {
-        showLoading('eTabloDashboardContent');
+        showLoading('eTabloDashboardContent', 'Google E-Tablo verileri canlı olarak çekiliyor ve formüllerle işleniyor, lütfen bekleyiniz...');
+        
         const spreadsheetId = '1bK5aWZH-dQt3ej8kD548KXlu_owvHMomildqmdu6JwI';
         const dataUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=DATA`;
+        const raporUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=Rapor`;
+        
         try {
-            const dataRes = await fetch(dataUrl);
+            const [dataRes, raporRes] = await Promise.all([
+                fetch(dataUrl),
+                fetch(raporUrl)
+            ]);
+            
+            if(!dataRes.ok || !raporRes.ok) {
+                throw new Error("E-Tablo DATA sekmesi başarıyla alınamadı.");
+            }
+            
             const dataText = await dataRes.text();
+            const raporText = await raporRes.text();
+            
             googleSheetsData.rawDATA = parseCSV(dataText);
+            googleSheetsData.rawRapor = parseCSV(raporText);
+            
+            // Aktif alt sekmeyi çizdir
             renderETabloActiveView();
+            
         } catch(err) {
-            document.getElementById('eTabloDashboardContent').innerHTML = `<div class="alert alert-danger">Veri çekilemedi.</div>`;
+            console.error('Google E-Tablo verisi okunamadı:', err);
+            document.getElementById('eTabloDashboardContent').innerHTML = `
+                <div class="alert alert-danger py-4" style="border-radius:12px;">
+                    <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> Canlı Entegrasyon Hatası</h5>
+                    <p class="small mb-3">Google Sheets üzerinden veriler çekilemedi. Lütfen bağlantı izinlerini ve e-tablo adını kontrol edin.</p>
+                    <div class="p-2 bg-light rounded text-monospace small text-danger mb-3" style="font-size:11px;">Hata Detayı: ${err.message}</div>
+                    <button class="btn btn-sm btn-primary px-3" style="border-radius:10px;" onclick="initETabloDashboard()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
+                </div>
+            `;
         }
     }
 
+    // Alt sekmeler arası geçiş
     window.switchETabloSubTab = function(tabName) {
         currentETabloSubTab = tabName;
         document.querySelectorAll('#e-tablo .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -1273,117 +1938,522 @@
     };
 
     function renderETabloActiveView() {
-        if(currentETabloSubTab === 'rapor') renderRaporView();
-        else if(currentETabloSubTab === 'analiz') renderDATAAnalizView();
-        else if(currentETabloSubTab === 'raw') renderHamDATAView();
+        if(currentETabloSubTab === 'rapor') {
+            renderRaporView();
+        } else if(currentETabloSubTab === 'analiz') {
+            renderDATAAnalizView();
+        } else if(currentETabloSubTab === 'raw') {
+            renderHamDATAView();
+        }
+    }
+
+    function parseSheetDate(dateStr) {
+        if(!dateStr) return null;
+        dateStr = dateStr.trim();
+        const parts = dateStr.split('.');
+        if(parts.length === 3 && parts[2].length === 4) {
+            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+        }
+        return new Date(dateStr);
+    }
+
+    function getSortedDates(rows) {
+        const dates = new Set();
+        for(let i = 1; i < rows.length; i++) {
+            const dStr = rows[i][1];
+            if(dStr && dStr.trim()) {
+                dates.add(dStr.trim());
+            }
+        }
+        return Array.from(dates).sort((a,b) => {
+            const da = parseSheetDate(a);
+            const db = parseSheetDate(b);
+            return da - db;
+        });
+    }
+
+    // ---------- SUMIFS TAKLİTÇİSİ (JS TABANLI HESAPLAMA) ----------
+    function sumifs(rows, sumColIdx, criteriaPairs) {
+        let total = 0;
+        for(let i = 1; i < rows.length; i++) {
+            const r = rows[i];
+            let matches = true;
+            for(let pair of criteriaPairs) {
+                const colIdx = pair.colIdx;
+                const val = pair.val;
+                if(r[colIdx] === undefined || r[colIdx].toString().trim().toLowerCase() !== val.toString().trim().toLowerCase()) {
+                    matches = false;
+                    break;
+                }
+            }
+            if(matches && r[sumColIdx]) {
+                const num = parseFloat(r[sumColIdx].toString().replace(',', '.').trim());
+                if(!isNaN(num)) {
+                    total += num;
+                }
+            }
+        }
+        return total;
     }
 
     function renderRaporView() {
         const rows = googleSheetsData.rawDATA;
-        if(!rows || rows.length <= 1) return;
+        if(!rows || rows.length <= 1) {
+            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Analiz edilecek ham DATA bulunamadı.</div>';
+            return;
+        }
+        
         const sortedDates = getSortedDates(rows);
+        if(sortedDates.length === 0) {
+            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Verilerde geçerli tarih bulunamadı.</div>';
+            return;
+        }
+        
         const maxDate = sortedDates[sortedDates.length - 1];
-        let tableHtml = `<div class="alert alert-success py-2">Tarih: <b>${maxDate}</b></div><div class="table-responsive"><table class="table table-bordered"><thead><tr class="table-dark"><th>HASTANE</th><th>Yatak</th><th>Dolu</th><th>Boş</th><th>Oran</th></tr></thead><tbody>`;
+        
+        let tableHtml = `
+            <div class="alert alert-success py-2 small mb-3 d-flex justify-content-between align-items-center" style="border-radius:12px;">
+                <span><i class="bi bi-calendar-check"></i> Canlı Rapor Tarihi (Son Gün / MAK): <b>${maxDate}</b></span>
+                <span class="badge bg-dark">${HOSPITALS.length} Hastane Canlı Hesaplanıyor</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover table-bordered bg-white align-middle" style="font-size: 11.5px;">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>HASTANE</th>
+                            <th class="text-center">🏥 3. Seviye YB Yatak</th>
+                            <th class="text-center">🛏️ Dolu Yatak</th>
+                            <th class="text-center">🚪 Boş Yatak</th>
+                            <th class="text-center">📊 Dolu Yatak Oranı</th>
+                            <th class="text-center">🚨 YB Bekleyen Hasta</th>
+                            <th class="text-center">📥 Yatırılan Hasta (Kendi)</th>
+                            <th class="text-center">🚚 Dış Kurumdan Gelen</th>
+                            <th class="text-center">📤 Taburcu</th>
+                            <th class="text-center">🖤 Ex (Vefat)</th>
+                            <th class="text-center">📊 Taburcu+Ex</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        let totals = { yatak: 0, dolu: 0, bos: 0, bekleyen: 0, yatirilan: 0, disKurum: 0, taburcu: 0, ex: 0, taburcuEx: 0 };
+        
         HOSPITALS.forEach(h => {
             const yatak = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)"}]);
             const bos = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)"}]);
+            
             const dolu = yatak - bos;
-            const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(1) + "%" : "0%";
-            tableHtml += `<tr><td>${h}</td><td>${yatak}</td><td>${dolu}</td><td>${bos}</td><td class="fw-bold text-primary">${oranStr}</td></tr>`;
+            const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(2).replace('.', ',') : "0,00";
+            
+            const bekleyen = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"}]);
+            const yatirilan = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)"}]);
+            const disKurum = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)"}]);
+            
+            const taburcu = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)"}]);
+            const ex = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)"}]);
+            const taburcuEx = taburcu + ex;
+            
+            totals.yatak += yatak;
+            totals.dolu += dolu;
+            totals.bos += bos;
+            totals.bekleyen += bekleyen;
+            totals.yatirilan += yatirilan;
+            totals.disKurum += disKurum;
+            totals.taburcu += taburcu;
+            totals.ex += ex;
+            totals.taburcuEx += taburcuEx;
+            
+            tableHtml += `
+                <tr>
+                    <td class="fw-bold text-dark bg-light">${h}</td>
+                    <td class="text-center">${yatak}</td>
+                    <td class="text-center">${dolu}</td>
+                    <td class="text-center">${bos}</td>
+                    <td class="text-center fw-bold text-primary">${oranStr}%</td>
+                    <td class="text-center">${bekleyen}</td>
+                    <td class="text-center">${yatirilan}</td>
+                    <td class="text-center">${disKurum}</td>
+                    <td class="text-center text-secondary">${taburcu}</td>
+                    <td class="text-center text-danger">${ex}</td>
+                    <td class="text-center fw-bold text-dark bg-light">${taburcuEx}</td>
+                </tr>
+            `;
         });
+        
+        const totalOranStr = totals.yatak > 0 ? (totals.dolu / totals.yatak * 100).toFixed(2).replace('.', ',') : "0,00";
+        tableHtml += `
+            <tr class="table-secondary fw-bold text-dark">
+                <td>TOPLAM</td>
+                <td class="text-center">${totals.yatak}</td>
+                <td class="text-center">${totals.dolu}</td>
+                <td class="text-center">${totals.bos}</td>
+                <td class="text-center text-primary">${totalOranStr}%</td>
+                <td class="text-center">${totals.bekleyen}</td>
+                <td class="text-center">${totals.yatirilan}</td>
+                <td class="text-center">${totals.disKurum}</td>
+                <td class="text-center text-secondary">${totals.taburcu}</td>
+                <td class="text-center text-danger">${totals.ex}</td>
+                <td class="text-center text-dark">${totals.taburcuEx}</td>
+            </tr>
+        `;
+        
         tableHtml += `</tbody></table></div>`;
         document.getElementById('eTabloDashboardContent').innerHTML = tableHtml;
     }
 
     function renderDATAAnalizView() {
         const rows = googleSheetsData.rawDATA;
+        if(!rows || rows.length <= 1) {
+            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Analiz edilecek ham DATA bulunamadı.</div>';
+            return;
+        }
+        
         const hospOptions = HOSPITALS.map(h => `<option value="${h}">${h}</option>`).join('');
         const varOptions = VARIABLES.map(v => `<option value="${v}">${v}</option>`).join('');
-        document.getElementById('eTabloDashboardContent').innerHTML = `
-            <div class="row g-3 mb-3"><div class="col-md-6"><select id="trendFilterHospital" class="form-select">${hospOptions}</select></div><div class="col-md-6"><select id="trendFilterVariable" class="form-select">${varOptions}</select></div></div>
-            <div class="border p-3 bg-white"><div style="height:320px;"><canvas id="trendAnalysisCanvas"></canvas></div></div>`;
         
-        document.getElementById('trendFilterHospital').onchange = updateTrendChart;
-        document.getElementById('trendFilterVariable').onchange = updateTrendChart;
+        let html = `
+            <div class="row g-3 mb-4 p-3 bg-light rounded border">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-secondary">Hastane Seçin</label>
+                    <select id="trendFilterHospital" class="form-select form-select-sm" style="border-radius:8px;">${hospOptions}</select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-secondary">Değişken Seçin</label>
+                    <select id="trendFilterVariable" class="form-select form-select-sm" style="border-radius:8px;">${varOptions}</select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-secondary">Tarih Aralığı</label>
+                    <select id="trendFilterRange" class="form-select form-select-sm" style="border-radius:8px;">
+                        <option value="7">Son 7 Gün</option>
+                        <option value="14">Son 14 Gün</option>
+                        <option value="30">Son 30 Gün</option>
+                        <option value="all">Tüm Zamanlar</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="border rounded p-3 bg-white shadow-sm mb-4" style="border-radius:14px;">
+                <h6 id="trendChartTitle" class="fw-bold mb-3 text-secondary"><i class="bi bi-graph-up-arrow"></i> Canlı Trend Çizgisi</h6>
+                <div style="height:320px; position:relative;">
+                    <canvas id="trendAnalysisCanvas"></canvas>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('eTabloDashboardContent').innerHTML = html;
+        
+        document.getElementById('trendFilterHospital').onchange = () => updateTrendChart();
+        document.getElementById('trendFilterVariable').onchange = () => updateTrendChart();
+        document.getElementById('trendFilterRange').onchange = () => updateTrendChart();
+        
+        const defaultH = "Prof. Dr. Feriha Öz ADH";
+        const defaultV = "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)";
+        
+        if (HOSPITALS.includes(defaultH)) {
+            document.getElementById('trendFilterHospital').value = defaultH;
+        }
+        if (VARIABLES.includes(defaultV)) {
+            document.getElementById('trendFilterVariable').value = defaultV;
+        }
+        
         updateTrendChart();
     }
-
+    
     function updateTrendChart() {
         const rows = googleSheetsData.rawDATA;
         const hospital = document.getElementById('trendFilterHospital').value;
         const variable = document.getElementById('trendFilterVariable').value;
+        const range = document.getElementById('trendFilterRange').value;
+        
         const sortedDates = getSortedDates(rows);
-        const dataPoints = sortedDates.map(d => sumifs(rows, 4, [{ colIdx: 1, val: d }, { colIdx: 2, val: hospital }, { colIdx: 3, val: variable }]));
+        let chartDates = [...sortedDates];
+        
+        if (range !== 'all') {
+            const limit = parseInt(range);
+            chartDates = chartDates.slice(-limit);
+        }
+        
+        const dataPoints = chartDates.map(date => {
+            return sumifs(rows, 4, [
+                { colIdx: 1, val: date },
+                { colIdx: 2, val: hospital },
+                { colIdx: 3, val: variable }
+            ]);
+        });
+        
+        document.getElementById('trendChartTitle').innerHTML = `<i class="bi bi-graph-up-arrow"></i> ${hospital} - <span class="text-primary small fw-semibold">${variable}</span> (Trend)`;
+        
         const ctx = document.getElementById('trendAnalysisCanvas')?.getContext('2d');
-        if(ctx) {
+        if (ctx) {
             if (charts.eTabloTrend) charts.eTabloTrend.destroy();
-            charts.eTabloTrend = new Chart(ctx, { type: 'line', data: { labels: sortedDates, datasets: [{ label: variable, data: dataPoints, borderColor: '#4f46e5', tension: 0.1, fill: true }] }, options: { responsive: true, maintainAspectRatio: false } });
+            charts.eTabloTrend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartDates,
+                    datasets: [{
+                        label: variable,
+                        data: dataPoints,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.15,
+                        fill: true,
+                        pointBackgroundColor: '#4f46e5',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                borderDash: [5, 5]
+                            },
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
         }
     }
 
     function renderHamDATAView() {
         const rows = googleSheetsData.rawDATA;
-        if(!rows || rows.length === 0) return;
-        let html = `<div class="table-responsive" style="max-height: 500px;"><table class="table table-sm table-striped"><thead><tr>${rows[0].map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
-        rows.slice(1, 100).forEach(row => { html += `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`; });
-        html += `</tbody></table></div>`;
+        if(!rows || rows.length === 0) {
+            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Ham DATA bulunamadı.</div>';
+            return;
+        }
+        
+        const headers = rows[0];
+        const dataRows = rows.slice(1);
+        
+        let html = `
+            <div class="alert alert-light border py-2 small mb-3" style="border-radius:10px;"><i class="bi bi-info-circle"></i> DATA sekmesindeki tüm ham kayıtlar aşağıda listelenmiştir.</div>
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-sm table-striped table-hover align-middle table-bordered" style="font-size: 11.5px;">
+                    <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
+                        <tr>
+                            ${headers.map(h => `<th>${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${dataRows.map(row => `
+                            <tr>
+                                ${row.map(cell => `<td>${cell !== null && cell !== undefined ? cell : ''}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
         document.getElementById('eTabloDashboardContent').innerHTML = html;
     }
 
-    // ---------- MHRS TABLO PARS VE CANLI VERI TRANSFER SISTEMI ----------
+    function parseCSV(text) {
+        if (!text) return [];
+        
+        const lines = text.split(/\r?\n/);
+        if (lines.length === 0) return [];
+        
+        const firstLine = lines[0];
+        const commaCount = (firstLine.match(/,/g) || []).length;
+        const semiCount = (firstLine.match(/;/g) || []).length;
+        const tabCount = (firstLine.match(/\t/g) || []).length;
+        
+        let delimiter = ',';
+        if (semiCount > commaCount) delimiter = ';';
+        if (tabCount > semiCount && tabCount > commaCount) delimiter = '\t';
+        
+        let r = [];
+        lines.forEach(line => {
+            if (!line.trim()) return;
+            
+            let row = [];
+            let inQuotes = false;
+            let currentCell = '';
+            
+            for (let i = 0; i < line.length; i++) {
+                let c = line[i];
+                let next = line[i+1];
+                
+                if (c === '"') {
+                    if (inQuotes && next === '"') { 
+                        currentCell += '"'; 
+                        i++; 
+                    } else { 
+                        inQuotes = !inQuotes; 
+                    }
+                } else if (c === delimiter && !inQuotes) {
+                    row.push(currentCell.replace(/^"(.*)"$/, '$1').trim());
+                    currentCell = '';
+                } else {
+                    currentCell += c;
+                }
+            }
+            row.push(currentCell.replace(/^"(.*)"$/, '$1').trim());
+            r.push(row);
+        });
+        return r;
+    }
+
+    // ---------- MHRS TABLO PARS VE VERİ TRANSFER SİSTEMİ ----------
+    function mapRowToObj(headers, row) {
+        const obj = {};
+        headers.forEach((h, idx) => {
+            if (!h) return;
+            let cleanH = h.toString().toLowerCase().trim().replace(/^["']|["']$/g, '');
+            cleanH = cleanH
+                .replace(/ı/g, 'i')
+                .replace(/ğ/g, 'g')
+                .replace(/ü/g, 'u')
+                .replace(/ş/g, 's')
+                .replace(/ö/g, 'o')
+                .replace(/ç/g, 'c')
+                .replace(/[\s_]+/g, '_');
+            
+            obj[cleanH] = row[idx] !== undefined ? row[idx].toString().replace(/^["']|["']$/g, '').trim() : '';
+        });
+        return obj;
+    }
+
+    const getVal = (obj, keyName) => {
+        const foldedKey = keyName.toLowerCase()
+            .replace(/ı/g,'i')
+            .replace(/ğ/g,'g')
+            .replace(/ü/g,'u')
+            .replace(/ş/g,'s')
+            .replace(/ö/g,'o')
+            .replace(/ç/g,'c')
+            .replace(/[\s_]+/g,'_');
+        return obj[foldedKey] || obj[keyName] || '';
+    };
+
     window.switchMhrsSubTab = function(tabName) {
         currentMhrsSubTab = tabName;
         document.querySelectorAll('#mhrs .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
-        if (tabName === 'H') document.getElementById('subtab-mhrs-h-btn').classList.add('active');
-        else document.getElementById('subtab-mhrs-a-btn').classList.add('active');
+        if (tabName === 'H') {
+            document.getElementById('subtab-mhrs-h-btn').classList.add('active');
+        } else {
+            document.getElementById('subtab-mhrs-a-btn').classList.add('active');
+        }
+        // Veri türünü de sıfırla
         currentMhrsVeriTipi = document.getElementById('mhrs-f-tip')?.value || 'MESAİ_İÇİ';
         window.populateMhrsFilters();
         window.filterMhrsData();
     };
 
     window.initMhrsDashboard = async function() {
-        showLoading('mhrsDashboardContent', 'Veriler canlı olarak yükleniyor...');
+        showLoading('mhrsDashboardContent', 'MHRS verileri canlı olarak Google Sheets dosyasından çekiliyor, lütfen bekleyiniz...');
+        
         const spreadsheetId = '1QhpIfSB6jd44_0J36ltXK3Wb5zq5-KbfYMgNB-zv9UA';
+        
+        // Veri türleri ve tablo isimleri
+        const veriTipleri = ['MESAİ_İÇİ', 'MESAİ_DIŞI', 'MESAİ_KAYDIRMA'];
         const sheets = {
-            H: ['MESAİ_İÇİ', 'MESAİ_DIŞI', 'MESAİ_KAYDIRMA'].map(t => ({ name: `H_${t}`, key: t })),
-            A: ['MESAİ_İÇİ', 'MESAİ_DIŞI', 'MESAİ_KAYDIRMA'].map(t => ({ name: `A_${t}`, key: t }))
+            H: veriTipleri.map(t => ({ name: `H_${t}`, key: t })),
+            A: veriTipleri.map(t => ({ name: `A_${t}`, key: t }))
         };
+        
         try {
+            // Tüm sekmeleri paralel çek
             const fetchPromises = [];
             const fetchMap = {};
+            
             for (const [tabloTipi, sheetList] of Object.entries(sheets)) {
                 for (const sheet of sheetList) {
                     const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet.name)}`;
-                    fetchPromises.push(fetch(url).then(async res => {
-                        const text = await res.text();
-                        fetchMap[`${tabloTipi}_${sheet.key}`] = text;
-                    }));
+                    fetchPromises.push(
+                        fetch(url).then(async res => {
+                            if (!res.ok) throw new Error(`${sheet.name} okunamadı`);
+                            const text = await res.text();
+                            fetchMap[`${tabloTipi}_${sheet.key}`] = text;
+                        })
+                    );
                 }
             }
+            
             await Promise.all(fetchPromises);
+            
+            // Verileri dönüştür
             for (const [tabloTipi, sheetList] of Object.entries(sheets)) {
                 for (const sheet of sheetList) {
                     const key = `${tabloTipi}_${sheet.key}`;
                     const text = fetchMap[key];
                     if (text) {
                         const rows = parseCSV(text);
-                        if (rows.length > 0) mhrsData[tabloTipi][sheet.key] = rows.slice(1).map(row => mapRowToObj(rows[0], row));
+                        if (rows.length > 0) {
+                            const headers = rows[0];
+                            mhrsData[tabloTipi][sheet.key] = rows.slice(1).map(row => mapRowToObj(headers, row));
+                        }
                     }
                 }
             }
+            
+            // İlk filtreleme ve gösterim
+            currentMhrsVeriTipi = document.getElementById('mhrs-f-tip')?.value || 'MESAİ_İÇİ';
             window.populateMhrsFilters();
             window.filterMhrsData();
+            
         } catch(err) {
-            console.error(err);
-            document.getElementById('mhrsDashboardContent').innerHTML = `<div class="alert alert-danger">MHRS verileri çekilemedi.</div>`;
+            console.error('MHRS canlı veri çekme hatası:', err);
+            document.getElementById('mhrsDashboardContent').innerHTML = `
+                <div class="alert alert-danger py-4" style="border-radius:12px;">
+                    <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> MHRS Canlı Entegrasyon Hatası</h5>
+                    <p class="small mb-3">Google Sheets dosyasından MHRS verileri okunamadı. Lütfen internet bağlantınızı veya dosya paylaşım izinlerini kontrol edin.</p>
+                    <div class="p-2 bg-light rounded text-monospace small text-danger mb-3" style="font-size:11px;">Hata Detayı: ${err.message}</div>
+                    <button class="btn btn-sm btn-primary px-3" style="border-radius:10px;" onclick="window.initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Yeniden Dene</button>
+                </div>
+            `;
         }
     };
 
     window.populateMhrsFilters = function() {
         const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
-        if (!list || list.length === 0) return;
-        const yillar = [...new Set(list.map(item => getVal(item, 'yil')).filter(y => y && /^\d{4}$/.test(y.toString().trim())))].sort((a,b)=>b-a);
-        const aylar = [...new Set(list.map(item => getVal(item, 'ay')).filter(Boolean))];
+        if (!list || list.length === 0) {
+            // Filtreleri temizle
+            ['mhrs-f-yil', 'mhrs-f-ay', 'mhrs-f-kurum', 'mhrs-f-brans'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '<option value="">-</option>';
+            });
+            return;
+        }
+        
+// Geçerli ay isimleri listesi (Hatalı metinleri engellemek için)
+        const GECERLI_AY_ISIMLERI = [
+            "OCAK", "ŞUBAT", "SUBAT", "MART", "NİSAN", "NISAN", "MAYIS", 
+            "HAZİRAN", "HAZIRAN", "TEMMUZ", "AĞUSTOS", "AGUSTOS", 
+            "EYLÜL", "EYLUL", "EKİM", "EKIM", "KASIM", "ARALIK"
+        ];
+
+        // 2312. satır yerine: Yalnızca 4 haneli yılları kabul eder
+        const yillar = [...new Set(list.map(item => getVal(item, 'yil'))
+            .filter(y => y && /^\d{4}$/.test(y.toString().trim()))
+        )].sort((a,b)=>b-a);
+
+        // 2313. satır yerine: Yalnızca gerçek ayları kabul eder
+        const aylar = [...new Set(list.map(item => getVal(item, 'ay'))
+            .filter(a => {
+                if (!a) return false;
+                const temizAy = a.toString().trim().toUpperCase()
+                    .replace(/ı/g, 'I')
+                    .replace(/i/g, 'İ');
+                const sayisalAy = !isNaN(temizAy) && parseInt(temizAy) >= 1 && parseInt(temizAy) <= 12;
+                return GECERLI_AY_ISIMLERI.includes(temizAy) || sayisalAy;
+            })
+        )];
         const kurumlar = [...new Set(list.map(item => getVal(item, 'kurum_adi')).filter(Boolean))].sort();
         const branslar = [...new Set(list.map(item => getVal(item, 'brans')).filter(Boolean))].sort();
         
@@ -1392,18 +2462,33 @@
         const kurumSelect = document.getElementById('mhrs-f-kurum');
         const bransSelect = document.getElementById('mhrs-f-brans');
         
-        if (yilSelect) { yilSelect.innerHTML = yillar.map(y => `<option value="${y}">${y}</option>`).join(''); yilSelect.value = yillar[0]; }
-        if (aySelect) { aySelect.innerHTML = '<option value="">Tümü</option>' + aylar.map(a => `<option value="${a}">${a}</option>`).join(''); }
-        if (kurumSelect) { kurumSelect.innerHTML = '<option value="">Tüm Kurumlar</option>' + kurumlar.map(k => `<option value="${k}">${k}</option>`).join(''); }
-        if (bransSelect) { bransSelect.innerHTML = '<option value="">Tüm Branşlar</option>' + branslar.map(b => `<option value="${b}">${b}</option>`).join(''); }
+        if (yilSelect) {
+            yilSelect.innerHTML = yillar.map(y => `<option value="${y}">${y}</option>`).join('');
+            if (yillar.length > 0) yilSelect.value = yillar[0];
+        }
+        
+        if (aySelect) {
+            aySelect.innerHTML = '<option value="">Tümü</option>' + aylar.map(a => `<option value="${a}">${a}</option>`).join('');
+            const monthsInLatestYear = [...new Set(list.filter(item => getVal(item, 'yil') === yillar[0]).map(item => getVal(item, 'ay')).filter(Boolean))].sort((a,b)=>b-a);
+            if (monthsInLatestYear.length > 0) aySelect.value = monthsInLatestYear[0];
+        }
+        
+        if (kurumSelect) {
+            kurumSelect.innerHTML = '<option value="">Tüm Kurumlar</option>' + kurumlar.map(k => `<option value="${k}">${k}</option>`).join('');
+        }
+        
+        if (bransSelect) {
+            bransSelect.innerHTML = '<option value="">Tüm Branşlar</option>' + branslar.map(b => `<option value="${b}">${b}</option>`).join('');
+        }
     };
 
     window.filterMhrsData = function() {
         const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
         if (!list || list.length === 0) {
-            document.getElementById('mhrsDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Veri bulunamadı.</div>';
+            document.getElementById('mhrsDashboardContent').innerHTML = '<div class="alert alert-warning text-center" style="border-radius:12px;">Seçili veri türü için analiz edilecek ham veri bulunamadı.</div>';
             return;
         }
+        
         const selYil = document.getElementById('mhrs-f-yil')?.value;
         const selAy = document.getElementById('mhrs-f-ay')?.value;
         const selKurum = document.getElementById('mhrs-f-kurum')?.value;
@@ -1418,95 +2503,292 @@
         });
         
         document.getElementById('mhrsDashboardContent').innerHTML = `
-            <div class="row g-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-md-5">
-                <div class="col"><div class="p-3 border rounded bg-white shadow-sm text-center"><h6>🎯 GENEL MHRS DOLULUK</h6><div class="fs-4 fw-bold text-primary" id="mhrs-stat-genel-doluluk">0%</div><div class="text-muted small" id="mhrs-desc-genel-doluluk">0 / 0</div></div></div>
-                <div class="col"><div class="p-3 border rounded bg-white shadow-sm text-center"><h6>🎯 İLK MUAYENE DOLULUK</h6><div class="fs-4 fw-bold text-indigo" id="mhrs-stat-ilk-doluluk">0%</div><div class="text-muted small" id="mhrs-desc-ilk-doluluk">0 / 0</div></div></div>
-                <div class="col"><div class="p-3 border rounded bg-white shadow-sm text-center"><h6>🔄 DEVAM EDEN DOLULUK</h6><div class="fs-4 fw-bold text-success" id="mhrs-stat-devam-doluluk">0%</div><div class="text-muted small" id="mhrs-desc-devam-doluluk">0 / 0</div></div></div>
-                <div class="col"><div class="p-3 border rounded bg-white shadow-sm text-center"><h6>📈 RANDEVU SADAKAT</h6><div class="fs-4 fw-bold text-info" id="mhrs-stat-ilk-gerceklesme">0%</div><div class="text-muted small" id="mhrs-desc-ilk-gerceklesme">0 / 0</div></div></div>
-                <div class="col"><div class="p-3 border rounded bg-white shadow-sm text-center"><h6>📊 DEVAM GERÇEKLEŞME</h6><div class="fs-4 fw-bold text-warning" id="mhrs-stat-devam-gerceklesme">0%</div><div class="text-muted small" id="mhrs-desc-devam-gerceklesme">0 / 0</div></div></div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
+                        <h6 class="text-secondary small fw-bold">🎯 MHRS DOLULUK</h6>
+                        <div class="fs-4 fw-bold text-primary" id="mhrs-stat-ilk-doluluk">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-ilk-doluluk">0 / 0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
+                        <h6 class="text-secondary small fw-bold">🔄 DEVAM EDEN DOLULUK</h6>
+                        <div class="fs-4 fw-bold text-success" id="mhrs-stat-devam-doluluk">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-devam-doluluk">0 / 0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
+                        <h6 class="text-secondary small fw-bold">📈 RANDEVU SADAKAT</h6>
+                        <div class="fs-4 fw-bold text-info" id="mhrs-stat-ilk-gerceklesme">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-ilk-gerceklesme">0 / 0</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px !important;">
+                        <h6 class="text-secondary small fw-bold">📊 DEVAM EDEN GERÇEKLEŞME</h6>
+                        <div class="fs-4 fw-bold text-warning" id="mhrs-stat-devam-gerceklesme">0%</div>
+                        <div class="text-muted small" id="mhrs-desc-devam-gerceklesme">0 / 0</div>
+                    </div>
+                </div>
             </div>
-            <div class="row g-4 mb-4">
-                <div class="col-md-8"><div class="p-3 border rounded bg-white shadow-sm"><h6>📈 Dağılım (Top 10)</h6><div style="height:320px;"><canvas id="mhrsMainChart"></canvas></div></div></div>
-                <div class="col-md-4"><div class="p-3 border rounded bg-white shadow-sm"><h6>⭐ Branşlar</h6><div id="mhrs-top-branches" style="max-height: 320px; overflow-y: auto;"></div></div></div>
-            </div>
-            <div class="row g-4 mb-4">
-                <div class="col-12"><div class="p-3 border rounded bg-white shadow-sm"><h6>📈 MHRS Performans Trend Analizi</h6><select id="mhrs-trend-metric" class="form-select form-select-sm mb-3" onchange="window.updateMhrsTrendChart()"><option value="genel_doluluk">Genel Doluluk (%)</option><option value="ilk_doluluk">İlk Muayene Doluluk (%)</option><option value="devam_doluluk">Devam Doluluk (%)</option></select><div style="height:280px;"><canvas id="mhrsTrendChart"></canvas></div></div></div>
-            </div>`;
 
-        let total_ilk_acilan = 0; let total_ilk_alinan = 0; let total_ilk_gerceklesen = 0;
-        let total_devam_acilan = 0; let total_devam_alinan = 0; let total_devam_gerceklesen = 0;
+            <div class="row g-4 mb-4">
+                <div class="col-md-8">
+                    <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important;">
+                        <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-bar-chart-line"></i> Kapasite, Randevu ve Gerçekleşme Dağılımı (Top 10)</h6>
+                        <div style="height: 320px; position: relative;">
+                            <canvas id="mhrsMainChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important;">
+                        <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-star"></i> En Çok Randevu Alınan Branşlar</h6>
+                        <div id="mhrs-top-branches" style="max-height: 320px; overflow-y: auto;">
+                            <div class="text-muted small text-center py-5">Veri yükleniyor...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border rounded p-3 bg-white shadow-sm" style="border-radius:14px !important;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-table"></i> Detaylı MHRS Performans Tablosu</h6>
+                    <button class="btn btn-sm btn-outline-success" style="border-radius:8px;" onclick="window.exportMhrsTableToExcel()"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
+                </div>
+                <div class="table-responsive" style="max-height: 400px;">
+                    <table class="table table-sm table-bordered table-striped table-hover align-middle" id="mhrsDetailTable" style="font-size: 11.5px;">
+                        <thead class="table-dark" style="position: sticky; top:0; z-index:2;">
+                            <tr>
+                                <th>Kurum Adı</th>
+                                <th>Branş</th>
+                                <th class="text-center">Aktif Hekim / Uzman</th>
+                                <th class="text-center">Asistan</th>
+                                <th class="text-center">Toplam Poliklinik Oda</th>
+                                <th class="text-center">Açılan Kapasite</th>
+                                <th class="text-center">Alınan Randevu</th>
+                                <th class="text-center">Gerçekleşen Muayene</th>
+                                <th class="text-center">Randevu Doluluk (%)</th>
+                                <th class="text-center">Muayene Gerçekleşme (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Satırlar Dinamik Dolacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        let total_ilk_acilan = 0;
+        let total_ilk_alinan = 0;
+        let total_ilk_gerceklesen = 0;
+        
+        let total_devam_acilan = 0;
+        let total_devam_alinan = 0;
+        let total_devam_gerceklesen = 0;
         
         filtered.forEach(item => {
-            const parseNum = (v) => { if (!v) return 0; return parseFloat(v.toString().replace(/\./g, '').replace(',', '.')) || 0; };
+            const parseNum = (v) => {
+                if (!v) return 0;
+                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                return isNaN(n) ? 0 : n;
+            };
+            
             total_ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
             total_ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
             total_ilk_gerceklesen += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
+            
             total_devam_acilan += parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
             total_devam_alinan += parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
             total_devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
         });
 
-        const genel_doluluk = (total_ilk_acilan + total_devam_acilan) > 0 ? ((total_ilk_alinan + total_devam_alinan) / (total_ilk_acilan + total_devam_acilan)) * 100 : 0;
         const ilk_doluluk = total_ilk_acilan > 0 ? (total_ilk_alinan / total_ilk_acilan) * 100 : 0;
+        const widthPercentLimit = 100; // responsive graphic handling
         const devam_doluluk = total_devam_acilan > 0 ? (total_devam_alinan / total_devam_acilan) * 100 : 0;
         const ilk_gerceklesme = total_ilk_alinan > 0 ? (total_ilk_gerceklesen / total_ilk_alinan) * 100 : 0;
         const devam_gerceklesme = total_devam_alinan > 0 ? (total_devam_gerceklesen / total_devam_alinan) * 100 : 0;
 
-        document.getElementById('mhrs-stat-genel-doluluk').innerText = `${genel_doluluk.toFixed(1)}%`;
-        document.getElementById('mhrs-desc-genel-doluluk').innerText = `${(total_ilk_alinan+total_devam_alinan).toLocaleString('tr-TR')} / ${(total_ilk_acilan+total_devam_acilan).toLocaleString('tr-TR')}`;
         document.getElementById('mhrs-stat-ilk-doluluk').innerText = `${ilk_doluluk.toFixed(1)}%`;
         document.getElementById('mhrs-desc-ilk-doluluk').innerText = `${total_ilk_alinan.toLocaleString('tr-TR')} / ${total_ilk_acilan.toLocaleString('tr-TR')}`;
+        
         document.getElementById('mhrs-stat-devam-doluluk').innerText = `${devam_doluluk.toFixed(1)}%`;
         document.getElementById('mhrs-desc-devam-doluluk').innerText = `${total_devam_alinan.toLocaleString('tr-TR')} / ${total_devam_acilan.toLocaleString('tr-TR')}`;
+
         document.getElementById('mhrs-stat-ilk-gerceklesme').innerText = `${ilk_gerceklesme.toFixed(1)}%`;
         document.getElementById('mhrs-desc-ilk-gerceklesme').innerText = `${total_ilk_gerceklesen.toLocaleString('tr-TR')} / ${total_ilk_alinan.toLocaleString('tr-TR')}`;
+
         document.getElementById('mhrs-stat-devam-gerceklesme').innerText = `${devam_gerceklesme.toFixed(1)}%`;
         document.getElementById('mhrs-desc-devam-gerceklesme').innerText = `${total_devam_gerceklesen.toLocaleString('tr-TR')} / ${total_devam_alinan.toLocaleString('tr-TR')}`;
 
+        const tbody = document.querySelector('#mhrsDetailTable tbody');
+        if (tbody) {
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Seçili filtrelere uygun veri bulunamadı.</td></tr>';
+            } else {
+                tbody.innerHTML = filtered.map(item => {
+                    const parseNum = (v) => {
+                        if (!v) return 0;
+                        const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                        return isNaN(n) ? 0 : n;
+                    };
+                    
+                    const ilk_ac = parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
+                    const ilk_al = parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
+                    const ilk_ge = parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
+                    const dev_ac = parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
+                    const dev_al = parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+                    const dev_ge = parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+                    
+                    const toplam_acilan = ilk_ac + dev_ac;
+                    const toplam_alinan = ilk_al + dev_al;
+                    const toplam_gerceklesen = ilk_ge + dev_ge;
+                    
+                    const doluluk_orani = toplam_acilan > 0 ? (toplam_alinan / toplam_acilan) * 100 : 0;
+                    const gerceklesme_orani = toplam_alinan > 0 ? (toplam_gerceklesen / toplam_alinan) * 100 : 0;
+                    
+                    let hekim_sayisi = 0;
+                    let asistan_sayisi = 0;
+                    let toplam_oda_sayisi = 0;
+                    
+                    if (currentMhrsSubTab === 'H') {
+                        hekim_sayisi = parseNum(getVal(item, 'aktif_klinisyen_uzman_sayisi'));
+                        asistan_sayisi = parseNum(getVal(item, 'asistan_sayisi'));
+                        toplam_oda_sayisi = parseNum(getVal(item, 'toplam_aktif_poliklinik_oda_sayisi'));
+                    } else {
+                        hekim_sayisi = parseNum(getVal(item, 'aktif_calisan_uzman_doktoralı_sayisi')) + parseNum(getVal(item, 'aktif_calisan_hekim_sayisi_uzman_haric'));
+                        asistan_sayisi = 0; 
+                        toplam_oda_sayisi = parseNum(getVal(item, 'toplam_aktif_poliklinik_oda_sayisi'));
+                    }
+                    
+                    return `
+                        <tr>
+                            <td><b>${getVal(item, 'kurum_adi')}</b></td>
+                            <td>${getVal(item, 'brans')}</td>
+                            <td class="text-center">${hekim_sayisi}</td>
+                            <td class="text-center">${asistan_sayisi}</td>
+                            <td class="text-center">${toplam_oda_sayisi}</td>
+                            <td class="text-center">${toplam_acilan.toLocaleString('tr-TR')}</td>
+                            <td class="text-center">${toplam_alinan.toLocaleString('tr-TR')}</td>
+                            <td class="text-center">${toplam_gerceklesen.toLocaleString('tr-TR')}</td>
+                            <td class="text-center fw-bold text-primary">${doluluk_orani.toFixed(1)}%</td>
+                            <td class="text-center fw-bold text-success">${gerceklesme_orani.toFixed(1)}%</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
         const bransRandevulari = {};
         filtered.forEach(item => {
-            const parseNum = (v) => { if (!v) return 0; return parseFloat(v.toString().replace(/\./g, '').replace(',', '.')) || 0; };
+            const parseNum = (v) => {
+                if (!v) return 0;
+                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                return isNaN(n) ? 0 : n;
+            };
             const al = parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
             const bName = getVal(item, 'brans');
-            if (bName) bransRandevulari[bName] = (bransRandevulari[bName] || 0) + al;
+            if (bName) {
+                bransRandevulari[bName] = (bransRandevulari[bName] || 0) + al;
+            }
         });
 
-        const sortedBranches = Object.entries(bransRandevulari).map(([name, vol]) => ({ name, vol })).sort((a,b)=>b.vol - a.vol);
+        const sortedBranches = Object.entries(bransRandevulari)
+            .map(([name, vol]) => ({ name, vol }))
+            .sort((a,b)=>b.vol - a.vol);
+
         const topBranchesEl = document.getElementById('mhrs-top-branches');
         if (topBranchesEl) {
-            topBranchesEl.innerHTML = sortedBranches.slice(0, 5).map((b, idx) => `
-                <div class="rank-card"><div><span class="rank-number">${idx+1}</span><strong>${b.name}</strong></div><span class="text-warning fw-bold small">${b.vol.toLocaleString('tr-TR')} Randevu</span></div>`).join('');
+            if (sortedBranches.length === 0) {
+                topBranchesEl.innerHTML = '<div class="text-muted small text-center py-5">Branş bazında randevu bulunamadı.</div>';
+            } else {
+                topBranchesEl.innerHTML = sortedBranches.slice(0, 5).map((b, idx) => `
+                    <div class="rank-card">
+                        <div>
+                            <span class="rank-number" style="background:#f59e0b; color:white;">${idx+1}</span>
+                            <strong>${b.name}</strong>
+                        </div>
+                        <span class="text-warning fw-bold small">${b.vol.toLocaleString('tr-TR')} Randevu</span>
+                    </div>
+                `).join('');
+            }
         }
 
         const kurumAggregates = {};
         filtered.forEach(item => {
-            const parseNum = (v) => { if (!v) return 0; return parseFloat(v.toString().replace(/\./g, '').replace(',', '.')) || 0; };
+            const parseNum = (v) => {
+                if (!v) return 0;
+                const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                return isNaN(n) ? 0 : n;
+            };
             const ac = parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
             const al = parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
             const ge = parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+            
             const kName = getVal(item, 'kurum_adi');
             if (kName) {
-                if (!kurumAggregates[kName]) kurumAggregates[kName] = { acilan: 0, alinan: 0, gerceklesen: 0 };
-                kurumAggregates[kName].acilan += ac; kurumAggregates[kName].alinan += al; kurumAggregates[kName].gerceklesen += ge;
+                if (!kurumAggregates[kName]) {
+                    kurumAggregates[kName] = { acilan: 0, alinan: 0, gerceklesen: 0 };
+                }
+                kurumAggregates[kName].acilan += ac;
+                kurumAggregates[kName].alinan += al;
+                kurumAggregates[kName].gerceklesen += ge;
             }
         });
 
-        const kisaltKurumAdi = (name) => {
-            if (!name) return "";
-            return name
-                .replace(/Eğitim ve Araştırma Hastanesi/gi, "EAH").replace(/Devlet Hastanesi/gi, "DH")
-                .replace(/Şehir Hastanesi/gi, "ŞH").replace(/Kadın Doğum ve Çocuk Hastalıkları/gi, "KDÇ")
-                .replace(/Göğüs Kalp ve Damar Cerrahisi/gi, "GKDC").replace(/Ağız ve Diş Sağlığı Merkezi/gi, "ADSM")
-                .replace(/Ağız ve Diş Sağlığı Hastanesi/gi, "ADSH").replace(/Sancaktepe Şehit Prof\.?\s*Dr\.?\s*İlhan Varank/gi, "Sancaktepe Varank")
-                .replace(/Zeynep Kamil Kadın Doğum ve Çocuk/gi, "Zeynep Kamil KDÇ").replace(/Dr\.?\s*Süleyman Yalçın/gi, "S. Yalçın").replace(/Fatih Sultan Mehmet/gi, "FSM");
-        };
+        const chartLabels = [];
+        const chartAcilan = [];
+        const chartAlinan = [];
+        const chartGerceklesen = [];
 
-        const chartLabels = []; const chartAcilan = []; const chartAlinan = []; const chartGerceklesen = [];
-        const sortedKurumList = Object.entries(kurumAggregates).sort((a,b)=>b[1].alinan - a[1].alinan).slice(0, 10);
-        sortedKurumList.forEach(([kName, val]) => {
-            chartLabels.push(kisaltKurumAdi(kName));
-            chartAcilan.push(val.acilan); chartAlinan.push(val.alinan); chartGerceklesen.push(val.gerceklesen);
-        });
+        if (selKurum) {
+            const bransAggregates = {};
+            filtered.forEach(item => {
+                const parseNum = (v) => {
+                    if (!v) return 0;
+                    const n = parseFloat(v.toString().replace(/\./g, '').replace(',', '.'));
+                    return isNaN(n) ? 0 : n;
+                };
+                const ac = parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
+                const al = parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
+                const ge = parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik')) + parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
+                
+                const bName = getVal(item, 'brans');
+                if (bName) {
+                    if (!bransAggregates[bName]) {
+                        bransAggregates[bName] = { acilan: 0, alinan: 0, gerceklesen: 0 };
+                    }
+                    bransAggregates[bName].acilan += ac;
+                    bransAggregates[bName].alinan += al;
+                    bransAggregates[bName].gerceklesen += ge;
+                }
+            });
+            
+            const sortedBransList = Object.entries(bransAggregates)
+                .sort((a,b)=>b[1].alinan - a[1].alinan)
+                .slice(0, 10);
+                
+            sortedBransList.forEach(([bName, val]) => {
+                chartLabels.push(bName.length > 20 ? bName.substring(0, 18) + '...' : bName);
+                chartAcilan.push(val.acilan);
+                chartAlinan.push(val.alinan);
+                chartGerceklesen.push(val.gerceklesen);
+            });
+        } else {
+            const sortedKurumList = Object.entries(kurumAggregates)
+                .sort((a,b)=>b[1].alinan - a[1].alinan)
+                .slice(0, 10);
+                
+            sortedKurumList.forEach(([kName, val]) => {
+                chartLabels.push(kName.replace("Devlet Hastanesi", "DH").replace("Eğitim ve Araştırma Hastanesi", "EAH"));
+                chartAcilan.push(val.acilan);
+                chartAlinan.push(val.alinan);
+                chartGerceklesen.push(val.gerceklesen);
+            });
+        }
 
         const ctx = document.getElementById('mhrsMainChart')?.getContext('2d');
         if (ctx) {
@@ -1516,121 +2798,111 @@
                 data: {
                     labels: chartLabels,
                     datasets: [
-                        { label: 'Kapasite', data: chartAcilan, backgroundColor: 'rgba(79, 70, 229, 0.75)' },
-                        { label: 'Randevu', data: chartAlinan, backgroundColor: 'rgba(245, 158, 11, 0.75)' },
-                        { label: 'Gerçekleşen', data: chartGerceklesen, backgroundColor: 'rgba(16, 185, 129, 0.75)' }
+                        {
+                            label: 'Açılan Kapasite',
+                            data: chartAcilan,
+                            backgroundColor: 'rgba(79, 70, 229, 0.75)',
+                            borderColor: 'rgba(79, 70, 229, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Alınan Randevu',
+                            data: chartAlinan,
+                            backgroundColor: 'rgba(245, 158, 11, 0.75)',
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Gerçekleşen Muayene',
+                            data: chartGerceklesen,
+                            backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        }
                     ]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: { x: { ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 45 } }, y: { grace: '15%' } }
-                },
-                plugins: [{
-                    id: 'verticalBarPercentages',
-                    afterDatasetsDraw(chart) {
-                        const { ctx } = chart; ctx.save();
-                        chart.data.datasets.forEach((dataset, datasetIndex) => {
-                            if (datasetIndex === 0) return; 
-                            const meta = chart.getDatasetMeta(datasetIndex);
-                            meta.data.forEach((bar, index) => {
-                                const acilanVal = chart.data.datasets[0].data[index] || 0;
-                                const alinanVal = chart.data.datasets[1].data[index] || 0;
-                                const gerceklesenVal = chart.data.datasets[2].data[index] || 0;
-                                let percentageText = '';
-                                if (datasetIndex === 1 && acilanVal > 0) percentageText = '%' + ((alinanVal / acilanVal) * 100).toFixed(0);
-                                else if (datasetIndex === 2 && alinanVal > 0) percentageText = '%' + ((gerceklesenVal / alinanVal) * 100).toFixed(0);
-                                if (percentageText && bar.y > 0) {
-                                    ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
-                                    ctx.fillStyle = datasetIndex === 1 ? '#b45309' : '#047857'; ctx.textAlign = 'center';
-                                    const x = bar.x; const y = bar.y - 8; ctx.save(); ctx.translate(x, y); ctx.rotate(-Math.PI / 2); ctx.fillText(percentageText, 0, 0); ctx.restore();
-                                }
-                            });
-                        });
-                        ctx.restore();
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { 
+                            grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [5, 5] },
+                            ticks: { precision: 0 }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 } } }
                     }
-                }]
-            });
-        }
-        window.updateMhrsTrendChart();
-    };
-
-    window.updateMhrsTrendChart = function() {
-        const list = mhrsData[currentMhrsSubTab][currentMhrsVeriTipi] || [];
-        if (!list || list.length === 0) return;
-        const selYil = document.getElementById('mhrs-f-yil')?.value;
-        const selKurum = document.getElementById('mhrs-f-kurum')?.value;
-        const selBrans = document.getElementById('mhrs-f-brans')?.value;
-        const selectedMetric = document.getElementById('mhrs-trend-metric')?.value || 'genel_doluluk';
-        
-        let trendFiltered = list.filter(item => {
-            if (selYil && getVal(item, 'yil') !== selYil) return false;
-            if (selKurum && getVal(item, 'kurum_adi') !== selKurum) return false;
-            if (selBrans && getVal(item, 'brans') !== selBrans) return false;
-            return true;
-        });
-        
-        const monthlyData = {};
-        trendFiltered.forEach(item => {
-            const ay = getVal(item, 'ay'); if (!ay) return;
-            const parseNum = (v) => { if (!v) return 0; return parseFloat(v.toString().replace(/\./g, '').replace(',', '.')) || 0; };
-            if (!monthlyData[ay]) { monthlyData[ay] = { ilk_acilan: 0, ilk_alinan: 0, ilk_gerceklesen: 0, devam_acilan: 0, devam_alinan: 0, devam_gerceklesen: 0 }; }
-            monthlyData[ay].ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
-            monthlyData[ay].ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
-            monthlyData[ay].ilk_gerceklesen += parseNum(getVal(item, 'ilk_muayene_gerceklesen_aylik'));
-            monthlyData[ay].devam_acilan += parseNum(getVal(item, 'devam_eden_muayene_acilan_kapasite_aylik'));
-            monthlyData[ay].devam_alinan += parseNum(getVal(item, 'devam_eden_muayene_alinan_randevu_aylik'));
-            monthlyData[ay].devam_gerceklesen += parseNum(getVal(item, 'devam_eden_muayene_gerceklesen_aylik'));
-        });
-        
-        const sortedMonthKeys = Object.keys(monthlyData).sort((a,b)=>a.localeCompare(b));
-        const dataPoints = sortedMonthKeys.map(key => {
-            const val = monthlyData[key];
-            if (selectedMetric === 'genel_doluluk') return (val.ilk_acilan + val.devam_acilan) > 0 ? (((val.ilk_alinan + val.devam_alinan) / (val.ilk_acilan + val.devam_acilan)) * 100) : 0;
-            if (selectedMetric === 'ilk_doluluk') return val.ilk_acilan > 0 ? ((val.ilk_alinan / val.ilk_acilan) * 100) : 0;
-            if (selectedMetric === 'devam_doluluk') return val.devam_acilan > 0 ? ((val.devam_alinan / val.devam_acilan) * 100) : 0;
-            return 0;
-        });
-        
-        const ctx = document.getElementById('mhrsTrendChart')?.getContext('2d');
-        if (ctx) {
-            if (charts.mhrsTrend) charts.mhrsTrend.destroy();
-            charts.mhrsTrend = new Chart(ctx, {
-                type: 'line',
-                data: { labels: sortedMonthKeys, datasets: [{ label: 'Trend Oranı (%)', data: dataPoints, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.08)', fill: true }] },
-                options: { responsive: true, maintainAspectRatio: false }
+                }
             });
         }
     };
 
-    window.exportMhrsTableToExcel = function() { window.exportTableToExcel('mhrsDetailTable', 'MHRS_Rapor'); };
+    window.exportMhrsTableToExcel = function() {
+        window.exportTableToExcel('mhrsDetailTable', `MHRS_Performans_Raporu_${currentMhrsSubTab}_${currentMhrsVeriTipi}`);
+    };
 
+   // ---------- SAYFA GEÇIŞLERI ----------
     window.gitSayfa = async function(sayfa, el) {
+        // 1. Geometrik Küp Loader'ı görünür yap
         const loader = document.getElementById('page-loader');
         if (loader) loader.classList.add('active');
-        const delayPromise = new Promise(resolve => setTimeout(resolve, 2000));
-        
+
+        // 2. 2.5 saniyelik (2500ms) zorunlu bekleme vaadi oluştur
+        const delayPromise = new Promise(resolve => setTimeout(resolve, 3000));
+
+        // 3. Arka planda sayfa geçiş ve navigasyon işlemlerini yap
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(sayfa).classList.add('active');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         if(el) el.classList.add('active');
         
-        document.getElementById('filter-bar').style.display = (sayfa === 'kurum-bazli') ? 'flex' : 'none';
+        const filterBar = document.getElementById('filter-bar');
+        filterBar.style.display = (sayfa === 'kurum-bazli') ? 'flex' : 'none';
         
         try {
+            // İlgili sayfanın arka plan veri yükleme işlemlerini başlat
             if(sayfa === 'genel-bakis') await dashboard();
+            
             if(sayfa === 'tum-bolge') {
                 const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`).join('');
                 const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
+
                 document.getElementById('tum-bolge').innerHTML = `
                     <div class="kds-card">
-                        <h6>🌍 Bölge Sıralaması</h6>
+                        <h6>🌍 Tüm Kurumlar Bölge Sıralaması</h6>
                         <div class="row g-3 mt-1 mb-4">
-                            <div class="col-md-4"><select id="bolgeFiltreYil" class="form-select">${yilOptions}</select></div>
-                            <div class="col-md-4"><select id="bolgeFiltreDonem" class="form-select">${donemOptions}</select></div>
-                            <div class="col-md-4"><select id="bolgeFiltreTip" class="form-select"><option value="">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select></div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Yıl</label>
+                                <select id="bolgeFiltreYil" class="form-select form-select-sm" style="border-radius:10px;">${yilOptions}</select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Dönem</label>
+                                <select id="bolgeFiltreDonem" class="form-select form-select-sm" style="border-radius:10px;">${donemOptions}</select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
+                                <select id="bolgeFiltreTip" class="form-select form-select-sm" style="border-radius:10px;">
+                                    <option value="">Tümü (Hastane & ADSM)</option>
+                                    <option value="Hastane">Hastane</option>
+                                    <option value="ADSM">ADSM/ADSH</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="table-responsive"><table class="table" id="table-bolge"><thead><tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr></thead><tbody></tbody></table></div>
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="table-bolge">
+                                <thead>
+                                    <tr><th>Kurum</th><th>Tür</th><th>Puan</th><th>Rol Ort.</th><th>Durum</th></tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>`;
+                
                 document.getElementById('bolgeFiltreYil').onchange = () => window.bolgeListesi();
                 document.getElementById('bolgeFiltreDonem').onchange = () => window.bolgeListesi();
                 document.getElementById('bolgeFiltreTip').onchange = () => window.bolgeListesi();
@@ -1638,19 +2910,36 @@
             }
             if(sayfa === 'raporlar') await raporlar();
             if(sayfa === 'itirazlar') {
-                document.getElementById('itirazlar').innerHTML = `<div class="kds-card"><h6>⚠️ İtiraz Yönetimi</h6><div id="itirazListe"></div></div>`;
+                document.getElementById('itirazlar').innerHTML = `<div class="kds-card"><h6>⚠️ İtiraz Yönetimi Paneli</h6><div id="itirazListe"></div></div>`;
                 await window.itirazlariGoster();
             }
             if(sayfa === 'karsilastirma') {
                 document.getElementById('karsilastirma').innerHTML = `
                     <div class="kds-card">
-                        <h6>📅 Dönemsel Karşılaştırma</h6>
+                        <h6><i class="bi bi-calendar-range"></i> Gelişmiş Dönemsel Karşılaştırma</h6>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4"><select id="karsKurumTip" class="form-select"><option value="">Tümü</option><option value="Hastane">Hastane</option><option value="ADSM">ADSM/ADSH</option></select></div>
-                            <div class="col-md-8"><select id="karsKurumAdi" class="form-select"><option value="">Seçiniz</option></select></div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Kurum Türü</label>
+                                <select id="karsKurumTip" class="form-select" style="border-radius:10px;">
+                                    <option value="">Tümü</option>
+                                    <option value="Hastane">Hastane</option>
+                                    <option value="ADSM">ADSM/ADSH</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold">Kurum Adı</label>
+                                <select id="karsKurumAdi" class="form-select" style="border-radius:10px;">
+                                    <option value="">Önce tür seçin</option>
+                                </select>
+                            </div>
                         </div>
-                        <div id="karsDonemCheckboxlar" class="donem-checkbox-group"><div id="karsDonemCheckboxlarInner">Önce kurum seçiniz.</div></div>
-                        <button class="btn-sm-custom px-4" id="karsilastirBtn">📊 Karşılaştır</button>
+                        <div id="karsDonemCheckboxlar" class="donem-checkbox-group">
+                            <div class="fw-semibold mb-2 text-secondary"><i class="bi bi-check2-square"></i> Karşılaştırılacak Dönemleri Seçin (Dinamik):</div>
+                            <div id="karsDonemCheckboxlarInner">
+                                <div class="text-muted small text-center py-3"><i class="bi bi-info-circle"></i> Lütfen önce yukarıdan bir kurum seçiniz.</div>
+                            </div>
+                        </div>
+                        <button class="btn-sm-custom px-4" id="karsilastirBtn">📊 SEÇİLİ DÖNEMLERİ KARŞILAŞTIR</button>
                         <div id="karsilastirmaSonuc" class="mt-3"></div>
                     </div>`;
                 document.getElementById('karsKurumTip').onchange = () => window.karsilastirmaKurumListesiGuncelle();
@@ -1658,18 +2947,22 @@
                 document.getElementById('karsilastirBtn').onclick = () => window.donemselKarsilastir();
                 await window.karsilastirmaKurumListesiGuncelle();
             }
+            if(sayfa === 'kurum-bazli') await itirazDurumlariniYukle();
             if(sayfa === 'e-tablo') await initETabloDashboard();
             if(sayfa === 'mhrs') await initMhrsDashboard();
             if(sayfa === 'kullanici-yonetimi') await kullanicilariYukle();
         } catch (err) {
-            console.error(err);
+            console.error("Yükleme hatası:", err);
         } finally {
+            // 4. Veri yükleme tamamlansa dahi en az 2.5 saniyelik sürenin dolmasını bekle
             await delayPromise;
             if (loader) loader.classList.remove('active');
         }
     };
 
+    // ---------- BAŞLATMA ----------
     (async function init() {
+        // Oturum kontrolü
         const activeUser = sessionStorage.getItem('khhb_auth_user');
         const activeRole = sessionStorage.getItem('khhb_auth_role');
         if (activeUser) {
@@ -1679,6 +2972,7 @@
         } else {
             uygulaYetkilendirme(null);
         }
+
         await dinamikFiltreleriDoldur();
         await itirazDurumlariniYukle();
         
@@ -1687,20 +2981,25 @@
             fTipSelect.onchange = async () => {
                 const tip = fTipSelect.value;
                 let q = _supabase.from('toplam_puanlar').select('kurum_adi');
+                
                 if(tip === 'ADSM') q = q.in('kurum_tipi', ['ADSM', 'ADSH']);
                 else if(tip) q = q.eq('kurum_tipi', tip);
+                
                 const { data } = await q;
                 const tekil = [...new Set((data||[]).map(d=>d.kurum_adi))].sort();
                 document.getElementById('f-kurum').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k=>`<option value="${k}">${k}</option>`).join('');
             };
         }
+        
         document.getElementById('kurumSorgulaBtn').onclick = () => window.kurumAnaliz();
         document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (e) => {
                 const sayfa = item.getAttribute('data-page');
                 if(sayfa) window.gitSayfa(sayfa, item);
             });
         });
+        
+        // Sayfa ilk açıldığında Genel Bakışı tetikle
         await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
     })();
 </script>
