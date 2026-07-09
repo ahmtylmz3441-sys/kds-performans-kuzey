@@ -3352,24 +3352,8 @@
             if (loader) loader.classList.remove('active');
         }
     };
-// ---------- SOL MENÜ AÇMA / KAPAMA ----------
-    document.addEventListener("DOMContentLoaded", function() {
-        const toggleBtn = document.getElementById('sidebar-toggle-btn');
-        const sidebar = document.querySelector('.sidebar');
 
-        if (toggleBtn && sidebar) {
-            toggleBtn.addEventListener('click', function() {
-                sidebar.classList.toggle('collapsed');
-            });
-        }
-    });
-
-    // ---------- BAŞLATMA ----------
-    (async function init() {
-        const activeUser = sessionStorage.getItem('khhb_auth_user');
-        const activeRole = sessionStorage.getItem('khhb_auth_role');
-        ...
-    // ---------- BAŞLATMA ----------
+   // ---------- BAŞLATMA ----------
     (async function init() {
         const activeUser = sessionStorage.getItem('khhb_auth_user');
         const activeRole = sessionStorage.getItem('khhb_auth_role');
@@ -3397,6 +3381,13 @@
                 const tekil = [...new Set((data||[]).map(d=>d.kurum_adi))].sort();
                 document.getElementById('f-kurum').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k=>`<option value="${k}">${k}</option>`).join('');
             };
+        }
+
+        // >>> BURAYA EKLEYİN: Sol Menü Açma/Kapama Tetikleyicisi <<<
+        const toggleBtn = document.getElementById('sidebar-toggle-btn');
+        const sidebar = document.querySelector('.sidebar');
+        if (toggleBtn && sidebar) {
+            toggleBtn.onclick = () => sidebar.classList.toggle('collapsed');
         }
         
         document.getElementById('kurumSorgulaBtn').onclick = () => window.kurumAnaliz();
