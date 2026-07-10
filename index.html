@@ -521,15 +521,13 @@
         }
         /* Sidebar geçiş efekti */
         .sidebar {
-            transition: margin-left 0.3s ease, width 0.3s ease;
-        }
+       transition: width 0.3s ease;
+}
 
-        /* Sidebar gizlendiğinde uygulanacak sınıf */
-        .sidebar.collapsed {
-            margin-left: -280px !important; /* Sidebar genişliği kadar sola kaydırır */
-            width: 0 !important;
-        }
-
+/* Sidebar gizlendiğinde uygulanacak sınıf */
+.sidebar.collapsed {
+    width: 0 !important;
+}
         /* Menü tetikleme butonu stili */
         #sidebar-toggle-btn {
             border: 1px solid #cbd5e1 !important;
