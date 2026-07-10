@@ -38,23 +38,25 @@
         
         .app-wrapper { display: flex; height: 100vh; }
         
-        /* Sol Menü (Sidebar) Tasarımı */
-        .sidebar { 
-            width: 280px; 
-            background: var(--sidebar-bg); 
-            color: white; 
-            flex-shrink: 0; 
-            overflow-y: auto;
-            border-right: 1px solid rgba(255,255,255,0.05);
-            display: flex;
-            flex-direction: column;
-        }
-        .sidebar-brand {
-            padding: 24px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: rgba(0,0,0,0.15);
-        }
+       /* Sol Menü (Sidebar) Tasarımı */
+.sidebar { 
+    width: 280px; 
+    background: var(--sidebar-bg); 
+    color: white; 
+    flex-shrink: 0; 
+    overflow-y: auto;
+    overflow-x: hidden; /* Genişlik küçülürken yatay taşmaları kesinlikle gizler */
+    border-right: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease; /* Sadece genişlik üzerinden yumuşak geçiş yapar */
+}
+
+/* Sidebar gizlendiğinde uygulanacak yeni stil (Negatif margin kaldırıldı) */
+.sidebar.collapsed {
+    width: 0 !important;
+    border-right: none !important; /* Kapanınca sağdaki ince çizgiyi de gizler */
+}
         .nav-container {
             padding: 15px 12px;
         }
