@@ -518,34 +518,35 @@
             50% { opacity: 1; }
         }
         /* Sidebar geçiş efekti */
-.sidebar {
-    transition: margin-left 0.3s ease, width 0.3s ease;
-}
+        .sidebar {
+            transition: margin-left 0.3s ease, width 0.3s ease;
+        }
 
-/* Sidebar gizlendiğinde uygulanacak sınıf */
-.sidebar.collapsed {
-    margin-left: -280px; /* Sidebar genişliği kadar sola kaydırır */
-    width: 0;
-}
+        /* Sidebar gizlendiğinde uygulanacak sınıf */
+        .sidebar.collapsed {
+            margin-left: -280px !important; /* Sidebar genişliği kadar sola kaydırır */
+            width: 0 !important;
+        }
 
-/* Menü tetikleme butonu stili */
-#sidebar-toggle-btn {
-    border: 1px solid var(--border-color);
-    background: white;
-    color: var(--text-main);
-    padding: 6px 12px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+        /* Menü tetikleme butonu stili */
+        #sidebar-toggle-btn {
+            border: 1px solid #cbd5e1 !important;
+            background: #ffffff !important;
+            color: #1e293b !important;
+            padding: 6px 12px !important;
+            border-radius: 10px !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 1000 !important;
+            transition: all 0.2s ease;
+        }
 
-#sidebar-toggle-btn:hover {
-    background: var(--bg);
-    color: var(--accent);
-}
+        #sidebar-toggle-btn:hover {
+            background: var(--bg) !important;
+            color: var(--accent) !important;
+        }
     </style>
 </head>
 <body>
@@ -612,13 +613,13 @@
             </div>
         </div>
         <header class="top-header">
-    <div class="d-flex align-items-center gap-3">
-        <!-- Sol Menü Açma/Kapama Butonu -->
-        <button id="sidebar-toggle-btn">
-            <i class="bi bi-list fs-5"></i>
-        </button>
-        <h5 id="page-title" class="mb-0 fw-bold">Genel Bakış</h5>
-    </div>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Sol Menü Açma/Kapama Butonu (Doğrudan Tetiklemeli) -->
+                <button id="sidebar-toggle-btn" onclick="window.toggleSidebar()">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                <h5 id="page-title" class="mb-0 fw-bold">Genel Bakış</h5>
+            </div>
             <div class="d-flex align-items-center gap-3">
                 <span id="activeUserName" class="badge bg-light text-dark py-2 px-3 border" style="border-radius: 10px;"><i class="bi bi-person-check-fill text-success"></i> Kullanıcı</span>
                 <button class="btn btn-sm btn-outline-primary" style="border-radius: 10px;" onclick="acSifreDegistirModal()"><i class="bi bi-key"></i> Şifremi Değiştir</button>
@@ -835,6 +836,17 @@
 </div>
 
 <script>
+    // ---------- GLOBAL MENÜ AÇMA / KAPAMA FONKSİYONU (Her Koşulda Güvenli Çalışır) ----------
+    window.toggleSidebar = function() {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('collapsed');
+            console.log("Menü tetiklendi. Sınıf Listesi:", sidebar.classList.toString());
+        } else {
+            console.error("Hata: .sidebar elementi bulunamadı!");
+        }
+    };
+
     // ---------- SUPABASE KONFIG ----------
     const SUPABASE_URL = "https://alisjxtoivkeyeyyuikr.supabase.co";
     const SUPABASE_KEY = "sb_publishable_dToCJocokZ1QVw8-oHTe6Q_72u3p7Of";
@@ -1250,6 +1262,7 @@
         return { class: 'badge-kritik', text: '❌ Kritik' + itirazBadge };
     }
 
+    // Yön okuma
     function yonOku(yon) {
         return yon === 'Pozitif' ? '<span class="text-success fw-bold">↑ Pozitif</span>' : '<span class="text-danger fw-bold">↓ Negatif</span>';
     }
@@ -1823,7 +1836,7 @@
     window.donemselKarsilastir = async function() {
         const kurum = document.getElementById('karsKurumAdi').value;
         const seciliDonemler = Array.from(document.querySelectorAll('.donem-checkbox:checked')).map(cb=>parseInt(cb.value)).sort((a,b)=>a-b);
-        if(!kurum || seciliDonemler.length===0) { alert('Lütfen bir kurum ve en az bir dönem seçin.'); return; }
+        if(!kurum || seciliDonemler.length===0) { alert('Lütfen bir kurum and en az bir dönem seçin.'); return; }
         
         await itirazDurumlariniYukle();
         const toplamlar = {};
@@ -2870,7 +2883,6 @@
             }
         });
 
-        // Türkçe karakter ve büyük harf uyumlu akıllı kurum kısaltma fonksiyonu
         const kisaltKurumAdi = (name) => {
             if (!name) return "";
             const trToUpper = (str) => {
@@ -2927,7 +2939,7 @@
             });
             
             const sortedBransList = Object.entries(bransAggregates)
-                .sort((a,b)=>b[1].acilan - a[1].acilan) // Branşları kapasiteye göre sıralar
+                .sort((a,b)=>b[1].acilan - a[1].acilan)
                 .slice(0, 10);
                 
             sortedBransList.forEach(([bName, val]) => {
@@ -2938,11 +2950,10 @@
             });
         } else {
             const sortedKurumList = Object.entries(kurumAggregates)
-                .sort((a,b)=>b[1].acilan - a[1].acilan) // Kapasiteye göre sıralar
+                .sort((a,b)=>b[1].acilan - a[1].acilan)
                 .slice(0, 10);
                 
             sortedKurumList.forEach(([kName, val]) => {
-                // .split(" ") ekleyerek kelimeleri boşluklardan bölüp alt alta yazdırıyoruz
                 chartLabels.push(kisaltKurumAdi(kName).split(" "));
                 chartAcilan.push(val.acilan);
                 chartAlinan.push(val.alinan);
@@ -2994,7 +3005,6 @@
                                 font: { size: 9, weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" },
                                 maxRotation: 0,
                                 minRotation: 0,
-                                // Hiçbir hastane adının gizlenmemesini zorunlu kılar
                                 autoSkip: false 
                             }
                         },
@@ -3089,7 +3099,7 @@
                 if (!ay) return;
                 
                 if (!monthlyData[ay]) {
-                    monthlyData[ay] = { ilk_acilan: 0, ilk_alinan: 0, ilk_gerceklesen: 0, devam_acilan: 0, devam_alinan: 0, devam_gerceklesen: 0 };
+                    monthlyData[ay] = { ilk_acilan: 0, ilk_alinan: 0, ilk_gerceklesen: 0, devam_acilan: 0, devam_alinan: 0, devs_gerceklesen: 0 };
                 }
                 monthlyData[ay].ilk_acilan += parseNum(getVal(item, 'ilk_muayene_acilan_kapasite_aylik'));
                 monthlyData[ay].ilk_alinan += parseNum(getVal(item, 'ilk_muayene_alinan_randevu_aylik'));
@@ -3170,7 +3180,6 @@
             });
             
         } else {
-            // İki Ay Karşılaştırma Modu
             const activeKurum = mhrsTrendState.compareKurum;
             const ay1 = mhrsTrendState.compareAy1;
             const ay2 = mhrsTrendState.compareAy2;
@@ -3353,7 +3362,7 @@
         }
     };
 
-// ---------- BAŞLATMA ----------
+    // ---------- BAŞLATMA ----------
     (async function init() {
         const activeUser = sessionStorage.getItem('khhb_auth_user');
         const activeRole = sessionStorage.getItem('khhb_auth_role');
@@ -3381,12 +3390,6 @@
                 const tekil = [...new Set((data||[]).map(d=>d.kurum_adi))].sort();
                 document.getElementById('f-kurum').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k=>`<option value="${k}">${k}</option>`).join('');
             };
-        }
-
-        const toggleBtn = document.getElementById('sidebar-toggle-btn');
-        const sidebar = document.querySelector('.sidebar');
-        if (toggleBtn && sidebar) {
-            toggleBtn.onclick = () => sidebar.classList.toggle('collapsed');
         }
         
         document.getElementById('kurumSorgulaBtn').onclick = () => window.kurumAnaliz();
