@@ -3412,7 +3412,24 @@ function getMhrsRowMetrics(item, type) {
         }
 
         if (currentAnalitikSubTab === 'korelasyon') {
-            // Yalnızca Supabase performans tablosundaki sayısal verileri süzme ve varyans kontrolü
+            // Pearson katsayısı hesaplama yardımcı fonksiyonu
+            const calculatePearsonValue = (dataPoints) => {
+                if (dataPoints.length < 3) return null;
+                const n = dataPoints.length;
+                let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+                dataPoints.forEach(p => {
+                    sumX += p.x;
+                    sumY += p.y;
+                    sumXY += (p.x * p.y);
+                    sumX2 += (p.x * p.x);
+                    sumY2 += (p.y * p.y);
+                });
+                const pay = (n * sumXY) - (sumX * sumY);
+                const payda = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+                return payda === 0 ? 0 : (pay / payda);
+            };
+
+            // Göstergelerin varyansını ve geçerliliğini kontrol eden fonksiyon
             const getValidSupabaseMetrics = (fPerfData) => {
                 const grouped = {};
                 fPerfData.forEach(p => {
@@ -3431,22 +3448,22 @@ function getMhrsRowMetrics(item, type) {
                     Object.values(grouped).forEach(g => {
                         if (g[m] !== undefined) values.push(g[m]);
                     });
-                    if (values.length < 3) return; // İstatistiki kesişim için en az 3 nokta
+                    if (values.length < 3) return;
                     
                     const mean = values.reduce((s, v) => s + v, 0) / values.length;
                     const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / values.length;
-                    if (variance > 0.00001) { // Sabit/değişmeyen göstergeler elenir
+                    if (variance > 0.00001) {
                         validMetrics.push(m);
                     }
                 });
                 return validMetrics.sort();
             };
 
-            // HTML Tasarımı (Sadece Supabase Gösterge Kartları İçin)
+            // HTML Tasarımı (Anlamlı İlişkiler Tablosu Eklendi)
             container.innerHTML = `
                 <div class="alert alert-light border py-2 mb-3" style="border-radius:10px;">
-                    <i class="bi bi-database border-primary text-primary"></i> 
-                    <b>Supabase Veri Tabanı Analizi:</b> Performans tablonuzda yer alan gösterge kartlarının değerleri ($gd$) üzerinden <b>Pearson Korelasyon Katsayısı ($r$)</b> anlık hesaplanır.
+                    <i class="bi bi-cpu text-danger"></i> 
+                    <b>Otomatik Keşif Modu:</b> Sistem arka planda tüm gösterge çiftlerini eşleştirir ve sadece Pearson katsayısı doğrusal sınırları aşan ($|r| \\ge 0.40$) anlamlı ilişkileri aşağıdaki listede sunar.
                 </div>
                 <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
                     <div class="col-md-3">
@@ -3488,7 +3505,137 @@ function getMhrsRowMetrics(item, type) {
                         </div>
                     </div>
                 </div>
+
+                <!-- Anlamlı İlişkiler Tablosu Bölümü -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important;">
+                            <h6 class="fw-bold mb-3 text-secondary d-flex align-items-center gap-2">
+                                <i class="bi bi-magic text-danger"></i> 
+                                Sistem Tarafından Keşfedilen Anlamlı İlişkiler Listesi ($|r| \\ge 0.40$)
+                            </h6>
+                            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                                <table class="table table-sm table-hover table-bordered align-middle mb-0" style="font-size:11.5px;">
+                                    <thead class="table-light" style="position: sticky; top:0; z-index:2;">
+                                        <tr>
+                                            <th>1. Gösterge (X)</th>
+                                            <th>2. Gösterge (Y)</th>
+                                            <th class="text-center" style="width: 100px;">Katsayı ($r$)</th>
+                                            <th class="text-center" style="width: 180px;">İlişki Gücü</th>
+                                            <th class="text-center" style="width: 120px;">İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="anlamli-iliskiler-tbody">
+                                        <tr><td colspan="5" class="text-center text-muted">Hesaplanıyor...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             `;
+
+            // Tüm ikili kombinasyonları tarayarak r katsayısı yüksek olanları listeleyen fonksiyon
+            const kesfetAnlamliIliskiler = (fPerfData, validMetrics) => {
+                const tbody = document.getElementById('anlamli-iliskiler-tbody');
+                if (!tbody) return;
+
+                const grouped = {};
+                fPerfData.forEach(p => {
+                    const val = parseFloat(p.gd);
+                    if (isNaN(val)) return;
+                    const key = `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
+                    if (!grouped[key]) grouped[key] = {};
+                    grouped[key][p.gosterge_adi] = val;
+                });
+
+                const results = [];
+
+                // İkili eşleştirmeleri gerçekleştir
+                for (let i = 0; i < validMetrics.length; i++) {
+                    for (let j = i + 1; j < validMetrics.length; j++) {
+                        const m1 = validMetrics[i];
+                        const m2 = validMetrics[j];
+
+                        const pts = [];
+                        Object.values(grouped).forEach(g => {
+                            if (g[m1] !== undefined && g[m2] !== undefined) {
+                                pts.push({ x: g[m1], y: g[m2] });
+                            }
+                        });
+
+                        if (pts.length >= 3) {
+                            const r = calculatePearsonValue(pts);
+                            if (r !== null && Math.abs(r) >= 0.40) { // İlişki barajı: 0.40
+                                results.push({ m1, m2, r });
+                            }
+                        }
+                    }
+                }
+
+                // İlişki gücüne göre azalan sırada sırala (mutlak değere göre)
+                results.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+
+                if (results.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Veri seti içerisinde $|r| \\ge 0.40$ sınırını aşan bir doğrusal ilişki bulunamadı.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = results.map(res => {
+                    let badgeClass = "bg-warning text-dark";
+                    let gucText = "Orta Seviye";
+                    const absR = Math.abs(res.r);
+
+                    if (absR >= 0.8) {
+                        badgeClass = "bg-danger text-white";
+                        gucText = res.r > 0 ? "Pozitif Çok Güçlü" : "Negatif Çok Güçlü";
+                    } else if (absR >= 0.6) {
+                        badgeClass = "bg-primary text-white";
+                        gucText = res.r > 0 ? "Pozitif Güçlü" : "Negatif Güçlü";
+                    } else {
+                        gucText = res.r > 0 ? "Pozitif Orta Seviye" : "Negatif Orta Seviye";
+                    }
+
+                    // Göstergelerin tam adlarını saklayarak seçildiğinde tetiklenecek fonksiyon çağrısı
+                    const encM1 = encodeURIComponent(res.m1);
+                    const encM2 = encodeURIComponent(res.m2);
+
+                    return `
+                        <tr>
+                            <td>${res.m1}</td>
+                            <td>${res.m2}</td>
+                            <td class="text-center fw-bold text-dark">${res.r.toFixed(4)}</td>
+                            <td class="text-center"><span class="badge ${badgeClass}">${gucText}</span></td>
+                            <td class="text-center">
+                                <button class="btn btn-xs btn-outline-danger py-0 px-2 fw-semibold" style="font-size:10.5px; border-radius:6px;" 
+                                    onclick="window.aktarVeGrafikCiz('${encM1}', '${encM2}')">
+                                    🎯 İncele
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            };
+
+            // Listeden seçilen ilişki çiftini yukarıdaki seçicilere otomatik aktaran fonksiyon
+            window.aktarVeGrafikCiz = function(encM1, encM2) {
+                const m1 = decodeURIComponent(encM1);
+                const m2 = decodeURIComponent(encM2);
+
+                const xSelect = document.getElementById('korelasyon-x');
+                const ySelect = document.getElementById('korelasyon-y');
+
+                if (xSelect && ySelect) {
+                    xSelect.value = m1;
+                    // Y seçeneğini güncelle ve ardından grafiği çiz
+                    window.guncelleKorelasyonYSecenekleri(null, null);
+                    ySelect.value = m2;
+                    window.hesaplaKorelasyonMetrikleri();
+                    
+                    // Sayfayı yukarı kaydır
+                    document.getElementById('korelasyon-x').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            };
 
             window.guncelleKorelasyonSecenekleri = function() {
                 const tip = document.getElementById('korelasyon-tip').value;
@@ -3510,6 +3657,9 @@ function getMhrsRowMetrics(item, type) {
                 
                 xSelect.innerHTML = validMetrics.map(m => `<option value="${m}">${m.substring(0, 70)}...</option>`).join('');
                 window.guncelleKorelasyonYSecenekleri(fPerfData, validMetrics);
+                
+                // Arka planda tüm anlamlı gösterge ilişkilerini çıkar
+                kesfetAnlamliIliskiler(fPerfData, validMetrics);
             };
 
             window.guncelleKorelasyonYSecenekleri = function(customData, validMetricsList) {
@@ -3587,20 +3737,7 @@ function getMhrsRowMetrics(item, type) {
                     return;
                 }
                 
-                const n = dataPoints.length;
-                let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
-                dataPoints.forEach(p => {
-                    sumX += p.x;
-                    sumY += p.y;
-                    sumXY += (p.x * p.y);
-                    sumX2 += (p.x * p.x);
-                    sumY2 += (p.y * p.y);
-                });
-                
-                const pay = (n * sumXY) - (sumX * sumY);
-                const payda = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
-                const r = payda === 0 ? 0 : (pay / payda);
-                
+                const r = calculatePearsonValue(dataPoints);
                 document.getElementById('r-katsayi-val').innerText = r.toFixed(4);
                 
                 let derece = "";
