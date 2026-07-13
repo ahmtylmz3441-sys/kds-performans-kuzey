@@ -3933,9 +3933,10 @@ function getMhrsRowMetrics(item, type) {
             window.hesaplaRegresyonTahmini();
             
         } else if (currentAnalitikSubTab === 'anomali') {
-            // Z-Skoru Anomali Tespiti
-            // Tüm gösterge değerlerinin ortalamasını ve standart sapmasını bul
-            const values = perfData.map(p => parseFloat(p.gd)).filter(v => !isNaN(v));
+            // SYPG-BH-20 göstergesini veri kümesinden tamamen muaf tutuyoruz
+            const filteredPerf = perfData.filter(p => p.gosterge_kodu !== 'SYPG-BH-20');
+            
+            const values = filteredPerf.map(p => parseFloat(p.gd)).filter(v => !isNaN(v));
             const n = values.length;
             
             if (n < 5) {
@@ -3947,14 +3948,13 @@ function getMhrsRowMetrics(item, type) {
             const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / n;
             const stdDev = Math.sqrt(variance);
             
-            // Z-Skorlarını Hesapla ve Anomalileri Ayıkla (|Z| > 1.5)
             const anomalies = [];
-            perfData.forEach(p => {
+            filteredPerf.forEach(p => {
                 const gd = parseFloat(p.gd);
                 if (isNaN(gd) || stdDev === 0) return;
                 
                 const z = (gd - mean) / stdDev;
-                if (Math.abs(z) > 1.5) {
+                if (Math.abs(z) > 1.5) { // 1.5 Standart sapma eşiği
                     anomalies.push({
                         kurum: p.kurum_adi,
                         gosterge: p.gosterge_kodu ? `${p.gosterge_kodu} - ${p.gosterge_adi}` : p.gosterge_adi,
@@ -3976,7 +3976,7 @@ function getMhrsRowMetrics(item, type) {
                     <td class="text-center"><span class="badge ${Math.abs(a.z) > 2 ? 'bg-danger':'bg-warning'}">${a.z.toFixed(2)}</span></td>
                     <td class="text-center">${a.donem}.Dönem (${a.yil})</td>
                     <td class="text-center">
-                        ${a.z > 0 ? '<span class="text-success fw-bold"><i class="bi bi-arrow-up-circle"></i> Pozitif Aşırı Sapan</span>' : '<span class="text-danger fw-bold"><i class="bi bi-arrow-down-circle"></i> Negatif Aşırı Sapan</span>'}
+                        ${a.z > 0 ? '<span class="text-success fw-bold"><i class="bi bi-arrow-up-circle"></i> Pozitif Aşırı Sapma</span>' : '<span class="text-danger fw-bold"><i class="bi bi-arrow-down-circle"></i> Negatif Aşırı Sapma</span>'}
                     </td>
                 </tr>
             `).join('');
@@ -3984,7 +3984,8 @@ function getMhrsRowMetrics(item, type) {
             container.innerHTML = `
                 <div class="alert alert-danger py-2 mb-3" style="border-radius:10px;">
                     <i class="bi bi-exclamation-octagon-fill"></i> 
-                    <b>İstatistiki Sapma Raporu:</b> Ortalama değere göre <b>1.5 kat standart sapmanın dışında kalan (Z-Skoru > 1.5 veya < -1.5)</b> uç (aşırı sapan) kurumsal göstergeler otomatik tespit edilmiştir.
+                    <b>İstatistiki Sapma Raporu:</b> Ortalama değere göre standart sapmanın dışında kalan uç veriler listelenmiştir. 
+                    <span class="badge bg-dark ms-2">SYPG-BH-20 Muaf Tutuldu</span>
                 </div>
                 <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                     <table class="table table-sm table-striped table-bordered align-middle" style="font-size:11.5px;">
@@ -3993,9 +3994,9 @@ function getMhrsRowMetrics(item, type) {
                                 <th>Kurum</th>
                                 <th>İlgili Gösterge</th>
                                 <th class="text-center">Gösterge Değeri (GD)</th>
-                                <th class="text-center">Hesaplanan Z-Skoru</th>
+                                <th class="text-center">Z-Skoru</th>
                                 <th class="text-center">Zaman Dilimi</th>
-                                <th class="text-center">Yapay Anomali Sınıfı</th>
+                                <th class="text-center">Anomali Sınıfı</th>
                             </tr>
                         </thead>
                         <tbody>
