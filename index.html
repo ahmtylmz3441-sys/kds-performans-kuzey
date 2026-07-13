@@ -3933,29 +3933,60 @@ function getMhrsRowMetrics(item, type) {
             window.hesaplaRegresyonTahmini();
             
         } else if (currentAnalitikSubTab === 'anomali') {
-            const yilOptions = ['<option value="">Tümü (Tüm Yıllar)</option>', ...mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`)].join('');
-            const donemOptions = ['<option value="">Tümü (Tüm Dönemler)</option>', ...mevcutYillarDonemler.donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`)].join('');
-
-            // HTML Tasarımı (Filtreler ve Dinamik Tablo Yapısı)
+            // SYPG-BH-20 göstergesini veri kümesinden tamamen muaf tutuyoruz
+            const filteredPerf = perfData.filter(p => p.gosterge_kodu !== 'SYPG-BH-20');
+            
+            const values = filteredPerf.map(p => parseFloat(p.gd)).filter(v => !isNaN(v));
+            const n = values.length;
+            
+            if (n < 5) {
+                container.innerHTML = '<div class="alert alert-warning text-center">Anomali tespiti için yeterli veri havuzu oluşmadı.</div>';
+                return;
+            }
+            
+            const mean = values.reduce((s, v) => s + v, 0) / n;
+            const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / n;
+            const stdDev = Math.sqrt(variance);
+            
+            const anomalies = [];
+            filteredPerf.forEach(p => {
+                const gd = parseFloat(p.gd);
+                if (isNaN(gd) || stdDev === 0) return;
+                
+                const z = (gd - mean) / stdDev;
+                if (Math.abs(z) > 1.5) { // 1.5 Standart sapma eşiği
+                    anomalies.push({
+                        kurum: p.kurum_adi,
+                        gosterge: p.gosterge_kodu ? `${p.gosterge_kodu} - ${p.gosterge_adi}` : p.gosterge_adi,
+                        gd: gd,
+                        z: z,
+                        yil: p.yil,
+                        donem: p.donem
+                    });
+                }
+            });
+            
+            anomalies.sort((a,b) => Math.abs(b.z) - Math.abs(a.z));
+            
+            let tableRows = anomalies.map(a => `
+                <tr>
+                    <td><b>${a.kurum}</b></td>
+                    <td>${a.gosterge}</td>
+                    <td class="text-center fw-bold">${a.gd}</td>
+                    <td class="text-center"><span class="badge ${Math.abs(a.z) > 2 ? 'bg-danger':'bg-warning'}">${a.z.toFixed(2)}</span></td>
+                    <td class="text-center">${a.donem}.Dönem (${a.yil})</td>
+                    <td class="text-center">
+                        ${a.z > 0 ? '<span class="text-success fw-bold"><i class="bi bi-arrow-up-circle"></i> Pozitif Aşırı Sapma</span>' : '<span class="text-danger fw-bold"><i class="bi bi-arrow-down-circle"></i> Negatif Aşırı Sapma</span>'}
+                    </td>
+                </tr>
+            `).join('');
+            
             container.innerHTML = `
                 <div class="alert alert-danger py-2 mb-3" style="border-radius:10px;">
                     <i class="bi bi-exclamation-octagon-fill"></i> 
                     <b>İstatistiki Sapma Raporu:</b> Ortalama değere göre standart sapmanın dışında kalan uç veriler listelenmiştir. 
-                    <span class="badge bg-dark ms-2">SYPG-BH-20 ve SYPG-BH-22 Muaf Tutuldu</span>
+                    <span class="badge bg-dark ms-2">SYPG-BH-20 Muaf Tutuldu</span>
                 </div>
-                
-                <!-- Dönem ve Yıl Filtreleri -->
-                <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold text-secondary">Yıl Seçimi</label>
-                        <select id="anomali-f-yil" class="form-select form-select-sm" onchange="window.hesaplaAnomaliListesi()">${yilOptions}</select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold text-secondary">Dönem Seçimi</label>
-                        <select id="anomali-f-donem" class="form-select form-select-sm" onchange="window.hesaplaAnomaliListesi()">${donemOptions}</select>
-                    </div>
-                </div>
-
                 <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                     <table class="table table-sm table-striped table-bordered align-middle" style="font-size:11.5px;">
                         <thead class="table-dark">
@@ -3968,87 +3999,16 @@ function getMhrsRowMetrics(item, type) {
                                 <th class="text-center">Anomali Sınıfı</th>
                             </tr>
                         </thead>
-                        <tbody id="anomali-tablo-body">
-                            <!-- Veriler dinamik hesaplanacaktır -->
+                        <tbody>
+                            ${tableRows || '<tr><td colspan="6" class="text-center text-muted">Bölge genelinde anormal sapma gösteren kritik bir parametre bulunamadı.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
             `;
 
-            // Dinamik Anomali Hesaplama ve Listeleme Fonksiyonu
-            window.hesaplaAnomaliListesi = function() {
-                const selYil = document.getElementById('anomali-f-yil').value;
-                const selDonem = document.getElementById('anomali-f-donem').value;
-                const tbody = document.getElementById('anomali-tablo-body');
-                if (!tbody) return;
-
-                // SYPG-BH-20 ve SYPG-BH-22 verilerini muaf tutuyoruz
-                let filteredPerf = perfData.filter(p => p.gosterge_kodu !== 'SYPG-BH-20' && p.gosterge_kodu !== 'SYPG-BH-22');
-                
-                // Seçilen filtrelere göre verileri daralt
-                if (selYil) {
-                    filteredPerf = filteredPerf.filter(p => p.yil.toString() === selYil.toString());
-                }
-                if (selDonem) {
-                    filteredPerf = filteredPerf.filter(p => p.donem.toString() === selDonem.toString());
-                }
-
-                const values = filteredPerf.map(p => parseFloat(p.gd)).filter(v => !isNaN(v));
-                const n = values.length;
-                
-                if (n < 3) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Seçilen kriterlerde istatistiksel hesaplama yapmak için yeterli veri bulunamadı.</td></tr>';
-                    return;
-                }
-                
-                // Filtrelenmiş alt küme için ortalama ve sapmayı hesapla
-                const mean = values.reduce((s, v) => s + v, 0) / n;
-                const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / n;
-                const stdDev = Math.sqrt(variance);
-                
-                const anomalies = [];
-                filteredPerf.forEach(p => {
-                    const gd = parseFloat(p.gd);
-                    if (isNaN(gd) || stdDev === 0) return;
-                    
-                    const z = (gd - mean) / stdDev;
-                    if (Math.abs(z) > 1.5) {
-                        anomalies.push({
-                            kurum: p.kurum_adi,
-                            gosterge: p.gosterge_kodu ? `${p.gosterge_kodu} - ${p.gosterge_adi}` : p.gosterge_adi,
-                            gd: gd,
-                            z: z,
-                            yil: p.yil,
-                            donem: p.donem
-                        });
-                    }
-                });
-                
-                anomalies.sort((a,b) => Math.abs(b.z) - Math.abs(a.z));
-                
-                if (anomalies.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-success fw-semibold">Filtrelenen aralıkta istatistiksel sınırlar dışında sapan veri tespit edilmedi.</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = anomalies.map(a => `
-                    <tr>
-                        <td><b>${a.kurum}</b></td>
-                        <td>${a.gosterge}</td>
-                        <td class="text-center fw-bold">${a.gd}</td>
-                        <td class="text-center"><span class="badge ${Math.abs(a.z) > 2 ? 'bg-danger':'bg-warning'}">${a.z.toFixed(2)}</span></td>
-                        <td class="text-center">${a.donem}.Dönem (${a.yil})</td>
-                        <td class="text-center">
-                            ${a.z > 0 ? '<span class="text-success fw-bold"><i class="bi bi-arrow-up-circle"></i> Pozitif Aşırı Sapma</span>' : '<span class="text-danger fw-bold"><i class="bi bi-arrow-down-circle"></i> Negatif Aşırı Sapma</span>'}
-                        </td>
-                    </tr>
-                `).join('');
-            };
-
             // Sayfa yüklendiğinde varsayılan tüm zamanlar üzerinden çalıştır
             window.hesaplaAnomaliListesi();
-        }
-            
+                  
         } else if (currentAnalitikSubTab === 'kume') {
             // Matris Tabanlı Segmentasyon
             if (puanData.length === 0) {
