@@ -3412,8 +3412,8 @@ function getMhrsRowMetrics(item, type) {
         }
 
         if (currentAnalitikSubTab === 'korelasyon') {
-            // Varyansı sıfırdan büyük ve en az 3 veri noktası olan anlamlı göstergeleri tespit eden yardımcı fonksiyon
-            const getValidCorrelatedMetrics = (fPerfData) => {
+            // Yalnızca Supabase performans tablosundaki sayısal verileri süzme ve varyans kontrolü
+            const getValidSupabaseMetrics = (fPerfData) => {
                 const grouped = {};
                 fPerfData.forEach(p => {
                     const val = parseFloat(p.gd);
@@ -3431,26 +3431,26 @@ function getMhrsRowMetrics(item, type) {
                     Object.values(grouped).forEach(g => {
                         if (g[m] !== undefined) values.push(g[m]);
                     });
-                    if (values.length < 3) return; // En az 3 veri noktası şartı
+                    if (values.length < 3) return; // İstatistiki kesişim için en az 3 nokta
                     
                     const mean = values.reduce((s, v) => s + v, 0) / values.length;
                     const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / values.length;
-                    if (variance > 0.00001) { // Varyans sıfır olmamalı (sabit değerler elenir)
+                    if (variance > 0.00001) { // Sabit/değişmeyen göstergeler elenir
                         validMetrics.push(m);
                     }
                 });
                 return validMetrics.sort();
             };
 
-            // HTML Tasarımı (Kurum Türü Filtresi Eklendi)
+            // HTML Tasarımı (Sadece Supabase Gösterge Kartları İçin)
             container.innerHTML = `
                 <div class="alert alert-light border py-2 mb-3" style="border-radius:10px;">
-                    <i class="bi bi-info-circle-fill text-primary"></i> 
-                    İki gösterge arasındaki doğrusal bağıntıyı incelemek için parametreleri seçiniz. Sistem, aralarında yeterli veri noktası ve anlamlı ilişki kurulabilecek göstergeleri süzerek <b>Pearson Korelasyon Katsayısını ($r$)</b> hesaplar.
+                    <i class="bi bi-database border-primary text-primary"></i> 
+                    <b>Supabase Veri Tabanı Analizi:</b> Performans tablonuzda yer alan gösterge kartlarının değerleri ($gd$) üzerinden <b>Pearson Korelasyon Katsayısı ($r$)</b> anlık hesaplanır.
                 </div>
                 <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
                     <div class="col-md-3">
-                        <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
+                        <label class="form-label small fw-bold text-secondary">Kurum Türü (Supabase)</label>
                         <select id="korelasyon-tip" class="form-select form-select-sm" onchange="window.guncelleKorelasyonSecenekleri()">
                             <option value="">Tümü</option>
                             <option value="Hastane">Hastane</option>
@@ -3475,11 +3475,11 @@ function getMhrsRowMetrics(item, type) {
                         <div class="p-3 border rounded bg-white shadow-sm mb-3">
                             <h6 class="text-secondary small fw-bold">Pearson Katsayısı ($r$)</h6>
                             <div class="fs-2 fw-extrabold text-danger" id="r-katsayi-val">-</div>
-                            <div id="r-katsayi-derece" class="small mt-1 text-muted">Parametreleri seçerek hesaplayın.</div>
+                            <div id="r-katsayi-derece" class="small mt-1 text-muted">Hesaplanıyor...</div>
                         </div>
                         <div class="p-3 border rounded bg-white shadow-sm">
                             <h6 class="text-secondary small fw-bold">Yorum ve Çıkarım</h6>
-                            <p id="r-katsayi-yorum" class="small text-muted mb-0">Seçilen iki kurumsal gösterge arasında veri desenleri üzerinden istatistiksel ilişki kurulacaktır.</p>
+                            <p id="r-katsayi-yorum" class="small text-muted mb-0">Seçilen iki gösterge kartının dönem verileri karşılaştırılıyor.</p>
                         </div>
                     </div>
                     <div class="col-md-8">
@@ -3490,7 +3490,6 @@ function getMhrsRowMetrics(item, type) {
                 </div>
             `;
 
-            // Seçilen kurum tipine göre X ve Y seçeneklerini güncelleyen fonksiyonlar
             window.guncelleKorelasyonSecenekleri = function() {
                 const tip = document.getElementById('korelasyon-tip').value;
                 let fPerfData = perfData;
@@ -3500,12 +3499,12 @@ function getMhrsRowMetrics(item, type) {
                     fPerfData = perfData.filter(p => p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH');
                 }
                 
-                const validMetrics = getValidCorrelatedMetrics(fPerfData);
+                const validMetrics = getValidSupabaseMetrics(fPerfData);
                 const xSelect = document.getElementById('korelasyon-x');
                 
                 if (validMetrics.length === 0) {
-                    xSelect.innerHTML = '<option value="">Uygun gösterge bulunamadı</option>';
-                    document.getElementById('korelasyon-y').innerHTML = '<option value="">Uygun gösterge bulunamadı</option>';
+                    xSelect.innerHTML = '<option value="">Gösterge kartı bulunamadı</option>';
+                    document.getElementById('korelasyon-y').innerHTML = '<option value="">Gösterge kartı bulunamadı</option>';
                     return;
                 }
                 
@@ -3527,9 +3526,8 @@ function getMhrsRowMetrics(item, type) {
                 
                 const valX = document.getElementById('korelasyon-x').value;
                 const ySelect = document.getElementById('korelasyon-y');
-                const validMetrics = validMetricsList || getValidCorrelatedMetrics(fPerfData);
+                const validMetrics = validMetricsList || getValidSupabaseMetrics(fPerfData);
                 
-                // Gruplama yaparak X ile Y arasında en az 3 ortak kesişim noktası olanları bulur
                 const grouped = {};
                 fPerfData.forEach(p => {
                     const val = parseFloat(p.gd);
@@ -3558,7 +3556,6 @@ function getMhrsRowMetrics(item, type) {
                 ySelect.innerHTML = metricsWithPairs.map(m => `<option value="${m}">${m.substring(0, 70)}...</option>`).join('');
             };
 
-            // İlk yükleme tetikleyicisi
             window.guncelleKorelasyonSecenekleri();
 
             window.hesaplaKorelasyonMetrikleri = function() {
@@ -3586,7 +3583,7 @@ function getMhrsRowMetrics(item, type) {
                 if (dataPoints.length < 3) {
                     document.getElementById('r-katsayi-val').innerText = "-";
                     document.getElementById('r-katsayi-derece').innerHTML = `<span class="badge bg-secondary">Yetersiz Ortak Veri</span>`;
-                    document.getElementById('r-katsayi-yorum').innerText = "Seçilen iki göstergenin kesiştiği ortak dönem/kurum sayısı analiz için yetersizdir.";
+                    document.getElementById('r-katsayi-yorum').innerText = "Seçilen iki gösterge kartının kesiştiği ortak dönem sayısı analiz için yetersizdir.";
                     return;
                 }
                 
@@ -3625,11 +3622,11 @@ function getMhrsRowMetrics(item, type) {
                 document.getElementById('r-katsayi-derece').innerHTML = `<span class="badge bg-danger">${derece}</span>`;
                 
                 if (r > 0.25) {
-                    yorum = "Seçilen iki gösterge arasında <b>pozitif yönlü</b> bir ilişki mevcuttur. Yani 1. Gösterge değeri yükseldikçe, 2. Gösterge performansının da istatistiksel olarak artma eğiliminde olduğu gözlenmiştir.";
+                    yorum = "Gösterge kartları arasında <b>pozitif yönlü</b> bir ilişki tespit edilmiştir. Soldaki parametre yükseldikçe sağdaki parametrenin de istatistiksel gelişim gösterdiği gözlenmektedir.";
                 } else if (r < -0.25) {
-                    yorum = "Seçilen iki gösterge arasında <b>negatif yönlü</b> bir ilişki mevcuttur. Yani 1. Gösterge değeri yükseldikçe, 2. Gösterge performans değerinin düşme eğilimi gösterdiği matematiksel olarak doğrulanmıştır.";
+                    yorum = "Gösterge kartları arasında <b>negatif yönlü</b> bir ilişki tespit edilmiştir. Yani ilk göstergedeki artış, ikinci göstergenin değerini matematiksel olarak aşağı çekmektedir.";
                 } else {
-                    yorum = "Göstergelerin veri dağılımında anlamlı ortak bir hareket deseni tespit edilememiştir. İki parametre operasyonel açıdan birbirinden bağımsız çalışıyor olabilir.";
+                    yorum = "Göstergelerin veri dağılımında ortak bir hareket deseni tespit edilememiştir. Parametreler idari olarak birbirini doğrudan etkilemiyor görünmektedir.";
                 }
                 document.getElementById('r-katsayi-yorum').innerHTML = yorum;
                 
@@ -3640,7 +3637,7 @@ function getMhrsRowMetrics(item, type) {
                         type: 'scatter',
                         data: {
                             datasets: [{
-                                label: 'Eşleşen Veri Noktaları',
+                                label: 'Eşleşen Kurum Dönemleri',
                                 data: dataPoints.map(p => ({ x: p.x, y: p.y, label: `${p.kurum} (${p.donem}.Dönem)` })),
                                 backgroundColor: 'rgba(239, 68, 68, 0.75)',
                                 borderColor: '#ef4444',
