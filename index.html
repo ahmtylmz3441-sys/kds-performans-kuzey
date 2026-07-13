@@ -3412,27 +3412,61 @@ function getMhrsRowMetrics(item, type) {
         }
 
         if (currentAnalitikSubTab === 'korelasyon') {
-            // Korelasyon Hesaplama Ekranı
-            const uniqueMetrics = [...new Set(perfData.map(p => p.gosterge_adi))].sort();
-            
-            let optionsHtml = uniqueMetrics.map(m => `<option value="${m}">${m.substring(0, 70)}...</option>`).join('');
-            
+            // Varyansı sıfırdan büyük ve en az 3 veri noktası olan anlamlı göstergeleri tespit eden yardımcı fonksiyon
+            const getValidCorrelatedMetrics = (fPerfData) => {
+                const grouped = {};
+                fPerfData.forEach(p => {
+                    const val = parseFloat(p.gd);
+                    if (isNaN(val)) return;
+                    const key = `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
+                    if (!grouped[key]) grouped[key] = {};
+                    grouped[key][p.gosterge_adi] = val;
+                });
+
+                const allMetrics = [...new Set(fPerfData.map(p => p.gosterge_adi))];
+                const validMetrics = [];
+                
+                allMetrics.forEach(m => {
+                    const values = [];
+                    Object.values(grouped).forEach(g => {
+                        if (g[m] !== undefined) values.push(g[m]);
+                    });
+                    if (values.length < 3) return; // En az 3 veri noktası şartı
+                    
+                    const mean = values.reduce((s, v) => s + v, 0) / values.length;
+                    const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / values.length;
+                    if (variance > 0.00001) { // Varyans sıfır olmamalı (sabit değerler elenir)
+                        validMetrics.push(m);
+                    }
+                });
+                return validMetrics.sort();
+            };
+
+            // HTML Tasarımı (Kurum Türü Filtresi Eklendi)
             container.innerHTML = `
                 <div class="alert alert-light border py-2 mb-3" style="border-radius:10px;">
                     <i class="bi bi-info-circle-fill text-primary"></i> 
-                    İki gösterge arasındaki doğrusal bağıntıyı incelemek için parametreleri seçiniz. Sistem, arka planda <b>Pearson Korelasyon Katsayısını ($r$)</b> anlık hesaplar.
+                    İki gösterge arasındaki doğrusal bağıntıyı incelemek için parametreleri seçiniz. Sistem, aralarında yeterli veri noktası ve anlamlı ilişki kurulabilecek göstergeleri süzerek <b>Pearson Korelasyon Katsayısını ($r$)</b> hesaplar.
                 </div>
                 <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
-                    <div class="col-md-5">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
+                        <select id="korelasyon-tip" class="form-select form-select-sm" onchange="window.guncelleKorelasyonSecenekleri()">
+                            <option value="">Tümü</option>
+                            <option value="Hastane">Hastane</option>
+                            <option value="ADSM">ADSM/ADSH</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label small fw-bold text-secondary">1. Gösterge (X Ekseni)</label>
-                        <select id="korelasyon-x" class="form-select form-select-sm">${optionsHtml}</select>
+                        <select id="korelasyon-x" class="form-select form-select-sm" onchange="window.guncelleKorelasyonYSecenekleri()"></select>
                     </div>
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <label class="form-label small fw-bold text-secondary">2. Gösterge (Y Ekseni)</label>
-                        <select id="korelasyon-y" class="form-select form-select-sm">${optionsHtml}</select>
+                        <select id="korelasyon-y" class="form-select form-select-sm"></select>
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button class="btn btn-sm btn-danger w-100 fw-bold" onclick="window.hesaplaKorelasyonMetrikleri()">📊 İlişkiyi Analiz Et</button>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button class="btn btn-sm btn-danger w-100 fw-bold" onclick="window.hesaplaKorelasyonMetrikleri()">📊 Analiz</button>
                     </div>
                 </div>
                 
@@ -3455,17 +3489,92 @@ function getMhrsRowMetrics(item, type) {
                     </div>
                 </div>
             `;
-            
-            if (uniqueMetrics.length > 1) {
-                document.getElementById('korelasyon-y').selectedIndex = 1;
-            }
+
+            // Seçilen kurum tipine göre X ve Y seçeneklerini güncelleyen fonksiyonlar
+            window.guncelleKorelasyonSecenekleri = function() {
+                const tip = document.getElementById('korelasyon-tip').value;
+                let fPerfData = perfData;
+                if (tip === 'Hastane') {
+                    fPerfData = perfData.filter(p => p.kurum_tipi === 'Hastane');
+                } else if (tip === 'ADSM') {
+                    fPerfData = perfData.filter(p => p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH');
+                }
+                
+                const validMetrics = getValidCorrelatedMetrics(fPerfData);
+                const xSelect = document.getElementById('korelasyon-x');
+                
+                if (validMetrics.length === 0) {
+                    xSelect.innerHTML = '<option value="">Uygun gösterge bulunamadı</option>';
+                    document.getElementById('korelasyon-y').innerHTML = '<option value="">Uygun gösterge bulunamadı</option>';
+                    return;
+                }
+                
+                xSelect.innerHTML = validMetrics.map(m => `<option value="${m}">${m.substring(0, 70)}...</option>`).join('');
+                window.guncelleKorelasyonYSecenekleri(fPerfData, validMetrics);
+            };
+
+            window.guncelleKorelasyonYSecenekleri = function(customData, validMetricsList) {
+                const tip = document.getElementById('korelasyon-tip').value;
+                let fPerfData = customData;
+                if (!fPerfData) {
+                    fPerfData = perfData;
+                    if (tip === 'Hastane') {
+                        fPerfData = perfData.filter(p => p.kurum_tipi === 'Hastane');
+                    } else if (tip === 'ADSM') {
+                        fPerfData = perfData.filter(p => p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH');
+                    }
+                }
+                
+                const valX = document.getElementById('korelasyon-x').value;
+                const ySelect = document.getElementById('korelasyon-y');
+                const validMetrics = validMetricsList || getValidCorrelatedMetrics(fPerfData);
+                
+                // Gruplama yaparak X ile Y arasında en az 3 ortak kesişim noktası olanları bulur
+                const grouped = {};
+                fPerfData.forEach(p => {
+                    const val = parseFloat(p.gd);
+                    if (isNaN(val)) return;
+                    const key = `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
+                    if (!grouped[key]) grouped[key] = {};
+                    grouped[key][p.gosterge_adi] = val;
+                });
+                
+                const metricsWithPairs = validMetrics.filter(m => {
+                    if (m === valX) return false;
+                    let pairsCount = 0;
+                    Object.values(grouped).forEach(g => {
+                        if (g[valX] !== undefined && g[m] !== undefined) {
+                            pairsCount++;
+                        }
+                    });
+                    return pairsCount >= 3;
+                });
+                
+                if (metricsWithPairs.length === 0) {
+                    ySelect.innerHTML = '<option value="">Kesişen gösterge bulunamadı</option>';
+                    return;
+                }
+                
+                ySelect.innerHTML = metricsWithPairs.map(m => `<option value="${m}">${m.substring(0, 70)}...</option>`).join('');
+            };
+
+            // İlk yükleme tetikleyicisi
+            window.guncelleKorelasyonSecenekleri();
+
             window.hesaplaKorelasyonMetrikleri = function() {
+                const tip = document.getElementById('korelasyon-tip').value;
                 const metricX = document.getElementById('korelasyon-x').value;
                 const metricY = document.getElementById('korelasyon-y').value;
                 
-                // Kurum ve Dönem bazında eşleştirme
+                let fPerfData = perfData;
+                if (tip === 'Hastane') {
+                    fPerfData = perfData.filter(p => p.kurum_tipi === 'Hastane');
+                } else if (tip === 'ADSM') {
+                    fPerfData = perfData.filter(p => p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH');
+                }
+
                 const pairedData = {};
-                perfData.forEach(p => {
+                fPerfData.forEach(p => {
                     const key = `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
                     if (!pairedData[key]) pairedData[key] = { x: null, y: null, kurum: p.kurum_adi, donem: p.donem };
                     if (p.gosterge_adi === metricX) pairedData[key].x = parseFloat(p.gd);
@@ -3475,11 +3584,12 @@ function getMhrsRowMetrics(item, type) {
                 const dataPoints = Object.values(pairedData).filter(item => item.x !== null && !isNaN(item.x) && item.y !== null && !isNaN(item.y));
                 
                 if (dataPoints.length < 3) {
-                    alert("Seçtiğiniz parametrelerde doğrusal ilişki hesaplamak için yeterli ortak kesişim kümesi (veri) bulunamadı.");
+                    document.getElementById('r-katsayi-val').innerText = "-";
+                    document.getElementById('r-katsayi-derece').innerHTML = `<span class="badge bg-secondary">Yetersiz Ortak Veri</span>`;
+                    document.getElementById('r-katsayi-yorum').innerText = "Seçilen iki göstergenin kesiştiği ortak dönem/kurum sayısı analiz için yetersizdir.";
                     return;
                 }
                 
-                // Pearson Formülü
                 const n = dataPoints.length;
                 let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
                 dataPoints.forEach(p => {
@@ -3492,34 +3602,37 @@ function getMhrsRowMetrics(item, type) {
                 
                 const pay = (n * sumXY) - (sumX * sumY);
                 const payda = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
-                
                 const r = payda === 0 ? 0 : (pay / payda);
                 
-                // Değerleri Ekrana Yaz
                 document.getElementById('r-katsayi-val').innerText = r.toFixed(4);
                 
                 let derece = "";
                 let yorum = "";
                 const absR = Math.abs(r);
                 
-                if (absR >= 0.8) derece = "Çok Güçlü / Belirgin İlişki";
-                else if (absR >= 0.6) derece = "Güçlü Doğrusal İlişki";
-                else if (absR >= 0.4) derece = "Orta Dereceli İlişki";
-                else if (absR >= 0.2) derece = "Zayıf / Düşük Bağıntı";
-                else derece = "Korelasyon Yok / İhmal Edilebilir";
+                if (absR >= 0.8) {
+                    derece = "Çok Güçlü / Belirgin İlişki";
+                } else if (absR >= 0.6) {
+                    derece = "Güçlü Doğrusal İlişki";
+                } else if (absR >= 0.4) {
+                    derece = "Orta Dereceli İlişki";
+                } else if (absR >= 0.2) {
+                    derece = "Zayıf / Düşük Bağıntı";
+                } else {
+                    derece = "Korelasyon Yok / İhmal Edilebilir";
+                }
                 
                 document.getElementById('r-katsayi-derece').innerHTML = `<span class="badge bg-danger">${derece}</span>`;
                 
-                if (r > 0.3) {
+                if (r > 0.25) {
                     yorum = "Seçilen iki gösterge arasında <b>pozitif yönlü</b> bir ilişki mevcuttur. Yani 1. Gösterge değeri yükseldikçe, 2. Gösterge performansının da istatistiksel olarak artma eğiliminde olduğu gözlenmiştir.";
-                } else if (r < -0.3) {
+                } else if (r < -0.25) {
                     yorum = "Seçilen iki gösterge arasında <b>negatif yönlü</b> bir ilişki mevcuttur. Yani 1. Gösterge değeri yükseldikçe, 2. Gösterge performans değerinin düşme eğilimi gösterdiği matematiksel olarak doğrulanmıştır.";
                 } else {
                     yorum = "Göstergelerin veri dağılımında anlamlı ortak bir hareket deseni tespit edilememiştir. İki parametre operasyonel açıdan birbirinden bağımsız çalışıyor olabilir.";
                 }
                 document.getElementById('r-katsayi-yorum').innerHTML = yorum;
                 
-                // Scatter Chart Çizimi
                 const ctx = document.getElementById('korelasyonScatterChart')?.getContext('2d');
                 if (ctx) {
                     if (charts.korelasyonScatter) charts.korelasyonScatter.destroy();
@@ -3557,8 +3670,9 @@ function getMhrsRowMetrics(item, type) {
             };
             
             window.hesaplaKorelasyonMetrikleri();
+        }
             
-        } else if (currentAnalitikSubTab === 'tahmin') {
+        else if (currentAnalitikSubTab === 'tahmin') {
             // Öngörü ve Regresyon Modeli
             const uniqueKurumlar = [...new Set(puanData.map(p => p.kurum_adi))].sort();
             let optionsHtml = uniqueKurumlar.map(k => `<option value="${k}">${k}</option>`).join('');
