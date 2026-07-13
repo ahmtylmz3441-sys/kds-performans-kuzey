@@ -596,6 +596,7 @@
             <div class="nav-item" data-page="kurum-bazli"><i class="bi bi-hospital"></i> Kurum Bazlı</div>
             <div class="nav-item" data-page="karsilastirma"><i class="bi bi-arrow-left-right"></i> Dönemsel Karşılaştırma</div>
             <div class="nav-item" data-page="raporlar"><i class="bi bi-graph-up"></i> Raporlar</div>
+            <div class="nav-item" data-page="derin-analiz"><i class="bi bi-cpu-fill text-danger"></i> Gelişmiş Analitik</div>
             <div class="nav-item" data-page="itirazlar"><i class="bi bi-chat-dots"></i> İtirazlar</div>
             <div class="nav-item" data-page="mhrs"><i class="bi bi-calendar2-week text-warning"></i> MHRS Analiz</div>
             <div class="nav-item" data-page="e-tablo"><i class="bi bi-file-earmark-spreadsheet text-success"></i> Kriz Koordinasyon</div>
@@ -664,6 +665,41 @@
             <section id="kurum-bazli" class="page"><div id="kurumAnalizIcerik" class="kds-card">Kurum seçip sorgulayın.</div></section>
             <section id="karsilastirma" class="page"></section>
             <section id="raporlar" class="page"></section>
+            <section id="derin-analiz" class="page">
+                <!-- Gelişmiş Analitik Paneli -->
+                <div class="row g-4">
+                    <div class="col-md-12">
+                        <div class="kds-card" style="border-top: 4px solid var(--danger);">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pb-3 mb-3 border-bottom">
+                                <div>
+                                    <h5 class="fw-bold mb-0 text-danger"><i class="bi bi-cpu"></i> Gelişmiş Veri Analitiği & Modelleme</h5>
+                                    <p class="text-muted small mb-0">Pearson Korelasyonu, Lineer Regresyon Puan Öngörüsü ve Z-Skoru Anomali Analizi</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Dahili Alt Sekmeler -->
+                            <ul class="nav nav-pills d-flex mb-4 border rounded overflow-hidden" style="padding: 0; list-style: none;">
+                                <li style="flex:1;">
+                                    <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-analitik-korelasyon-btn" onclick="window.switchAnalitikSubTab('korelasyon')">🔗 İlişki Analizi</button>
+                                </li>
+                                <li style="flex:1;">
+                                    <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analitik-tahmin-btn" onclick="window.switchAnalitikSubTab('tahmin')">🔮 Öngörü Modeli</button>
+                                </li>
+                                <li style="flex:1;">
+                                    <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analitik-anomali-btn" onclick="window.switchAnalitikSubTab('anomali')">⚠️ Anomali Tespiti</button>
+                                </li>
+                                <li style="flex:1;">
+                                    <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analitik-kume-btn" onclick="window.switchAnalitikSubTab('kume')">📦 Segmentasyon</button>
+                                </li>
+                            </ul>
+                            
+                            <div id="analitikDinamikIcerik">
+                                <!-- Seçilen Alt Sekmeye Göre Matematiksel Hesaplamalar Buraya Yüklenecektir -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
             <section id="itirazlar" class="page"></section>
             <section id="mhrs" class="page">
                 <div class="kds-card" style="border-top: 4px solid #f59e0b;">
@@ -931,6 +967,9 @@
     let mhrsTrendState = { mode: 'trend', selectedKurum: '', selectedMetric: 'genel_doluluk', compareAy1: '', compareAy2: '', compareKurum: '' };
     let currentMhrsSubTab = 'H';
     let currentMhrsVeriTipi = 'MESAİ_İÇİ';
+
+    // Gelişmiş Analitik Veri Deposu
+    let currentAnalitikSubTab = 'korelasyon';
 
     // ---------- ROL BAZLI YETKİLENDİRME (RBAC) FONKSİYONU ----------
     function uygulaYetkilendirme(role) {
@@ -2098,7 +2137,7 @@
                     <td class="text-center">${dolu}</td>
                     <td class="text-center">${bos}</td>
                     <td class="text-center fw-bold text-primary">${oranStr}%</td>
-                    <td class="text-center">${grid_bekleyen = bekleyen}</td>
+                    <td class="text-center">${bekleyen}</td>
                     <td class="text-center">${yatirilan}</td>
                     <td class="text-center">${disKurum}</td>
                     <td class="text-center text-secondary">${taburcu}</td>
@@ -3349,6 +3388,448 @@ function getMhrsRowMetrics(item, type) {
         window.exportTableToExcel('mhrsDetailTable', `MHRS_Performans_Raporu_${currentMhrsSubTab}_${currentMhrsVeriTipi}`);
     };
 
+    // ---------- GELİŞMİŞ ANALİTİK (DEEP DATA ANALYTICS) MODÜLÜ ----------
+    window.switchAnalitikSubTab = function(tabName) {
+        currentAnalitikSubTab = tabName;
+        document.querySelectorAll('#derin-analiz .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`subtab-analitik-${tabName}-btn`).classList.add('active');
+        renderAnalitikActiveView();
+    };
+
+    async function renderAnalitikActiveView() {
+        const container = document.getElementById('analitikDinamikIcerik');
+        if (!container) return;
+        
+        showLoading('analitikDinamikIcerik', 'İleri düzey matematiksel analizler hesaplanıyor...');
+        
+        // Supabase veri tabanından analizlik performans havuzunu çek
+        const { data: perfData, error } = await _supabase.from('performans').select('*');
+        const { data: puanData } = await _supabase.from('toplam_puanlar').select('*');
+        
+        if (error || !perfData || perfData.length === 0) {
+            container.innerHTML = '<div class="alert alert-warning text-center">Gelişmiş analitik hesaplamaları için yeterli performans verisi bulunamadı.</div>';
+            return;
+        }
+
+        if (currentAnalitikSubTab === 'korelasyon') {
+            // Korelasyon Hesaplama Ekranı
+            const uniqueMetrics = [...new Set(perfData.map(p => p.gosterge_adi))].sort();
+            
+            let optionsHtml = uniqueMetrics.map(m => `<option value="${m}">${m.substring(0, 70)}...</option>`).join('');
+            
+            container.innerHTML = `
+                <div class="alert alert-light border py-2 mb-3" style="border-radius:10px;">
+                    <i class="bi bi-info-circle-fill text-primary"></i> 
+                    İki gösterge arasındaki doğrusal bağıntıyı incelemek için parametreleri seçiniz. Sistem, arka planda <b>Pearson Korelasyon Katsayısını ($r$)</b> anlık hesaplar.
+                </div>
+                <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
+                    <div class="col-md-5">
+                        <label class="form-label small fw-bold text-secondary">1. Gösterge (X Ekseni)</label>
+                        <select id="korelasyon-x" class="form-select form-select-sm">${optionsHtml}</select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small fw-bold text-secondary">2. Gösterge (Y Ekseni)</label>
+                        <select id="korelasyon-y" class="form-select form-select-sm">${optionsHtml}</select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-sm btn-danger w-100 fw-bold" onclick="window.hesaplaKorelasyonMetrikleri()">📊 İlişkiyi Analiz Et</button>
+                    </div>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded bg-white shadow-sm mb-3">
+                            <h6 class="text-secondary small fw-bold">Pearson Katsayısı ($r$)</h6>
+                            <div class="fs-2 fw-extrabold text-danger" id="r-katsayi-val">-</div>
+                            <div id="r-katsayi-derece" class="small mt-1 text-muted">Parametreleri seçerek hesaplayın.</div>
+                        </div>
+                        <div class="p-3 border rounded bg-white shadow-sm">
+                            <h6 class="text-secondary small fw-bold">Yorum ve Çıkarım</h6>
+                            <p id="r-katsayi-yorum" class="small text-muted mb-0">Seçilen iki kurumsal gösterge arasında veri desenleri üzerinden istatistiksel ilişki kurulacaktır.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="p-3 border rounded bg-white shadow-sm" style="height:320px; position:relative;">
+                            <canvas id="korelasyonScatterChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (uniqueMetrics.length > 1) {
+                document.getElementById('korelasyon-y').selectedIndex = 1;
+            }
+            window.hesaplaKorelasyonMetrikleri = function() {
+                const metricX = document.getElementById('korelasyon-x').value;
+                const metricY = document.getElementById('korelasyon-y').value;
+                
+                // Kurum ve Dönem bazında eşleştirme
+                const pairedData = {};
+                perfData.forEach(p => {
+                    const key = `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
+                    if (!pairedData[key]) pairedData[key] = { x: null, y: null, kurum: p.kurum_adi, donem: p.donem };
+                    if (p.gosterge_adi === metricX) pairedData[key].x = parseFloat(p.gd);
+                    if (p.gosterge_adi === metricY) pairedData[key].y = parseFloat(p.gd);
+                });
+                
+                const dataPoints = Object.values(pairedData).filter(item => item.x !== null && !isNaN(item.x) && item.y !== null && !isNaN(item.y));
+                
+                if (dataPoints.length < 3) {
+                    alert("Seçtiğiniz parametrelerde doğrusal ilişki hesaplamak için yeterli ortak kesişim kümesi (veri) bulunamadı.");
+                    return;
+                }
+                
+                // Pearson Formülü
+                const n = dataPoints.length;
+                let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+                dataPoints.forEach(p => {
+                    sumX += p.x;
+                    sumY += p.y;
+                    sumXY += (p.x * p.y);
+                    sumX2 += (p.x * p.x);
+                    sumY2 += (p.y * p.y);
+                });
+                
+                const pay = (n * sumXY) - (sumX * sumY);
+                const payda = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+                
+                const r = payda === 0 ? 0 : (pay / payda);
+                
+                // Değerleri Ekrana Yaz
+                document.getElementById('r-katsayi-val').innerText = r.toFixed(4);
+                
+                let derece = "";
+                let yorum = "";
+                const absR = Math.abs(r);
+                
+                if (absR >= 0.8) derece = "Çok Güçlü / Belirgin İlişki";
+                else if (absR >= 0.6) derece = "Güçlü Doğrusal İlişki";
+                else if (absR >= 0.4) derece = "Orta Dereceli İlişki";
+                else if (absR >= 0.2) derece = "Zayıf / Düşük Bağıntı";
+                else derece = "Korelasyon Yok / İhmal Edilebilir";
+                
+                document.getElementById('r-katsayi-derece').innerHTML = `<span class="badge bg-danger">${derece}</span>`;
+                
+                if (r > 0.3) {
+                    yorum = "Seçilen iki gösterge arasında <b>pozitif yönlü</b> bir ilişki mevcuttur. Yani 1. Gösterge değeri yükseldikçe, 2. Gösterge performansının da istatistiksel olarak artma eğiliminde olduğu gözlenmiştir.";
+                } else if (r < -0.3) {
+                    yorum = "Seçilen iki gösterge arasında <b>negatif yönlü</b> bir ilişki mevcuttur. Yani 1. Gösterge değeri yükseldikçe, 2. Gösterge performans değerinin düşme eğilimi gösterdiği matematiksel olarak doğrulanmıştır.";
+                } else {
+                    yorum = "Göstergelerin veri dağılımında anlamlı ortak bir hareket deseni tespit edilememiştir. İki parametre operasyonel açıdan birbirinden bağımsız çalışıyor olabilir.";
+                }
+                document.getElementById('r-katsayi-yorum').innerHTML = yorum;
+                
+                // Scatter Chart Çizimi
+                const ctx = document.getElementById('korelasyonScatterChart')?.getContext('2d');
+                if (ctx) {
+                    if (charts.korelasyonScatter) charts.korelasyonScatter.destroy();
+                    charts.korelasyonScatter = new Chart(ctx, {
+                        type: 'scatter',
+                        data: {
+                            datasets: [{
+                                label: 'Eşleşen Veri Noktaları',
+                                data: dataPoints.map(p => ({ x: p.x, y: p.y, label: `${p.kurum} (${p.donem}.Dönem)` })),
+                                backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                                borderColor: '#ef4444',
+                                pointRadius: 5
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const item = context.raw;
+                                            return `${item.label} -> X: ${item.x}, Y: ${item.y}`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: { title: { display: true, text: metricX.substring(0,35) + '...' } },
+                                y: { title: { display: true, text: metricY.substring(0,35) + '...' } }
+                            }
+                        }
+                    });
+                }
+            };
+            
+            window.hesaplaKorelasyonMetrikleri();
+            
+        } else if (currentAnalitikSubTab === 'tahmin') {
+            // Öngörü ve Regresyon Modeli
+            const uniqueKurumlar = [...new Set(puanData.map(p => p.kurum_adi))].sort();
+            let optionsHtml = uniqueKurumlar.map(k => `<option value="${k}">${k}</option>`).join('');
+            
+            container.innerHTML = `
+                <div class="alert alert-light border py-2 mb-3" style="border-radius:10px;">
+                    <i class="bi bi-magic text-indigo"></i>
+                    Seçeceğiniz kurumun geçmiş dönem toplam puanları üzerinden <b>En Küçük Kareler Doğrusal Regresyonu</b> yöntemiyle bir sonraki dönemin tahmini puan projeksiyonu hesaplanır.
+                </div>
+                <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
+                    <div class="col-md-9">
+                        <label class="form-label small fw-bold text-secondary">Projeksiyonu Çıkarılacak Kurum</label>
+                        <select id="regresyon-kurum" class="form-select form-select-sm">${optionsHtml}</select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-sm btn-indigo w-100 fw-bold text-white" style="background-color: var(--accent);" onclick="window.hesaplaRegresyonTahmini()">🔮 Projeksiyon Üret</button>
+                    </div>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded bg-indigo-light shadow-sm mb-3" style="background-color: rgba(79, 70, 229, 0.05);">
+                            <h6 class="text-primary small fw-bold">Gelecek Dönem Puan Öngörüsü</h6>
+                            <div class="fs-1 fw-extrabold text-primary" id="tahmin-puan-val">-</div>
+                            <div class="small mt-1 text-muted" id="tahmin-puan-aralik">Lineer regresyon tahmini</div>
+                        </div>
+                        <div class="p-3 border rounded bg-white shadow-sm">
+                            <h6 class="text-secondary small fw-bold">Eğilim / Trend Katsayısı</h6>
+                            <p id="tahmin-egilim-yorum" class="small text-muted mb-0">Kurumun genel karne puanı gelişim ivmesi analiz ediliyor.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="p-3 border rounded bg-white shadow-sm" style="height:320px; position:relative;">
+                            <canvas id="regresyonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            window.hesaplaRegresyonTahmini = function() {
+                const kurum = document.getElementById('regresyon-kurum').value;
+                const kData = puanData.filter(p => p.kurum_adi === kurum).sort((a,b) => a.donem - b.donem);
+                
+                if (kData.length < 2) {
+                    alert("Kurumun lineer tahmin grafiğini oluşturmak için en az 2 dönemlik verisi bulunmalıdır.");
+                    return;
+                }
+                
+                // Regresyon Verilerini Hazırla (X: Dönem Sırası, Y: Toplam Puan)
+                const xValues = kData.map((d, i) => i + 1);
+                const yValues = kData.map(d => parseFloat(d.toplam_puan));
+                const n = kData.length;
+                
+                let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+                for (let i = 0; i < n; i++) {
+                    sumX += xValues[i];
+                    sumY += yValues[i];
+                    sumXY += (xValues[i] * yValues[i]);
+                    sumXX += (xValues[i] * xValues[i]);
+                }
+                
+                // m (eğim) ve c (kesişim) hesapla -> y = mx + c
+                const slope = ((n * sumXY) - (sumX * sumY)) / ((n * sumXX) - (sumX * sumX));
+                const intercept = (sumY - (slope * sumX)) / n;
+                
+                // Gelecek dönemi tahmin et (n + 1)
+                const nextX = n + 1;
+                const prediction = (slope * nextX) + intercept;
+                
+                document.getElementById('tahmin-puan-val').innerText = prediction.toFixed(1) + " Puan";
+                document.getElementById('tahmin-puan-aralik').innerText = `Gelecek Dönem (${nextX}. Gözlem) Matematiksel Öngörüsü`;
+                
+                let egilimText = "";
+                if (slope > 0) {
+                    egilimText = `Kurumun dönemsel performansı <b>pozitif bir ivme (+${slope.toFixed(2)})</b> göstermektedir. Bu trend devam ederse kurumun puan hedeflerini yakalaması olasıdır.`;
+                } else if (slope < 0) {
+                    egilimText = `Kurumun dönemsel performansı <b>düşüş eğiliminde (${slope.toFixed(2)})</b> seyretmektedir. Operasyonel veya idari süreçlerin gözden geçirilmesi gerekebilir.`;
+                } else {
+                    egilimText = "Kurumun dönemsel performansı yatay ve stabil bir seyir izlemektedir.";
+                }
+                document.getElementById('tahmin-egilim-yorum').innerHTML = egilimText;
+                
+                // Grafikte Çizilecek Veriler
+                const linePoints = [];
+                for (let i = 0; i <= n; i++) {
+                    linePoints.push((slope * (i + 1)) + intercept);
+                }
+                
+                const ctx = document.getElementById('regresyonChart')?.getContext('2d');
+                if (ctx) {
+                    if (charts.regresyon) charts.regresyon.destroy();
+                    charts.regresyon = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: [...kData.map(d => `${d.donem}.Dönem`), 'Öngörülen Dönem'],
+                            datasets: [
+                                {
+                                    label: 'Gerçekleşen Toplam Puan',
+                                    data: yValues,
+                                    borderColor: '#4f46e5',
+                                    backgroundColor: 'rgba(79, 70, 229, 0.4)',
+                                    pointRadius: 6,
+                                    type: 'line',
+                                    fill: false
+                                },
+                                {
+                                    label: 'Doğrusal Regresyon Eğrisi',
+                                    data: linePoints,
+                                    borderColor: '#10b981',
+                                    borderDash: [5, 5],
+                                    fill: false,
+                                    pointRadius: 4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    });
+                }
+            };
+            
+            window.hesaplaRegresyonTahmini();
+            
+        } else if (currentAnalitikSubTab === 'anomali') {
+            // Z-Skoru Anomali Tespiti
+            // Tüm gösterge değerlerinin ortalamasını ve standart sapmasını bul
+            const values = perfData.map(p => parseFloat(p.gd)).filter(v => !isNaN(v));
+            const n = values.length;
+            
+            if (n < 5) {
+                container.innerHTML = '<div class="alert alert-warning text-center">Anomali tespiti için yeterli veri havuzu oluşmadı.</div>';
+                return;
+            }
+            
+            const mean = values.reduce((s, v) => s + v, 0) / n;
+            const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / n;
+            const stdDev = Math.sqrt(variance);
+            
+            // Z-Skorlarını Hesapla ve Anomalileri Ayıkla (|Z| > 1.5)
+            const anomalies = [];
+            perfData.forEach(p => {
+                const gd = parseFloat(p.gd);
+                if (isNaN(gd) || stdDev === 0) return;
+                
+                const z = (gd - mean) / stdDev;
+                if (Math.abs(z) > 1.5) {
+                    anomalies.push({
+                        kurum: p.kurum_adi,
+                        gosterge: p.gosterge_kodu ? `${p.gosterge_kodu} - ${p.gosterge_adi}` : p.gosterge_adi,
+                        gd: gd,
+                        z: z,
+                        yil: p.yil,
+                        donem: p.donem
+                    });
+                }
+            });
+            
+            anomalies.sort((a,b) => Math.abs(b.z) - Math.abs(a.z));
+            
+            let tableRows = anomalies.map(a => `
+                <tr>
+                    <td><b>${a.kurum}</b></td>
+                    <td>${a.gosterge}</td>
+                    <td class="text-center fw-bold">${a.gd}</td>
+                    <td class="text-center"><span class="badge ${Math.abs(a.z) > 2 ? 'bg-danger':'bg-warning'}">${a.z.toFixed(2)}</span></td>
+                    <td class="text-center">${a.donem}.Dönem (${a.yil})</td>
+                    <td class="text-center">
+                        ${a.z > 0 ? '<span class="text-success fw-bold"><i class="bi bi-arrow-up-circle"></i> Pozitif Aşırı Sapan</span>' : '<span class="text-danger fw-bold"><i class="bi bi-arrow-down-circle"></i> Negatif Aşırı Sapan</span>'}
+                    </td>
+                </tr>
+            `).join('');
+            
+            container.innerHTML = `
+                <div class="alert alert-danger py-2 mb-3" style="border-radius:10px;">
+                    <i class="bi bi-exclamation-octagon-fill"></i> 
+                    <b>İstatistiki Sapma Raporu:</b> Ortalama değere göre <b>1.5 kat standart sapmanın dışında kalan (Z-Skoru > 1.5 veya < -1.5)</b> uç (aşırı sapan) kurumsal göstergeler otomatik tespit edilmiştir.
+                </div>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm table-striped table-bordered align-middle" style="font-size:11.5px;">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Kurum</th>
+                                <th>İlgili Gösterge</th>
+                                <th class="text-center">Gösterge Değeri (GD)</th>
+                                <th class="text-center">Hesaplanan Z-Skoru</th>
+                                <th class="text-center">Zaman Dilimi</th>
+                                <th class="text-center">Yapay Anomali Sınıfı</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows || '<tr><td colspan="6" class="text-center text-muted">Bölge genelinde anormal sapma gösteren kritik bir parametre bulunamadı.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+        } else if (currentAnalitikSubTab === 'kume') {
+            // Matris Tabanlı Segmentasyon
+            if (puanData.length === 0) {
+                container.innerHTML = '<div class="alert alert-warning text-center">Segmentasyon matrisi oluşturmak için yeterli veri bulunamadı.</div>';
+                return;
+            }
+            
+            // En son yıl ve dönemi bul
+            const sortedPuanlar = [...puanData].sort((a,b) => b.yil - a.yil || b.donem - a.donem);
+            const enSonYil = sortedPuanlar[0]?.yil;
+            const enSonDonem = sortedPuanlar[0]?.donem;
+            
+            const activePeriodPuanlar = puanData.filter(p => p.yil === enSonYil && p.donem === enSonDonem);
+            
+            // Kurumları Segmentlere ayır
+            const segments = {
+                liderler: [],        // Skor >= Rol Ortalaması ve Skor yüksek
+                dengeli: [],        // Skor >= Rol Ortalaması ama Rol Ortalamasına yakın
+                gelismekte: [],     // Skor < Rol Ortalaması ama yakın
+                kritik: []          // Skor < Rol Ortalaması ve belirgin şekilde düşük
+            };
+            
+            activePeriodPuanlar.forEach(p => {
+                const skor = parseFloat(p.toplam_puan);
+                const ort = parseFloat(p.rol_ortalamasi);
+                const fark = skor - ort;
+                
+                if (fark >= 10) {
+                    segments.liderler.push(p);
+                } else if (fark >= 0) {
+                    segments.dengeli.push(p);
+                } else if (fark >= -15) {
+                    segments.gelismekte.push(p);
+                } else {
+                    segments.kritik.push(p);
+                }
+            });
+            
+            const renderSegmentBlock = (title, icon, list, colorClass) => {
+                return `
+                    <div class="col-md-6 mb-3">
+                        <div class="p-3 border rounded h-100 bg-white shadow-sm" style="border-top: 3px solid ${colorClass} !important;">
+                            <h6 class="fw-bold mb-2 d-flex align-items-center gap-2" style="color: ${colorClass}">
+                                ${icon} ${title} (${list.length} Kurum)
+                            </h6>
+                            <div class="list-group list-group-flush">
+                                ${list.map(k => `
+                                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-1 border-0">
+                                        <span class="small text-dark font-weight-bold">${k.kurum_adi}</span>
+                                        <span class="badge rounded-pill text-white" style="background-color: ${colorClass}">${k.toplam_puan} Puan</span>
+                                    </div>
+                                `).join('') || '<span class="text-muted small">Bu segmentte aktif kurum bulunmamaktadır.</span>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+            
+            container.innerHTML = `
+                <div class="alert alert-light border py-2 mb-3" style="border-radius:10px;">
+                    <i class="bi bi-grid-fill text-warning"></i> 
+                    <b>Karne Puan Segmentasyonu:</b> Kurumlar son dönem puanlarının rol ortalaması ile olan sapma farklarına göre 4 temel sınıfa ayrılmıştır.
+                </div>
+                <div class="row g-3">
+                    ${renderSegmentBlock("Liderler (İleri Düzey Performans)", '<i class="bi bi-trophy-fill"></i>', segments.liderler, "#10b981")}
+                    ${renderSegmentBlock("Dengeli (Ortalama Üstü / Stabil)", '<i class="bi bi-shield-check"></i>', segments.dengeli, "#4f46e5")}
+                    ${renderSegmentBlock("Gelişmekte Olan (İzleme Süreci)", '<i class="bi bi-activity"></i>', segments.gelismekte, "#f59e0b")}
+                    ${renderSegmentBlock("Kritik Odaklar (Öncelikli Eylem)", '<i class="bi bi-exclamation-triangle-fill"></i>', segments.kritik, "#ef4444")}
+                </div>
+            `;
+        }
+    }
+
     // ---------- SAYFA GEÇIŞLERI ----------
     window.gitSayfa = async function(sayfa, el) {
         const loader = document.getElementById('page-loader');
@@ -3408,6 +3889,7 @@ function getMhrsRowMetrics(item, type) {
                 await window.bolgeListesi();
             }
             if(sayfa === 'raporlar') await raporlar();
+            if(sayfa === 'derin-analiz') await renderAnalitikActiveView();
             if(sayfa === 'itirazlar') {
                 document.getElementById('itirazlar').innerHTML = `<div class="kds-card"><h6>⚠️ İtiraz Yönetimi Paneli</h6><div id="itirazListe"></div></div>`;
                 await window.itirazlariGoster();
