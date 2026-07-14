@@ -3429,118 +3429,107 @@ function getMhrsRowMetrics(item, type) {
                 return payda === 0 ? 0 : (pay / payda);
             };
 
-            // Göstergelerin varyansını ve geçerliliğini kontrol eden fonksiyon
-            const getValidSupabaseMetrics = (fPerfData) => {
-                const grouped = {};
+            // Veri tabanındaki kodları (BH-8, ADS-5 vb.) gerçek gösterge adlarıyla dinamik eşleştiren çözücü
+            const resolveIndicatorNames = (fPerfData) => {
+                const mapping = {};
                 fPerfData.forEach(p => {
-                    const val = parseFloat(p.gd);
-                    if (isNaN(val)) return;
-                    const key = `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
-                    if (!grouped[key]) grouped[key] = {};
-                    grouped[key][p.gosterge_adi] = val;
-                });
-
-                const allMetrics = [...new Set(fPerfData.map(p => p.gosterge_adi))];
-                const validMetrics = [];
-                
-                allMetrics.forEach(m => {
-                    const values = [];
-                    Object.values(grouped).forEach(g => {
-                        if (g[m] !== undefined) values.push(g[m]);
-                    });
-                    if (values.length < 3) return;
-                    
-                    const mean = values.reduce((s, v) => s + v, 0) / values.length;
-                    const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / values.length;
-                    if (variance > 0.00001) {
-                        validMetrics.push(m);
+                    if (p.gosterge_kodu) {
+                        const code = p.gosterge_kodu.trim().toUpperCase();
+                        mapping[code] = p.gosterge_adi;
                     }
                 });
-                return validMetrics.sort();
+                return mapping;
             };
 
-            // Akıllı ve Esnek Mantıksal Eşleştirme Motoru (Onaylanan 5+7 Çift)
-            const checkLogicalRelationship = (m1, m2, isAdsm) => {
-                const clean = (str) => str.toLowerCase()
-                    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
-                    .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
-                    .replace(/[\s_%()\-]+/g, '');
-                    
-                const c1 = clean(m1);
-                const c2 = clean(m2);
+            // Onaylanan 12 Kritik İlişki Modeli (Hassas Kod Tanımlamaları)
+            const HASTANE_ILISKILERI = [
+                { id: 1, xCode: "SYPG-BH-8", yCode: "SYPG-BH-9", xLabel: "Primer Sezaryen Oranı", yLabel: "Toplam Sezaryen Oranı", desc: "Doğum süreçlerinde ilk ameliyat (primer) sıklığının toplam sezaryen oranına doğrudan etkisi." },
+                { id: 2, xCode: "SYPG-BH-37", yCode: "SYPG-BH-16", xLabel: "Acil Müşahede Süresi", yLabel: "Servis Yatak Devir Hızı", desc: "Kliniklerde boş yatak bulunmamasının acil servis müşahede sürelerini uzatma etkisi." },
+                { id: 3, xCode: "SYPG-BH-37", yCode: "SYPG-BH-17", xLabel: "Acil Müşahede Süresi", yLabel: "Yoğun Bakım Yatak Doluluk Oranı", desc: "Yoğun bakım yatak doluluğunun acil müşahede sürelerindeki darboğaza etkisi." },
+                { id: 4, xCode: "SYPG-BH-20", yCode: "SYPG-BH-18", xLabel: "Ameliyat Masası Verimliliği", yLabel: "Cerrahi Klinisyen İş Yükü", desc: "Ameliyathane fiziki verimliliği ile cerrahi hekim kadrosunun toplam ameliyat puanı ilişkisi." },
+                { id: 5, xCode: "SYPG-BH-20", yCode: "SYPG-BH-19", xLabel: "Ameliyat Masası Verimliliği", yLabel: "Cerrahi Klinisyen Nitelikli Ameliyat Yükü", desc: "Ameliyat masası başına üretilen puan ile klinisyenlerin nitelikli ameliyat puanı ilişkisi." },
+                { id: 6, xCode: "SYPG-BH-25", yCode: "SYPG-BH-24", xLabel: "Ortalama BT Raporlama Süresi", yLabel: "3 Günü Geçen BT Raporlama Oranı", desc: "Ortalama BT raporlama süresinin kalite hedefi olan 3 günlük limiti aşma oranına etkisi." },
+                { id: 7, xCode: "SYPG-BH-27", yCode: "SYPG-BH-26", xLabel: "Ortalama MR Raporlama Süresi", yLabel: "7 Günü Geçen MR Raporlama Oranı", desc: "Ortalama MR raporlama süresinin kalite hedefi olan 7 günlük limiti aşma oranına etkisi." },
+                { id: 8, xCode: "SYPG-BH-1", yCode: "SYPG-BH-2", xLabel: "Hasta Memnuniyet Oranı", yLabel: "Çalışan Memnuniyet Oranı", desc: "Hekim/personel motivasyonunun doğrudan hastaya yansıyan hizmet kalitesi ve memnuniyete etkisi." },
+                { id: 9, xCode: "SYPG-BH-4", yCode: "SYPG-BH-5", xLabel: "Randevulu Muayene Oranı (MHRS)", yLabel: "Uzman Hekim Muayene Sayısı", desc: "MHRS planlamasının hekim başına düşen poliklinik muayene yükünü dengelenmesine etkisi." }
+            ];
 
-                // Genel Hastaneler İçin Tanımlanmış Gerçekçi İlişki Eşleşmeleri (Görsel 1 Kodlarıyla Tam Uyumlu)
-                const hospitalRules = [
-                    ["sypgbh8", "sypgbh9"],     // Primer Sezaryen Oranı & Toplam Sezaryen Oranı
-                    ["sypgbh37", "sypgbh16"],   // Acil Servis Ortalama Müşahede Süresi & Servis Yatak Devir Hızı
-                    ["sypgbh37", "sypgbh17"],   // Acil Servis Ortalama Müşahede Süresi & Yoğun Bakım Yatak Doluluk Oranı
-                    ["sypgbh20", "sypgbh18"],   // Ameliyat Masası Ameliyat Puanı & Cerrahi Klinisyen Başına Ameliyat
-                    ["sypgbh20", "sypgbh19"],   // Ameliyat Masası Ameliyat Puanı & Cerrahi Klinisyen Başına Nitelikli Ameliyat
-                    ["sypgbh25", "sypgbh24"],   // Ortalama BT Raporlama Süresi & 3 Günü Geçen BT Raporlama Oranı
-                    ["sypgbh27", "sypgbh26"],   // Ortalama MR Raporlama Süresi & 7 Günü Geçen MR Raporlama Oranı
-                    ["sypgbh1", "sypgbh2"],     // Hasta Memnuniyet Oranı & Çalışan Memnuniyet Oranı
-                    ["sypgbh4", "sypgbh5"]      // Randevulu Muayene Oranı (MHRS) & Uzman Hekim Başına Muayene Sayısı
-                ];
+            const ADSM_ILISKILERI = [
+                { id: 10, xCode: "SYPG-ADS-5", yCode: "SYPG-ADS-1", xLabel: "İşlem İçeren Başvuru Oranı", yLabel: "Hasta Memnuniyet Oranı", desc: "Hastalara muayene dışında aktif girişimsel diş tedavisi sunulmasının memnuniyete etkisi.", alternateX: "SYPG-ADSH-5", alternateY: "SYPG-ADSH-1" },
+                { id: 11, xCode: "SYPG-ADS-6", yCode: "SYPG-ADS-1", xLabel: "Diş Protez Teslim Süresi", yLabel: "Hasta Memnuniyet Oranı", desc: "Protez laboratuvar teslim sürelerinin kısalmasının hasta memnuniyetine doğrudan etkisi.", alternateX: "SYPG-ADSH-6", alternateY: "SYPG-ADSH-1" },
+                { id: 12, xCode: "SYPG-ADS-4", yCode: "SYPG-ADS-8", xLabel: "Hekim Başına Muayene", yLabel: "Protez/Dolgu Yenileme Oranı", desc: "Günlük muayene yoğunluğunun işlem kalitesine ve erken dolgu/protez düşme oranlarına etkisi.", alternateX: "SYPG-ADSH-4", alternateY: "SYPG-ADSH-8" },
+                { id: 13, xCode: "SYPG-ADS-3", yCode: "SYPG-ADS-11", xLabel: "Randevulu Muayene Oranı (MHRS)", yLabel: "Gelmeyen Hasta Oranı", desc: "Randevu sırası bekleme gününün uzaması ile MHRS randevusuna gelmeme (no-show) oranı ilişkisi.", alternateX: "SYPG-ADSH-3", alternateY: "SYPG-ADSH-11" },
+                { id: 14, xCode: "SYPG-ADS-1", yCode: "SYPG-ADS-2", xLabel: "Hasta Memnuniyet Oranı", yLabel: "Çalışan Memnuniyet Oranı", desc: "Klinik personel memnuniyetinin ağız ve diş sağlığı tedavi memnuniyeti ile ilişkisi.", alternateX: "SYPG-ADSH-1", alternateY: "SYPG-ADSH-2" }
+            ];
 
-                // ADSM / ADSH Kurumları İçin Tanımlanmış Gerçekçi İlişki Eşleşmeleri (Görsel 2 Kodlarıyla Tam Uyumlu)
-                const adsmRules = [
-                    ["ads5", "ads1"],           // İşlem İçeren Başvuru Oranı & Hasta Memnuniyet Oranı
-                    ["adsh5", "adsh1"],
-                    ["ads6", "ads1"],           // Diş Protez Ortalama Teslim Süresi & Hasta Memnuniyet Oranı
-                    ["adsh6", "adsh1"],
-                    ["ads4", "ads8"],           // Hekim Başına Muayene & Protez/Dolgu Yenileme Oranı
-                    ["adsh4", "adsh8"],
-                    ["ads3", "ads11"],          // Randevulu Muayene Oranı (MHRS) & Randevusuna Gelmeyen Hasta Oranı
-                    ["adsh3", "adsh11"],
-                    ["ads1", "ads2"],           // Hasta Memnuniyet Oranı & Çalışan Memnuniyet Oranı
-                    ["adsh1", "adsh2"]
-                ];
+            // Kurum Adı ve Dönem Filtre Seçeneklerini Hazırla
+            const kurumlar = [...new Set(perfData.map(p => p.kurum_adi))].sort();
+            const yillar = [...new Set(perfData.map(p => p.yil))].sort((a,b)=>b-a);
+            const donemler = [...new Set(perfData.map(p => p.donem))].sort((a,b)=>a-b);
 
-                const rules = isAdsm ? adsmRules : hospitalRules;
+            const kurumOptions = ['<option value="">Tüm Bölge (Toplam)</option>', ...kurumlar.map(k => `<option value="${k}">${k}</option>`)].join('');
+            const yilOptions = ['<option value="">Tüm Yıllar</option>', ...yillar.map(y => `<option value="${y}">${y}</option>`)].join('');
+            const donemOptions = ['<option value="">Tüm Dönemler</option>', ...donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`)].join('');
 
-                return rules.some(([r1, r2]) => {
-                    return (c1.includes(r1) && c2.includes(r2)) || (c1.includes(r2) && c2.includes(r1));
-                });
-            };
-
-            // HTML Tasarımı (Kurum Türü Seçimine Duyarlı Dinamik Arayüz)
+            // HTML Şablonu (Sadece Kurum, Yıl ve Dönem Seçicileri Bulunmaktadır)
             container.innerHTML = `
-                <div class="alert alert-light border py-2 mb-3" style="border-radius:10px;">
-                    <i class="bi bi-cpu text-danger"></i> 
-                    <b>Karar Destek Filtreleme Modu:</b> Sistem, sahte korelasyonları eleyerek yalnızca <b>Hastane</b> veya <b>ADSM</b> süreçlerine göre doğrulanmış mantıksal çiftleri analiz eder.
-                </div>
                 <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
                     <div class="col-md-3">
-                        <label class="form-label small fw-bold text-secondary">Kurum Türü (Supabase)</label>
-                        <select id="korelasyon-tip" class="form-select form-select-sm" onchange="window.guncelleKorelasyonSecenekleri()">
-                            <option value="">Tümü (Genel Hastane)</option>
+                        <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
+                        <select id="korelasyon-tip" class="form-select form-select-sm shadow-sm" onchange="window.guncelleKorelasyonArayuzu()">
                             <option value="Hastane">Hastane</option>
                             <option value="ADSM">ADSM/ADSH</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold text-secondary">1. Gösterge (X Ekseni)</label>
-                        <select id="korelasyon-x" class="form-select form-select-sm" onchange="window.guncelleKorelasyonYSecenekleri()"></select>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-secondary">Kurum Filtresi</label>
+                        <select id="korelasyon-f-kurum" class="form-select form-select-sm shadow-sm" onchange="window.hesaplaDinamikIliskiler()">${kurumOptions}</select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold text-secondary">2. Gösterge (Y Ekseni)</label>
-                        <select id="korelasyon-y" class="form-select form-select-sm"></select>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-secondary">Yıl</label>
+                        <select id="korelasyon-f-yil" class="form-select form-select-sm shadow-sm" onchange="window.hesaplaDinamikIliskiler()">${yilOptions}</select>
                     </div>
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button class="btn btn-sm btn-danger w-100 fw-bold" onclick="window.hesaplaKorelasyonMetrikleri()">📊 Analiz</button>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-secondary">Dönem</label>
+                        <select id="korelasyon-f-donem" class="form-select form-select-sm shadow-sm" onchange="window.hesaplaDinamikIliskiler()">${donemOptions}</select>
                     </div>
                 </div>
-                
-                <div class="row g-4">
+
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important;">
+                            <h6 class="fw-bold mb-3 text-secondary d-flex align-items-center gap-2">
+                                <i class="bi bi-shield-check text-primary"></i> 
+                                Doğrulanmış Operasyonel İlişkiler & Performans Analizi
+                            </h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover table-bordered align-middle mb-0" style="font-size:11.5px;" id="analitikIliskilerTablosu">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Süreç İlişkisi</th>
+                                            <th>1. Gösterge (X)</th>
+                                            <th>2. Gösterge (Y)</th>
+                                            <th class="text-center" style="width: 110px;">Pearson ($r$)</th>
+                                            <th class="text-center" style="width: 140px;">Durum / Güç</th>
+                                            <th class="text-center" style="width: 100px;">İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="analitik-iliskiler-tbody">
+                                        <!-- Dinamik olarak dolacaktır -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4" id="detayliGrafikAlani" style="display: none;">
                     <div class="col-md-4">
                         <div class="p-3 border rounded bg-white shadow-sm mb-3">
-                            <h6 class="text-secondary small fw-bold">Pearson Katsayısı ($r$)</h6>
-                            <div class="fs-2 fw-extrabold text-danger" id="r-katsayi-val">-</div>
-                            <div id="r-katsayi-derece" class="small mt-1 text-muted">Hesaplanıyor...</div>
-                        </div>
-                        <div class="p-3 border rounded bg-white shadow-sm">
-                            <h6 class="text-secondary small fw-bold">Yorum ve Çıkarım</h6>
-                            <p id="r-katsayi-yorum" class="small text-muted mb-0">Seçilen iki gösterge kartının dönem verileri karşılaştırılıyor.</p>
+                            <h6 class="text-secondary small fw-bold">Seçili İlişki Detayı</h6>
+                            <div class="fs-4 fw-bold text-primary mb-1" id="grafik-r-val">-</div>
+                            <div id="grafik-r-derece" class="small mt-1 text-muted mb-3">Hesaplanıyor...</div>
+                            <p id="grafik-r-yorum" class="small text-muted mb-0">İlişki yorumu yüklenecektir.</p>
                         </div>
                     </div>
                     <div class="col-md-8">
@@ -3549,115 +3538,139 @@ function getMhrsRowMetrics(item, type) {
                         </div>
                     </div>
                 </div>
-
-                <!-- Sadece Doğrulanmış İlişkiler Tablosu Bölümü -->
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="p-3 border rounded bg-white shadow-sm" style="border-radius:14px !important;">
-                            <h6 class="fw-bold mb-3 text-secondary d-flex align-items-center gap-2">
-                                <i class="bi bi-magic text-danger"></i> 
-                                Kurumsal Süreçlere Göre Doğrulanmış İlişkiler Listesi ($|r| \\ge 0.40$)
-                            </h6>
-                            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-                                <table class="table table-sm table-hover table-bordered align-middle mb-0" style="font-size:11.5px;">
-                                    <thead class="table-light" style="position: sticky; top:0; z-index:2;">
-                                        <tr>
-                                            <th>1. Gösterge (X)</th>
-                                            <th>2. Gösterge (Y)</th>
-                                            <th class="text-center" style="width: 100px;">Katsayı ($r$)</th>
-                                            <th class="text-center" style="width: 180px;">İlişki Gücü</th>
-                                            <th class="text-center" style="width: 120px;">İşlem</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="anlamli-iliskiler-tbody">
-                                        <tr><td colspan="5" class="text-center text-muted">Hesaplanıyor...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             `;
 
-            // Doğrulanmış ilişkileri tarayarak listeleyen fonksiyon
-            const kesfetAnlamliIliskiler = (fPerfData, validMetrics) => {
-                const tbody = document.getElementById('anlamli-iliskiler-tbody');
+            // Kurum türü seçildiğinde Kurum Filtre listesini ona göre süzen fonksiyon
+            window.guncelleKorelasyonArayuzu = function() {
+                const tip = document.getElementById('korelasyon-tip').value;
+                const kurumSelect = document.getElementById('korelasyon-f-kurum');
+                if(!kurumSelect) return;
+
+                // Veri tabanında o kurum tipine sahip kurumları bul
+                const tKurumlar = [...new Set(perfData.filter(p => {
+                    if (tip === 'Hastane') return p.kurum_tipi === 'Hastane';
+                    return p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH';
+                }).map(p => p.kurum_adi))].sort();
+
+                kurumSelect.innerHTML = '<option value="">Tüm Bölge (Toplam)</option>' + tKurumlar.map(k => `<option value="${k}">${k}</option>`).join('');
+                window.hesaplaDinamikIliskiler();
+            };
+
+            // Filtrelere göre 12 ilişkiyi anlık hesaplayan motor
+            window.hesaplaDinamikIliskiler = function() {
+                const tip = document.getElementById('korelasyon-tip').value;
+                const selKurum = document.getElementById('korelasyon-f-kurum').value;
+                const selYil = document.getElementById('korelasyon-f-yil').value;
+                const selDonem = document.getElementById('korelasyon-f-donem').value;
+                const tbody = document.getElementById('analitik-iliskiler-tbody');
                 if (!tbody) return;
 
-                const tip = document.getElementById('korelasyon-tip').value;
-                const isAdsm = (tip === 'ADSM');
+                document.getElementById('detayliGrafikAlani').style.display = 'none';
 
+                // Kurum tipine göre veriyi filtrele
+                let fPerfData = perfData;
+                if (tip === 'Hastane') {
+                    fPerfData = perfData.filter(p => p.kurum_tipi === 'Hastane');
+                } else {
+                    fPerfData = perfData.filter(p => p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH');
+                }
+
+                // Yıl ve Dönem filtrelerini uygula
+                if (selYil) fPerfData = fPerfData.filter(p => p.yil.toString() === selYil.toString());
+                if (selDonem) fPerfData = fPerfData.filter(p => p.donem.toString() === selDonem.toString());
+
+                // Akıllı isim çözücüyü çalıştır (Koddan Ada Dönüşüm)
+                const nameMap = resolveIndicatorNames(perfData);
+
+                // Gruplama
                 const grouped = {};
                 fPerfData.forEach(p => {
-                    const val = parseFloat(p.gd);
-                    if (isNaN(val)) return;
-                    const key = `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
+                    // Kurum filtresi aktifse sadece o kurumu grupla, değilse tüm bölge genelinde grupla
+                    const key = selKurum ? `d${p.donem}_y${p.yil}` : `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
+                    if (selKurum && p.kurum_adi !== selKurum) return;
+                    
                     if (!grouped[key]) grouped[key] = {};
-                    grouped[key][p.gosterge_adi] = val;
+                    const code = p.gosterge_kodu ? p.gosterge_kodu.trim().toUpperCase() : "";
+                    if (code) {
+                        grouped[key][code] = parseFloat(p.gd);
+                    }
                 });
 
-                const results = [];
+                const activeRules = (tip === 'Hastane') ? HASTANE_ILISKILERI : ADSM_ILISKILERI;
+                const calculatedList = [];
 
-                // Sadece geçerli ikili eşleştirmeleri tarar
-                for (let i = 0; i < validMetrics.length; i++) {
-                    for (let j = i + 1; j < validMetrics.length; j++) {
-                        const m1 = validMetrics[i];
-                        const m2 = validMetrics[j];
+                activeRules.forEach(rule => {
+                    const pts = [];
+                    // Hem standart hem de alternatif kodları destekle (Örn: ADS-5 ve ADSH-5 uyumu)
+                    const xCodes = [rule.xCode, rule.alternateX].filter(Boolean);
+                    const yCodes = [rule.yCode, rule.alternateY].filter(Boolean);
 
-                        // Sadece önceden tanımlanmış mantıksal kurallarla eşleşen çiftleri inceler
-                        if (checkLogicalRelationship(m1, m2, isAdsm)) {
-                            const pts = [];
-                            Object.values(grouped).forEach(g => {
-                                if (g[m1] !== undefined && g[m2] !== undefined) {
-                                    pts.push({ x: g[m1], y: g[m2] });
-                                }
-                            });
+                    Object.values(grouped).forEach(g => {
+                        let xVal = null;
+                        let yVal = null;
+                        for (let xc of xCodes) { if (g[xc] !== undefined && !isNaN(g[xc])) xVal = g[xc]; }
+                        for (let yc of yCodes) { if (g[yc] !== undefined && !isNaN(g[yc])) yVal = g[yc]; }
+                        
+                        if (xVal !== null && yVal !== null) {
+                            pts.push({ x: xVal, y: yVal });
+                        }
+                    });
 
-                            if (pts.length >= 3) {
-                                const r = calculatePearsonValue(pts);
-                                if (r !== null && Math.abs(r) >= 0.40) {
-                                    results.push({ m1, m2, r });
-                                }
-                            }
+                    const r = calculatePearsonValue(pts);
+                    
+                    // Göstergenin veritabanındaki gerçek ismini çöz, yoksa varsayılan etiketi koy
+                    const realXName = nameMap[rule.xCode] || nameMap[rule.alternateX] || rule.xLabel;
+                    const realYName = nameMap[rule.yCode] || nameMap[rule.alternateY] || rule.yLabel;
+
+                    calculatedList.push({
+                        id: rule.id,
+                        xName: realXName,
+                        yName: realYName,
+                        xCode: rule.xCode,
+                        yCode: rule.yCode,
+                        desc: rule.desc,
+                        r: r,
+                        dataPointsCount: pts.length
+                    });
+                });
+
+                tbody.innerHTML = calculatedList.map(item => {
+                    let badgeClass = "bg-secondary text-white";
+                    let gucText = "Yetersiz Veri";
+                    let rValStr = "-";
+
+                    if (item.r !== null && !isNaN(item.r)) {
+                        rValStr = item.r.toFixed(4);
+                        const absR = Math.abs(item.r);
+                        if (absR >= 0.8) {
+                            badgeClass = "bg-danger text-white";
+                            gucText = item.r > 0 ? "Pozitif Çok Güçlü" : "Negatif Çok Güçlü";
+                        } else if (absR >= 0.5) {
+                            badgeClass = "bg-primary text-white";
+                            gucText = item.r > 0 ? "Pozitif Güçlü" : "Negatif Güçlü";
+                        } else if (absR >= 0.3) {
+                            badgeClass = "bg-warning text-dark";
+                            gucText = item.r > 0 ? "Pozitif Orta Seviye" : "Negatif Orta Seviye";
+                        } else {
+                            badgeClass = "bg-light text-dark border";
+                            gucText = "İhmal Edilebilir / Zayıf";
                         }
                     }
-                }
-
-                results.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
-
-                if (results.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Seçilen kurum türünde, doğrulanmış kurallara uyan ve sınırı aşan doğrusal bir ilişki bulunamadı.</td></tr>`;
-                    return;
-                }
-
-                tbody.innerHTML = results.map(res => {
-                    let badgeClass = "bg-warning text-dark";
-                    let gucText = "Orta Seviye";
-                    const absR = Math.abs(res.r);
-
-                    if (absR >= 0.8) {
-                        badgeClass = "bg-danger text-white";
-                        gucText = res.r > 0 ? "Pozitif Çok Güçlü" : "Negatif Çok Güçlü";
-                    } else if (absR >= 0.6) {
-                        badgeClass = "bg-primary text-white";
-                        gucText = res.r > 0 ? "Pozitif Güçlü" : "Negatif Güçlü";
-                    } else {
-                        gucText = res.r > 0 ? "Pozitif Orta Seviye" : "Negatif Orta Seviye";
-                    }
-
-                    const encM1 = encodeURIComponent(res.m1);
-                    const encM2 = encodeURIComponent(res.m2);
 
                     return `
                         <tr>
-                            <td><b>${res.m1}</b></td>
-                            <td><b>${res.m2}</b></td>
-                            <td class="text-center fw-bold text-dark">${res.r.toFixed(4)}</td>
-                            <td class="text-center"><span class="badge ${badgeClass}">${gucText}</span></td>
+                            <td>
+                                <b>${item.xLabel || item.xName.substring(0,30)} / ${item.yLabel || item.yName.substring(0,30)}</b>
+                                <div class="text-muted small" style="font-size:10px;">${item.desc}</div>
+                            </td>
+                            <td class="small text-secondary">${item.xCode} - ${item.xName}</td>
+                            <td class="small text-secondary">${item.yCode} - ${item.yName}</td>
+                            <td class="text-center fw-bold text-dark fs-7">${rValStr}</td>
+                            <td class="text-center"><span class="badge ${badgeClass}" style="font-size:10px;">${gucText}</span></td>
                             <td class="text-center">
-                                <button class="btn btn-xs btn-outline-danger py-0 px-2 fw-semibold" style="font-size:10.5px; border-radius:6px;" 
-                                    onclick="window.aktarVeGrafikCiz('${encM1}', '${encM2}')">
-                                    🎯 İncele
+                                <button class="btn btn-xs btn-outline-primary py-0 px-2 fw-semibold" style="font-size:10.5px; border-radius:6px;"
+                                    onclick="window.cizDetayliKorelasyonGrafigi(${item.id})" ${item.r === null ? 'disabled' : ''}>
+                                    <i class="bi bi-graph-up"></i> Grafik
                                 </button>
                             </td>
                         </tr>
@@ -3665,154 +3678,93 @@ function getMhrsRowMetrics(item, type) {
                 }).join('');
             };
 
-            // Listeden seçilen ilişki çiftini yukarıdaki seçicilere otomatik aktaran fonksiyon
-            window.aktarVeGrafikCiz = function(encM1, encM2) {
-                const m1 = decodeURIComponent(encM1);
-                const m2 = decodeURIComponent(encM2);
-
-                const xSelect = document.getElementById('korelasyon-x');
-                const ySelect = document.getElementById('korelasyon-y');
-
-                if (xSelect && ySelect) {
-                    xSelect.value = m1;
-                    window.guncelleKorelasyonYSecenekleri(null, null);
-                    ySelect.value = m2;
-                    window.hesaplaKorelasyonMetrikleri();
-                    
-                    document.getElementById('korelasyon-x').scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            };
-
-            window.guncelleKorelasyonSecenekleri = function() {
+            // Listeden tıklanan bir satırın veri dağılımını grafiğe döken fonksiyon
+            window.cizDetayliKorelasyonGrafigi = function(ruleId) {
                 const tip = document.getElementById('korelasyon-tip').value;
+                const selKurum = document.getElementById('korelasyon-f-kurum').value;
+                const selYil = document.getElementById('korelasyon-f-yil').value;
+                const selDonem = document.getElementById('korelasyon-f-donem').value;
+
                 let fPerfData = perfData;
                 if (tip === 'Hastane') {
                     fPerfData = perfData.filter(p => p.kurum_tipi === 'Hastane');
-                } else if (tip === 'ADSM') {
+                } else {
                     fPerfData = perfData.filter(p => p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH');
                 }
-                
-                const validMetrics = getValidSupabaseMetrics(fPerfData);
-                const xSelect = document.getElementById('korelasyon-x');
-                
-                if (validMetrics.length === 0) {
-                    xSelect.innerHTML = '<option value="">Gösterge kartı bulunamadı</option>';
-                    document.getElementById('korelasyon-y').innerHTML = '<option value="">Gösterge kartı bulunamadı</option>';
-                    return;
-                }
-                
-                xSelect.innerHTML = validMetrics.map(m => `<option value="${m}">${m.substring(0, 70)}...</option>`).join('');
-                window.guncelleKorelasyonYSecenekleri(fPerfData, validMetrics);
-                
-                // Sadece filtrelenmiş mantıksal ilişkileri hesapla
-                kesfetAnlamliIliskiler(fPerfData, validMetrics);
-            };
 
-            window.guncelleKorelasyonYSecenekleri = function(customData, validMetricsList) {
-                const tip = document.getElementById('korelasyon-tip').value;
-                let fPerfData = customData;
-                if (!fPerfData) {
-                    fPerfData = perfData;
-                    if (tip === 'Hastane') {
-                        fPerfData = perfData.filter(p => p.kurum_tipi === 'Hastane');
-                    } else if (tip === 'ADSM') {
-                        fPerfData = perfData.filter(p => p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH');
-                    }
-                }
-                
-                const valX = document.getElementById('korelasyon-x').value;
-                const ySelect = document.getElementById('korelasyon-y');
-                const validMetrics = validMetricsList || getValidSupabaseMetrics(fPerfData);
-                
+                if (selYil) fPerfData = fPerfData.filter(p => p.yil.toString() === selYil.toString());
+                if (selDonem) fPerfData = fPerfData.filter(p => p.donem.toString() === selDonem.toString());
+
+                const activeRules = (tip === 'Hastane') ? HASTANE_ILISKILERI : ADSM_ILISKILERI;
+                const rule = activeRules.find(r => r.id === ruleId);
+                if (!rule) return;
+
+                const nameMap = resolveIndicatorNames(perfData);
+                const realXName = nameMap[rule.xCode] || nameMap[rule.alternateX] || rule.xLabel;
+                const realYName = nameMap[rule.yCode] || nameMap[rule.alternateY] || rule.yLabel;
+
+                // Eşleşen Verileri Çıkar
                 const grouped = {};
                 fPerfData.forEach(p => {
-                    const val = parseFloat(p.gd);
-                    if (isNaN(val)) return;
-                    const key = `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
+                    const key = selKurum ? `d${p.donem}_y${p.yil}` : `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
+                    if (selKurum && p.kurum_adi !== selKurum) return;
+                    
                     if (!grouped[key]) grouped[key] = {};
-                    grouped[key][p.gosterge_adi] = val;
+                    const code = p.gosterge_kodu ? p.gosterge_kodu.trim().toUpperCase() : "";
+                    if (code) grouped[key][code] = parseFloat(p.gd);
                 });
-                
-                const metricsWithPairs = validMetrics.filter(m => {
-                    if (m === valX) return false;
-                    let pairsCount = 0;
-                    Object.values(grouped).forEach(g => {
-                        if (g[valX] !== undefined && g[m] !== undefined) {
-                            pairsCount++;
-                        }
-                    });
-                    return pairsCount >= 3;
+
+                const dataPoints = [];
+                const xCodes = [rule.xCode, rule.alternateX].filter(Boolean);
+                const yCodes = [rule.yCode, rule.alternateY].filter(Boolean);
+
+                Object.entries(grouped).forEach(([key, g]) => {
+                    let xVal = null;
+                    let yVal = null;
+                    for (let xc of xCodes) { if (g[xc] !== undefined && !isNaN(g[xc])) xVal = g[xc]; }
+                    for (let yc of yCodes) { if (g[yc] !== undefined && !isNaN(g[yc])) yVal = g[yc]; }
+                    
+                    if (xVal !== null && yVal !== null) {
+                        dataPoints.push({
+                            x: xVal,
+                            y: yVal,
+                            label: selKurum ? `${selKurum} (${key.replace('_', ' ')})` : `${key.split('_')[0]} (${key.split('_')[1]} ${key.split('_')[2]})`
+                        });
+                    }
                 });
-                
-                if (metricsWithPairs.length === 0) {
-                    ySelect.innerHTML = '<option value="">Kesişen gösterge bulunamadı</option>';
-                    return;
-                }
-                
-                ySelect.innerHTML = metricsWithPairs.map(m => `<option value="${m}">${m.substring(0, 70)}...</option>`).join('');
-            };
 
-            window.guncelleKorelasyonSecenekleri();
-
-            window.hesaplaKorelasyonMetrikleri = function() {
-                const tip = document.getElementById('korelasyon-tip').value;
-                const metricX = document.getElementById('korelasyon-x').value;
-                const metricY = document.getElementById('korelasyon-y').value;
-                
-                let fPerfData = perfData;
-                if (tip === 'Hastane') {
-                    fPerfData = perfData.filter(p => p.kurum_tipi === 'Hastane');
-                } else if (tip === 'ADSM') {
-                    fPerfData = perfData.filter(p => p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH');
-                }
-
-                const pairedData = {};
-                fPerfData.forEach(p => {
-                    const key = `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
-                    if (!pairedData[key]) pairedData[key] = { x: null, y: null, kurum: p.kurum_adi, donem: p.donem };
-                    if (p.gosterge_adi === metricX) pairedData[key].x = parseFloat(p.gd);
-                    if (p.gosterge_adi === metricY) pairedData[key].y = parseFloat(p.gd);
-                });
-                
-                const dataPoints = Object.values(pairedData).filter(item => item.x !== null && !isNaN(item.x) && item.y !== null && !isNaN(item.y));
-                
-                if (dataPoints.length < 3) {
-                    document.getElementById('r-katsayi-val').innerText = "-";
-                    document.getElementById('r-katsayi-derece').innerHTML = `<span class="badge bg-secondary">Yetersiz Ortak Veri</span>`;
-                    document.getElementById('r-katsayi-yorum').innerText = "Seçilen iki gösterge kartının kesiştiği ortak dönem sayısı analiz için yetersizdir.";
-                    return;
-                }
-                
                 const r = calculatePearsonValue(dataPoints);
-                document.getElementById('r-katsayi-val').innerText = r.toFixed(4);
+
+                // Grafik Alanını Göster ve Doldur
+                document.getElementById('detayliGrafikAlani').style.display = 'flex';
+                document.getElementById('grafik-r-val').innerText = `r = ${r.toFixed(4)}`;
                 
-                let derece = "";
-                let yorum = "";
+                let gucText = "";
+                let yorumText = "";
                 const absR = Math.abs(r);
-                
+
                 if (absR >= 0.8) {
-                    derece = "Çok Güçlü / Belirgin İlişki";
-                } else if (absR >= 0.6) {
-                    derece = "Güçlü Doğrusal İlişki";
-                } else if (absR >= 0.4) {
-                    derece = "Orta Dereceli İlişki";
-                } else if (absR >= 0.2) {
-                    derece = "Zayıf / Düşük Bağıntı";
+                    gucText = "Çok Güçlü İlişki";
+                } else if (absR >= 0.5) {
+                    gucText = "Güçlü İlişki";
+                } else if (absR >= 0.3) {
+                    gucText = "Orta Seviye İlişki";
                 } else {
-                    derece = "Korelasyon Yok / İhmal Edilebilir";
+                    gucText = "Zayıf / İhmal Edilebilir İlişki";
                 }
-                
-                document.getElementById('r-katsayi-derece').innerHTML = `<span class="badge bg-danger">${derece}</span>`;
+
+                document.getElementById('grafik-r-derece').innerHTML = `<span class="badge ${r > 0 ? 'bg-success':'bg-danger'}">${gucText}</span>`;
                 
                 if (r > 0.25) {
-                    yorum = "Gösterge kartları arasında <b>pozitif yönlü</b> bir ilişki tespit edilmiştir. Soldaki parametre yükseldikçe sağdaki parametrenin de istatistiksel gelişim gösterdiği gözlenmektedir.";
+                    yorumText = `<b>${rule.xLabel}</b> ile <b>${rule.yLabel}</b> arasında pozitif yönlü doğrusal bağıntı mevcuttur. Parametrelerden biri iyileştikçe diğeri de istatistiksel gelişim göstermektedir.`;
                 } else if (r < -0.25) {
-                    yorum = "Gösterge kartları arasında <b>negatif yönlü</b> bir ilişki tespit edilmiştir. Yani ilk göstergedeki artış, ikinci göstergenin değerini matematiksel olarak aşağı çekmektedir.";
+                    yorumText = `<b>${rule.xLabel}</b> ile <b>${rule.yLabel}</b> arasında negatif yönlü doğrusal bağıntı mevcuttur. İlk parametrenin artışı, ikinci parametrede bir düşüş veya gerilemeye neden olmaktadır.`;
                 } else {
-                    yorum = "Göstergelerin veri dağılımında ortak bir hareket deseni tespit edilememiştir. Parametreler idari olarak birbirini doğrudan etkilemiyor görünmektedir.";
+                    yorumText = `Mevcut filtre sınırlarında iki gösterge arasında anlamlı doğrusal bir eğilim izlenmemiştir.`;
                 }
-                document.getElementById('r-katsayi-yorum').innerHTML = yorum;
-                
+                document.getElementById('grafik-r-yorum').innerHTML = yorumText;
+
+                // Scatter Chart Çizimi
                 const ctx = document.getElementById('korelasyonScatterChart')?.getContext('2d');
                 if (ctx) {
                     if (charts.korelasyonScatter) charts.korelasyonScatter.destroy();
@@ -3821,10 +3773,10 @@ function getMhrsRowMetrics(item, type) {
                         data: {
                             datasets: [{
                                 label: 'Eşleşen Kurum Dönemleri',
-                                data: dataPoints.map(p => ({ x: p.x, y: p.y, label: `${p.kurum} (${p.donem}.Dönem)` })),
-                                backgroundColor: 'rgba(239, 68, 68, 0.75)',
-                                borderColor: '#ef4444',
-                                pointRadius: 5
+                                data: dataPoints,
+                                backgroundColor: 'rgba(79, 70, 229, 0.75)',
+                                borderColor: '#4f46e5',
+                                pointRadius: 6
                             }]
                         },
                         options: {
@@ -3841,17 +3793,17 @@ function getMhrsRowMetrics(item, type) {
                                 }
                             },
                             scales: {
-                                x: { title: { display: true, text: metricX.substring(0,35) + '...' } },
-                                y: { title: { display: true, text: metricY.substring(0,35) + '...' } }
+                                x: { title: { display: true, text: realXName.substring(0,35) + '...' } },
+                                y: { title: { display: true, text: realYName.substring(0,35) + '...' } }
                             }
                         }
                     });
                 }
             };
-            
-            window.hesaplaKorelasyonMetrikleri();
-        }
-            
+
+            // İlk yüklemeyi Başlat
+            window.guncelleKorelasyonArayuzu();
+        }            
         else if (currentAnalitikSubTab === 'tahmin') {
             // Öngörü ve Regresyon Modeli
             const uniqueKurumlar = [...new Set(puanData.map(p => p.kurum_adi))].sort();
