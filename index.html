@@ -3441,7 +3441,7 @@ function getMhrsRowMetrics(item, type) {
                 return mapping;
             };
 
-            // Onaylanan 12 Kritik İlişki Modeli (Hassas Kod Tanımlamaları)
+            // Onaylanan 12 Kritik İlişki Modeli
             const HASTANE_ILISKILERI = [
                 { id: 1, xCode: "SYPG-BH-8", yCode: "SYPG-BH-9", xLabel: "Primer Sezaryen Oranı", yLabel: "Toplam Sezaryen Oranı", desc: "Doğum süreçlerinde ilk ameliyat (primer) sıklığının toplam sezaryen oranına doğrudan etkisi." },
                 { id: 2, xCode: "SYPG-BH-37", yCode: "SYPG-BH-16", xLabel: "Acil Müşahede Süresi", yLabel: "Servis Yatak Devir Hızı", desc: "Kliniklerde boş yatak bulunmamasının acil servis müşahede sürelerini uzatma etkisi." },
@@ -3467,11 +3467,13 @@ function getMhrsRowMetrics(item, type) {
             const yillar = [...new Set(perfData.map(p => p.yil))].sort((a,b)=>b-a);
             const donemler = [...new Set(perfData.map(p => p.donem))].sort((a,b)=>a-b);
 
+            const formatDonemAdiLocal = (d) => AYLAR[d-1] || `${d}. Dönem`;
+
             const kurumOptions = ['<option value="">Tüm Bölge (Toplam)</option>', ...kurumlar.map(k => `<option value="${k}">${k}</option>`)].join('');
             const yilOptions = ['<option value="">Tüm Yıllar</option>', ...yillar.map(y => `<option value="${y}">${y}</option>`)].join('');
-            const donemOptions = ['<option value="">Tüm Dönemler</option>', ...donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`)].join('');
+            const donemOptions = ['<option value="">Tüm Dönemler</option>', ...donemler.map(d => `<option value="${d}">${formatDonemAdiLocal(d)}</option>`)].join('');
 
-            // HTML Şablonu (Sadece Kurum, Yıl ve Dönem Seçicileri Bulunmaktadır)
+            // HTML Şablonu
             container.innerHTML = `
                 <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
                     <div class="col-md-3">
@@ -3524,15 +3526,17 @@ function getMhrsRowMetrics(item, type) {
                 </div>
 
                 <div class="row g-4" id="detayliGrafikAlani" style="display: none;">
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <div class="p-3 border rounded bg-white shadow-sm mb-3">
-                            <h6 class="text-secondary small fw-bold">Seçili İlişki Detayı</h6>
-                            <div class="fs-4 fw-bold text-primary mb-1" id="grafik-r-val">-</div>
-                            <div id="grafik-r-derece" class="small mt-1 text-muted mb-3">Hesaplanıyor...</div>
+                            <h6 class="text-secondary small fw-bold" id="grafik-detay-baslik">Seçili İlişki Detayı</h6>
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <div class="fs-4 fw-bold text-primary" id="grafik-r-val">-</div>
+                                <div id="grafik-r-derece">Hesaplanıyor...</div>
+                            </div>
                             <p id="grafik-r-yorum" class="small text-muted mb-0">İlişki yorumu yüklenecektir.</p>
                         </div>
                     </div>
-                    <div class="col-md-8">
+                    <div class="col-md-7">
                         <div class="p-3 border rounded bg-white shadow-sm" style="height:320px; position:relative;">
                             <canvas id="korelasyonScatterChart"></canvas>
                         </div>
@@ -3546,7 +3550,6 @@ function getMhrsRowMetrics(item, type) {
                 const kurumSelect = document.getElementById('korelasyon-f-kurum');
                 if(!kurumSelect) return;
 
-                // Veri tabanında o kurum tipine sahip kurumları bul
                 const tKurumlar = [...new Set(perfData.filter(p => {
                     if (tip === 'Hastane') return p.kurum_tipi === 'Hastane';
                     return p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH';
@@ -3567,7 +3570,6 @@ function getMhrsRowMetrics(item, type) {
 
                 document.getElementById('detayliGrafikAlani').style.display = 'none';
 
-                // Kurum tipine göre veriyi filtrele
                 let fPerfData = perfData;
                 if (tip === 'Hastane') {
                     fPerfData = perfData.filter(p => p.kurum_tipi === 'Hastane');
@@ -3575,17 +3577,14 @@ function getMhrsRowMetrics(item, type) {
                     fPerfData = perfData.filter(p => p.kurum_tipi === 'ADSM' || p.kurum_tipi === 'ADSH');
                 }
 
-                // Yıl ve Dönem filtrelerini uygula
                 if (selYil) fPerfData = fPerfData.filter(p => p.yil.toString() === selYil.toString());
                 if (selDonem) fPerfData = fPerfData.filter(p => p.donem.toString() === selDonem.toString());
 
-                // Akıllı isim çözücüyü çalıştır (Koddan Ada Dönüşüm)
                 const nameMap = resolveIndicatorNames(perfData);
 
                 // Gruplama
                 const grouped = {};
                 fPerfData.forEach(p => {
-                    // Kurum filtresi aktifse sadece o kurumu grupla, değilse tüm bölge genelinde grupla
                     const key = selKurum ? `d${p.donem}_y${p.yil}` : `${p.kurum_adi}_d${p.donem}_y${p.yil}`;
                     if (selKurum && p.kurum_adi !== selKurum) return;
                     
@@ -3601,7 +3600,6 @@ function getMhrsRowMetrics(item, type) {
 
                 activeRules.forEach(rule => {
                     const pts = [];
-                    // Hem standart hem de alternatif kodları destekle (Örn: ADS-5 ve ADSH-5 uyumu)
                     const xCodes = [rule.xCode, rule.alternateX].filter(Boolean);
                     const yCodes = [rule.yCode, rule.alternateY].filter(Boolean);
 
@@ -3618,7 +3616,6 @@ function getMhrsRowMetrics(item, type) {
 
                     const r = calculatePearsonValue(pts);
                     
-                    // Göstergenin veritabanındaki gerçek ismini çöz, yoksa varsayılan etiketi koy
                     const realXName = nameMap[rule.xCode] || nameMap[rule.alternateX] || rule.xLabel;
                     const realYName = nameMap[rule.yCode] || nameMap[rule.alternateY] || rule.yLabel;
 
@@ -3628,6 +3625,8 @@ function getMhrsRowMetrics(item, type) {
                         yName: realYName,
                         xCode: rule.xCode,
                         yCode: rule.yCode,
+                        xLabel: rule.xLabel,
+                        yLabel: rule.yLabel,
                         desc: rule.desc,
                         r: r,
                         dataPointsCount: pts.length
@@ -3660,7 +3659,7 @@ function getMhrsRowMetrics(item, type) {
                     return `
                         <tr>
                             <td>
-                                <b>${item.xLabel || item.xName.substring(0,30)} / ${item.yLabel || item.yName.substring(0,30)}</b>
+                                <b>${item.xLabel} / ${item.yLabel}</b>
                                 <div class="text-muted small" style="font-size:10px;">${item.desc}</div>
                             </td>
                             <td class="small text-secondary">${item.xCode} - ${item.xName}</td>
@@ -3678,7 +3677,7 @@ function getMhrsRowMetrics(item, type) {
                 }).join('');
             };
 
-            // Listeden tıklanan bir satırın veri dağılımını grafiğe döken fonksiyon
+            // Listeden tıklanan bir satırın veri dağılımını grafiğe döken fonksiyon (Rasyonel Analiz Metinli)
             window.cizDetayliKorelasyonGrafigi = function(ruleId) {
                 const tip = document.getElementById('korelasyon-tip').value;
                 const selKurum = document.getElementById('korelasyon-f-kurum').value;
@@ -3728,39 +3727,46 @@ function getMhrsRowMetrics(item, type) {
                         dataPoints.push({
                             x: xVal,
                             y: yVal,
-                            label: selKurum ? `${selKurum} (${key.replace('_', ' ')})` : `${key.split('_')[0]} (${key.split('_')[1]} ${key.split('_')[2]})`
+                            label: selKurum ? `${selKurum} (${formatDonemAdiLocal(parseInt(key.split('_')[0].replace('d', '')))} ${key.split('_')[1].replace('y', '')})` : `${key.split('_')[0]} (${formatDonemAdiLocal(parseInt(key.split('_')[1].replace('d', '')))} ${key.split('_')[2].replace('y', '')})`
                         });
                     }
                 });
 
                 const r = calculatePearsonValue(dataPoints);
 
-                // Grafik Alanını Göster ve Doldur
+                // Grafik Alanını Göster ve Doldur (Dinamik Başlık)
                 document.getElementById('detayliGrafikAlani').style.display = 'flex';
+                document.getElementById('grafik-detay-baslik').innerHTML = `<i class="bi bi-info-circle-fill text-primary"></i> ${rule.xLabel} & ${rule.yLabel} Dağılım Grafiği`;
                 document.getElementById('grafik-r-val').innerText = `r = ${r.toFixed(4)}`;
                 
                 let gucText = "";
+                let badgeClass = "bg-secondary";
                 let yorumText = "";
                 const absR = Math.abs(r);
 
                 if (absR >= 0.8) {
                     gucText = "Çok Güçlü İlişki";
+                    badgeClass = "bg-danger";
                 } else if (absR >= 0.5) {
                     gucText = "Güçlü İlişki";
+                    badgeClass = "bg-success";
                 } else if (absR >= 0.3) {
                     gucText = "Orta Seviye İlişki";
+                    badgeClass = "bg-warning text-dark";
                 } else {
-                    gucText = "Zayıf / İhmal Edilebilir İlişki";
+                    gucText = "Zayıf / İhmal Edilebilir";
+                    badgeClass = "bg-light text-dark border";
                 }
 
-                document.getElementById('grafik-r-derece').innerHTML = `<span class="badge ${r > 0 ? 'bg-success':'bg-danger'}">${gucText}</span>`;
+                document.getElementById('grafik-r-derece').innerHTML = `<span class="badge ${badgeClass}" style="font-size:11px;">${gucText}</span>`;
                 
+                // Rasyonel/Açıklayıcı Analiz Dili (Subjektif Olmayan İstatistiksel İfade)
                 if (r > 0.25) {
-                    yorumText = `<b>${rule.xLabel}</b> ile <b>${rule.yLabel}</b> arasında pozitif yönlü doğrusal bağıntı mevcuttur. Parametrelerden biri iyileştikçe diğeri de istatistiksel gelişim göstermektedir.`;
+                    yorumText = `Mevcut filtre sınırlarında, <b>${rule.xLabel}</b> değeri yükseldikçe, <b>${rule.yLabel}</b> değerinin de paralel olarak <b>artış eğiliminde</b> olduğu istatistiksel olarak doğrulanmıştır.`;
                 } else if (r < -0.25) {
-                    yorumText = `<b>${rule.xLabel}</b> ile <b>${rule.yLabel}</b> arasında negatif yönlü doğrusal bağıntı mevcuttur. İlk parametrenin artışı, ikinci parametrede bir düşüş veya gerilemeye neden olmaktadır.`;
+                    yorumText = `Mevcut filtre sınırlarında, <b>${rule.xLabel}</b> değeri yükseldikçe, <b>${rule.yLabel}</b> değerinin <b>azalma eğiliminde</b> olduğu istatistiksel olarak doğrulanmıştır.`;
                 } else {
-                    yorumText = `Mevcut filtre sınırlarında iki gösterge arasında anlamlı doğrusal bir eğilim izlenmemiştir.`;
+                    yorumText = `Seçili zaman aralığında iki gösterge arasında anlamlı doğrusal bir eğilim izlenmemiştir. Süreçler bağımsız seyretmektedir.`;
                 }
                 document.getElementById('grafik-r-yorum').innerHTML = yorumText;
 
@@ -4178,7 +4184,20 @@ function getMhrsRowMetrics(item, type) {
                 await window.bolgeListesi();
             }
             if(sayfa === 'raporlar') await raporlar();
-            if(sayfa === 'derin-analiz') await renderAnalitikActiveView();
+            if(sayfa === 'derin-analiz') {
+                try {
+                    // Supabase'den 10.000 satır limitli olarak verileri çekip küresel değişkenlere aktarıyoruz:
+                    const { data: pData, error: pErr } = await _supabase.from('performans').select('*').limit(10000);
+                    const { data: tData, error: tErr } = await _supabase.from('toplam_puanlar').select('*').limit(10000);
+                    
+                    window.perfData = pData || [];
+                    window.puanData = tData || [];
+                    
+                    await renderAnalitikActiveView();
+                } catch (err) {
+                    console.error("Gelişmiş analitik veri çekme hatası:", err);
+                }
+            }
             if(sayfa === 'itirazlar') {
                 document.getElementById('itirazlar').innerHTML = `<div class="kds-card"><h6>⚠️ İtiraz Yönetimi Paneli</h6><div id="itirazListe"></div></div>`;
                 await window.itirazlariGoster();
