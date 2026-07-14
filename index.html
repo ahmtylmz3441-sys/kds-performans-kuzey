@@ -4197,7 +4197,7 @@ function getMhrsRowMetrics(item, type) {
                 } catch (err) {
                     console.error("Gelişmiş analitik veri çekme hatası:", err);
                 }
-            }
+                
             if(sayfa === 'itirazlar') {
                 document.getElementById('itirazlar').innerHTML = `<div class="kds-card"><h6>⚠️ İtiraz Yönetimi Paneli</h6><div id="itirazListe"></div></div>`;
                 await window.itirazlariGoster();
