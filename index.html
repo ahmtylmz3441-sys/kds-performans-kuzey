@@ -3402,9 +3402,9 @@ function getMhrsRowMetrics(item, type) {
         
         showLoading('analitikDinamikIcerik', 'İleri düzey matematiksel analizler hesaplanıyor...');
         
-        // Supabase veri tabanından analizlik performans havuzunu çek
-        const { data: perfData, error } = await _supabase.from('performans').select('*');
-        const { data: puanData } = await _supabase.from('toplam_puanlar').select('*');
+        // YENİ GÜNCEL HALİ:
+        const { data: perfData, error } = await _supabase.from('performans').select('*').limit(10000);
+        const { data: puanData } = await _supabase.from('toplam_puanlar').select('*').limit(10000);
         
         if (error || !perfData || perfData.length === 0) {
             container.innerHTML = '<div class="alert alert-warning text-center">Gelişmiş analitik hesaplamaları için yeterli performans verisi bulunamadı.</div>';
