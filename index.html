@@ -3441,15 +3441,13 @@ const puanData = window.puanData || [];
                 return mapping;
             };
 
-            // Onaylanan 12 Kritik İlişki Modeli
+            // Onaylanan 12 Kritik İlişki Modeli (Sadece Doğrulanan İlişkiler Kaldı)
             const HASTANE_ILISKILERI = [
                 { id: 1, xCode: "SYPG-BH-8", yCode: "SYPG-BH-9", xLabel: "Primer Sezaryen Oranı", yLabel: "Toplam Sezaryen Oranı", desc: "Doğum süreçlerinde ilk ameliyat (primer) sıklığının toplam sezaryen oranına doğrudan etkisi." },
                 { id: 2, xCode: "SYPG-BH-37", yCode: "SYPG-BH-16", xLabel: "Acil Müşahede Süresi", yLabel: "Servis Yatak Devir Hızı", desc: "Kliniklerde boş yatak bulunmamasının acil servis müşahede sürelerini uzatma etkisi." },
                 { id: 3, xCode: "SYPG-BH-37", yCode: "SYPG-BH-17", xLabel: "Acil Müşahede Süresi", yLabel: "Yoğun Bakım Yatak Doluluk Oranı", desc: "Yoğun bakım yatak doluluğunun acil müşahede sürelerindeki darboğaza etkisi." },
                 { id: 4, xCode: "SYPG-BH-20", yCode: "SYPG-BH-18", xLabel: "Ameliyat Masası Verimliliği", yLabel: "Cerrahi Klinisyen İş Yükü", desc: "Ameliyathane fiziki verimliliği ile cerrahi hekim kadrosunun toplam ameliyat puanı ilişkisi." },
                 { id: 5, xCode: "SYPG-BH-20", yCode: "SYPG-BH-19", xLabel: "Ameliyat Masası Verimliliği", yLabel: "Cerrahi Klinisyen Nitelikli Ameliyat Yükü", desc: "Ameliyat masası başına üretilen puan ile klinisyenlerin nitelikli ameliyat puanı ilişkisi." },
-                { id: 6, xCode: "SYPG-BH-25", yCode: "SYPG-BH-24", xLabel: "Ortalama BT Raporlama Süresi", yLabel: "3 Günü Geçen BT Raporlama Oranı", desc: "Ortalama BT raporlama süresinin kalite hedefi olan 3 günlük limiti aşma oranına etkisi." },
-                { id: 7, xCode: "SYPG-BH-27", yCode: "SYPG-BH-26", xLabel: "Ortalama MR Raporlama Süresi", yLabel: "7 Günü Geçen MR Raporlama Oranı", desc: "Ortalama MR raporlama süresinin kalite hedefi olan 7 günlük limiti aşma oranına etkisi." },
                 { id: 8, xCode: "SYPG-BH-1", yCode: "SYPG-BH-2", xLabel: "Hasta Memnuniyet Oranı", yLabel: "Çalışan Memnuniyet Oranı", desc: "Hekim/personel motivasyonunun doğrudan hastaya yansıyan hizmet kalitesi ve memnuniyete etkisi." },
                 { id: 9, xCode: "SYPG-BH-4", yCode: "SYPG-BH-5", xLabel: "Randevulu Muayene Oranı (MHRS)", yLabel: "Uzman Hekim Muayene Sayısı", desc: "MHRS planlamasının hekim başına düşen poliklinik muayene yükünü dengelenmesine etkisi." }
             ];
@@ -3472,6 +3470,46 @@ const puanData = window.puanData || [];
             const kurumOptions = ['<option value="">Tüm Bölge (Toplam)</option>', ...kurumlar.map(k => `<option value="${k}">${k}</option>`)].join('');
             const yilOptions = ['<option value="">Tüm Yıllar</option>', ...yillar.map(y => `<option value="${y}">${y}</option>`)].join('');
             const donemOptions = ['<option value="">Tüm Dönemler</option>', ...donemler.map(d => `<option value="${d}">${formatDonemAdiLocal(d)}</option>`)].join('');
+
+            // Akıllı ve Esnek Mantıksal Eşleştirme Motoru
+            const checkLogicalRelationship = (m1, m2, isAdsm) => {
+                const clean = (str) => str.toLowerCase()
+                    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+                    .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+                    .replace(/[\s_%()\-]+/g, '');
+                    
+                const c1 = clean(m1);
+                const c2 = clean(m2);
+
+                const hospitalRules = [
+                    ["sypgbh8", "sypgbh9"],     // Primer Sezaryen Oranı & Toplam Sezaryen Oranı
+                    ["sypgbh37", "sypgbh16"],   // Acil Servis Ortalama Müşahede Süresi & Servis Yatak Devir Hızı
+                    ["sypgbh37", "sypgbh17"],   // Acil Servis Ortalama Müşahede Süresi & Yoğun Bakım Yatak Doluluk Oranı
+                    ["sypgbh20", "sypgbh18"],   // Ameliyat Masası Ameliyat Puanı & Cerrahi Klinisyen Başına Ameliyat
+                    ["sypgbh20", "sypgbh19"],   // Ameliyat Masası Ameliyat Puanı & Cerrahi Klinisyen Başına Nitelikli Ameliyat
+                    ["sypgbh1", "sypgbh2"],     // Hasta Memnuniyet Oranı & Çalışan Memnuniyet Oranı
+                    ["sypgbh4", "sypgbh5"]      // Randevulu Muayene Oranı (MHRS) & Uzman Hekim Başına Muayene Sayısı
+                ];
+
+                const adsmRules = [
+                    ["ads5", "ads1"],           // İşlem İçeren Başvuru Oranı & Hasta Memnuniyet Oranı
+                    ["adsh5", "adsh1"],
+                    ["ads6", "ads1"],           // Diş Protez Ortalama Teslim Süresi & Hasta Memnuniyet Oranı
+                    ["adsh6", "adsh1"],
+                    ["ads4", "ads8"],           // Hekim Başına Muayene & Protez/Dolgu Yenileme Oranı
+                    ["adsh4", "adsh8"],
+                    ["ads3", "ads11"],          // Randevulu Muayene Oranı (MHRS) & Randevusuna Gelmeyen Hasta Oranı
+                    ["adsh3", "adsh11"],
+                    ["ads1", "ads2"],           // Hasta Memnuniyet Oranı & Çalışan Memnuniyet Oranı
+                    ["adsh1", "adsh2"]
+                ];
+
+                const rules = isAdsm ? adsmRules : hospitalRules;
+
+                return rules.some(([r1, r2]) => {
+                    return (c1.includes(r1) && c2.includes(r2)) || (c1.includes(r2) && c2.includes(r1));
+                });
+            };
 
             // HTML Şablonu
             container.innerHTML = `
@@ -3754,62 +3792,7 @@ const puanData = window.puanData || [];
                     gucText = "Orta Seviye İlişki";
                     badgeClass = "bg-warning text-dark";
                 } else {
-                    gucText = "Zayıf / İhmal Edilebilir";
-                    badgeClass = "bg-light text-dark border";
-                }
-
-                document.getElementById('grafik-r-derece').innerHTML = `<span class="badge ${badgeClass}" style="font-size:11px;">${gucText}</span>`;
-                
-                // Rasyonel/Açıklayıcı Analiz Dili (Subjektif Olmayan İstatistiksel İfade)
-                if (r > 0.25) {
-                    yorumText = `Mevcut filtre sınırlarında, <b>${rule.xLabel}</b> değeri yükseldikçe, <b>${rule.yLabel}</b> değerinin de paralel olarak <b>artış eğiliminde</b> olduğu istatistiksel olarak doğrulanmıştır.`;
-                } else if (r < -0.25) {
-                    yorumText = `Mevcut filtre sınırlarında, <b>${rule.xLabel}</b> değeri yükseldikçe, <b>${rule.yLabel}</b> değerinin <b>azalma eğiliminde</b> olduğu istatistiksel olarak doğrulanmıştır.`;
-                } else {
-                    yorumText = `Seçili zaman aralığında iki gösterge arasında anlamlı doğrusal bir eğilim izlenmemiştir. Süreçler bağımsız seyretmektedir.`;
-                }
-                document.getElementById('grafik-r-yorum').innerHTML = yorumText;
-
-                // Scatter Chart Çizimi
-                const ctx = document.getElementById('korelasyonScatterChart')?.getContext('2d');
-                if (ctx) {
-                    if (charts.korelasyonScatter) charts.korelasyonScatter.destroy();
-                    charts.korelasyonScatter = new Chart(ctx, {
-                        type: 'scatter',
-                        data: {
-                            datasets: [{
-                                label: 'Eşleşen Kurum Dönemleri',
-                                data: dataPoints,
-                                backgroundColor: 'rgba(79, 70, 229, 0.75)',
-                                borderColor: '#4f46e5',
-                                pointRadius: 6
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            const item = context.raw;
-                                            return `${item.label} -> X: ${item.x}, Y: ${item.y}`;
-                                        }
-                                    }
-                                }
-                            },
-                            scales: {
-                                x: { title: { display: true, text: realXName.substring(0,35) + '...' } },
-                                y: { title: { display: true, text: realYName.substring(0,35) + '...' } }
-                            }
-                        }
-                    });
-                }
-            };
-
-            // İlk yüklemeyi Başlat
-            window.guncelleKorelasyonArayuzu();
-        }            
+                    gucText            
         else if (currentAnalitikSubTab === 'tahmin') {
             // Öngörü ve Regresyon Modeli
             const uniqueKurumlar = [...new Set(puanData.map(p => p.kurum_adi))].sort();
