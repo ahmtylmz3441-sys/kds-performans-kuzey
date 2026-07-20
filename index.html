@@ -4166,39 +4166,34 @@ const puanData = window.puanData || [];
                 document.getElementById('bolgeFiltreTip').onchange = () => window.bolgeListesi();
                 await window.bolgeListesi();
             }
-            if(sayfa === 'raporlar') await raporlar();
             if(sayfa === 'derin-analiz') {
                 try {
-                    // Supabase 1000 satır limitini aşmak için döngüsel (paginated) çekim yapıyoruz:
-                    let allPerfData = [];
-                    let from = 0;
-                    let to = 999;
-                    let hasMore = true;
-
-                    while (hasMore) {
-                        const { data, error } = await _supabase
-                            .from('performans')
-                            .select('*')
-                            .range(from, to);
-
-                        if (error) {
-                            console.error("Supabase veri çekme hatası:", error);
-                            break;
-                        }
-
-                        if (data && data.length > 0) {
-                            allPerfData = allPerfData.concat(data);
-                            from += 1000;
-                            to += 1000;
-                            // Eğer gelen veri 1000'den azsa çekilecek başka veri kalmamıştır
-                            if (data.length < 1000) {
-                                hasMore = false;
-                            }
-                        } else {
-                            hasMore = false;
-                        }
-                    }
-
+                    // Paralel istekler sayesinde sıfır kilitlenme riskiyle 3000 satıra kadar veriyi anında çekiyoruz:
+                    const [res1, res2, res3, resPuan] = await Promise.all([
+                        _supabase.from('performans').select('*').range(0, 999),
+                        _supabase.from('performans').select('*').range(1000, 1999),
+                        _supabase.from('performans').select('*').range(2000, 2999),
+                        _supabase.from('toplam_puanlar').select('*').limit(1000)
+                    ]);
+                    
+                    // Gelen parçaları tek bir dizide birleştiriyoruz
+                    const allPerfData = []
+                        .concat(res1.data || [])
+                        .concat(res2.data || [])
+                        .concat(res3.data || []);
+                        
+                    window.perfData = allPerfData;
+                    window.puanData = resPuan.data || [];
+                    
+                    await renderAnalitikActiveView();
+                } catch (err) {
+                    console.error("Gelişmiş analitik paralel veri çekme hatası:", err);
+                    // Hata durumunda dahi ekranın kilitli kalmaması için boş veriyle çalıştırıyoruz
+                    window.perfData = window.perfData || [];
+                    window.puanData = window.puanData || [];
+                    await renderAnalitikActiveView();
+                }
+            
                     // Toplam puanlar için de aynısını yapıyoruz
                     let allPuanData = [];
                     let fromP = 0;
