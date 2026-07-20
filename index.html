@@ -2780,7 +2780,7 @@ function getMhrsRowMetrics(item, type) {
             </div>
         `;
     } else {
-        // MESAİ DIŞI veya MESAİ KAYDIRMA Modu (Yeni Gelişmiş Kart Yapısı)
+        // MESAİ DIŞI / MESAİ KAYDIRMA Modu (Yeni Gelişmiş Kart Yapısı)
         const ayaktan_orani = t_toplam_muayene > 0 ? (t_ayaktan / t_toplam_muayene) * 100 : 0;
 
         cardsHtml = `
@@ -3404,7 +3404,7 @@ function getMhrsRowMetrics(item, type) {
         
         // YENİ GÜNCEL HALİ:
         const perfData = window.perfData || [];
-const puanData = window.puanData || [];
+        const puanData = window.puanData || [];
         
         if (!perfData || perfData.length === 0) {
             container.innerHTML = '<div class="alert alert-warning text-center">Gelişmiş analitik hesaplamaları için yeterli performans verisi bulunamadı.</div>';
@@ -3441,15 +3441,13 @@ const puanData = window.puanData || [];
                 return mapping;
             };
 
-            // Onaylanan 12 Kritik İlişki Modeli
+            // Onaylanan 12 Kritik İlişki Modeli (Sadece Doğrulanan İlişkiler Kaldı)
             const HASTANE_ILISKILERI = [
                 { id: 1, xCode: "SYPG-BH-8", yCode: "SYPG-BH-9", xLabel: "Primer Sezaryen Oranı", yLabel: "Toplam Sezaryen Oranı", desc: "Doğum süreçlerinde ilk ameliyat (primer) sıklığının toplam sezaryen oranına doğrudan etkisi." },
                 { id: 2, xCode: "SYPG-BH-37", yCode: "SYPG-BH-16", xLabel: "Acil Müşahede Süresi", yLabel: "Servis Yatak Devir Hızı", desc: "Kliniklerde boş yatak bulunmamasının acil servis müşahede sürelerini uzatma etkisi." },
                 { id: 3, xCode: "SYPG-BH-37", yCode: "SYPG-BH-17", xLabel: "Acil Müşahede Süresi", yLabel: "Yoğun Bakım Yatak Doluluk Oranı", desc: "Yoğun bakım yatak doluluğunun acil müşahede sürelerindeki darboğaza etkisi." },
                 { id: 4, xCode: "SYPG-BH-20", yCode: "SYPG-BH-18", xLabel: "Ameliyat Masası Verimliliği", yLabel: "Cerrahi Klinisyen İş Yükü", desc: "Ameliyathane fiziki verimliliği ile cerrahi hekim kadrosunun toplam ameliyat puanı ilişkisi." },
                 { id: 5, xCode: "SYPG-BH-20", yCode: "SYPG-BH-19", xLabel: "Ameliyat Masası Verimliliği", yLabel: "Cerrahi Klinisyen Nitelikli Ameliyat Yükü", desc: "Ameliyat masası başına üretilen puan ile klinisyenlerin nitelikli ameliyat puanı ilişkisi." },
-                { id: 6, xCode: "SYPG-BH-25", yCode: "SYPG-BH-24", xLabel: "Ortalama BT Raporlama Süresi", yLabel: "3 Günü Geçen BT Raporlama Oranı", desc: "Ortalama BT raporlama süresinin kalite hedefi olan 3 günlük limiti aşma oranına etkisi." },
-                { id: 7, xCode: "SYPG-BH-27", yCode: "SYPG-BH-26", xLabel: "Ortalama MR Raporlama Süresi", yLabel: "7 Günü Geçen MR Raporlama Oranı", desc: "Ortalama MR raporlama süresinin kalite hedefi olan 7 günlük limiti aşma oranına etkisi." },
                 { id: 8, xCode: "SYPG-BH-1", yCode: "SYPG-BH-2", xLabel: "Hasta Memnuniyet Oranı", yLabel: "Çalışan Memnuniyet Oranı", desc: "Hekim/personel motivasyonunun doğrudan hastaya yansıyan hizmet kalitesi ve memnuniyete etkisi." },
                 { id: 9, xCode: "SYPG-BH-4", yCode: "SYPG-BH-5", xLabel: "Randevulu Muayene Oranı (MHRS)", yLabel: "Uzman Hekim Muayene Sayısı", desc: "MHRS planlamasının hekim başına düşen poliklinik muayene yükünü dengelenmesine etkisi." }
             ];
@@ -3472,6 +3470,46 @@ const puanData = window.puanData || [];
             const kurumOptions = ['<option value="">Tüm Bölge (Toplam)</option>', ...kurumlar.map(k => `<option value="${k}">${k}</option>`)].join('');
             const yilOptions = ['<option value="">Tüm Yıllar</option>', ...yillar.map(y => `<option value="${y}">${y}</option>`)].join('');
             const donemOptions = ['<option value="">Tüm Dönemler</option>', ...donemler.map(d => `<option value="${d}">${formatDonemAdiLocal(d)}</option>`)].join('');
+
+            // Akıllı ve Esnek Mantıksal Eşleştirme Motoru
+            const checkLogicalRelationship = (m1, m2, isAdsm) => {
+                const clean = (str) => str.toLowerCase()
+                    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+                    .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+                    .replace(/[\s_%()\-]+/g, '');
+                    
+                const c1 = clean(m1);
+                const c2 = clean(m2);
+
+                const hospitalRules = [
+                    ["sypgbh8", "sypgbh9"],     // Primer Sezaryen Oranı & Toplam Sezaryen Oranı
+                    ["sypgbh37", "sypgbh16"],   // Acil Servis Ortalama Müşahede Süresi & Servis Yatak Devir Hızı
+                    ["sypgbh37", "sypgbh17"],   // Acil Servis Ortalama Müşahede Süresi & Yoğun Bakım Yatak Doluluk Oranı
+                    ["sypgbh20", "sypgbh18"],   // Ameliyat Masası Ameliyat Puanı & Cerrahi Klinisyen Başına Ameliyat
+                    ["sypgbh20", "sypgbh19"],   // Ameliyat Masası Ameliyat Puanı & Cerrahi Klinisyen Başına Nitelikli Ameliyat
+                    ["sypgbh1", "sypgbh2"],     // Hasta Memnuniyet Oranı & Çalışan Memnuniyet Oranı
+                    ["sypgbh4", "sypgbh5"]      // Randevulu Muayene Oranı (MHRS) & Uzman Hekim Başına Muayene Sayısı
+                ];
+
+                const adsmRules = [
+                    ["ads5", "ads1"],           // İşlem İçeren Başvuru Oranı & Hasta Memnuniyet Oranı
+                    ["adsh5", "adsh1"],
+                    ["ads6", "ads1"],           // Diş Protez Ortalama Teslim Süresi & Hasta Memnuniyet Oranı
+                    ["adsh6", "adsh1"],
+                    ["ads4", "ads8"],           // Hekim Başına Muayene & Protez/Dolgu Yenileme Oranı
+                    ["adsh4", "adsh8"],
+                    ["ads3", "ads11"],          // Randevulu Muayene Oranı (MHRS) & Randevusuna Gelmeyen Hasta Oranı
+                    ["adsh3", "adsh11"],
+                    ["ads1", "ads2"],           // Hasta Memnuniyet Oranı & Çalışan Memnuniyet Oranı
+                    ["adsh1", "adsh2"]
+                ];
+
+                const rules = isAdsm ? adsmRules : hospitalRules;
+
+                return rules.some(([r1, r2]) => {
+                    return (c1.includes(r1) && c2.includes(r2)) || (c1.includes(r2) && c2.includes(r1));
+                });
+            };
 
             // HTML Şablonu
             container.innerHTML = `
@@ -4186,66 +4224,30 @@ const puanData = window.puanData || [];
             if(sayfa === 'raporlar') await raporlar();
             if(sayfa === 'derin-analiz') {
                 try {
-                    // Supabase 1000 satır limitini aşmak için döngüsel (paginated) çekim yapıyoruz:
-                    let allPerfData = [];
-                    let from = 0;
-                    let to = 999;
-                    let hasMore = true;
-
-                    while (hasMore) {
-                        const { data, error } = await _supabase
-                            .from('performans')
-                            .select('*')
-                            .range(from, to);
-
-                        if (error) {
-                            console.error("Supabase veri çekme hatası:", error);
-                            break;
-                        }
-
-                        if (data && data.length > 0) {
-                            allPerfData = allPerfData.concat(data);
-                            from += 1000;
-                            to += 1000;
-                            // Eğer gelen veri 1000'den azsa çekilecek başka veri kalmamıştır
-                            if (data.length < 1000) {
-                                hasMore = false;
-                            }
-                        } else {
-                            hasMore = false;
-                        }
-                    }
-
-                    // Toplam puanlar için de aynısını yapıyoruz
-                    let allPuanData = [];
-                    let fromP = 0;
-                    let toP = 999;
-                    let hasMoreP = true;
-
-                    while (hasMoreP) {
-                        const { data, error } = await _supabase
-                            .from('toplam_puanlar')
-                            .select('*')
-                            .range(fromP, toP);
-
-                        if (error) break;
-
-                        if (data && data.length > 0) {
-                            allPuanData = allPuanData.concat(data);
-                            fromP += 1000;
-                            toP += 1000;
-                            if (data.length < 1000) hasMoreP = false;
-                        } else {
-                            hasMoreP = false;
-                        }
-                    }
+                    // Paralel istekler sayesinde sıfır kilitlenme riskiyle 3000 satıra kadar veriyi anında çekiyoruz:
+                    const [res1, res2, res3, resPuan] = await Promise.all([
+                        _supabase.from('performans').select('*').range(0, 999),
+                        _supabase.from('performans').select('*').range(1000, 1999),
+                        _supabase.from('performans').select('*').range(2000, 2999),
+                        _supabase.from('toplam_puanlar').select('*').limit(1000)
+                    ]);
                     
+                    // Gelen parçaları tek bir dizide birleştiriyoruz
+                    const allPerfData = []
+                        .concat(res1.data || [])
+                        .concat(res2.data || [])
+                        .concat(res3.data || []);
+                        
                     window.perfData = allPerfData;
-                    window.puanData = allPuanData;
+                    window.puanData = resPuan.data || [];
                     
                     await renderAnalitikActiveView();
                 } catch (err) {
-                    console.error("Gelişmiş analitik veri çekme hatası:", err);
+                    console.error("Gelişmiş analitik paralel veri çekme hatası:", err);
+                    // Hata durumunda dahi ekranın kilitli kalmaması için boş veriyle çalıştırıyoruz
+                    window.perfData = window.perfData || [];
+                    window.puanData = window.puanData || [];
+                    await renderAnalitikActiveView();
                 }
             }                
             if(sayfa === 'itirazlar') {
