@@ -1872,10 +1872,11 @@
         document.getElementById('karsDonemCheckboxlarInner').innerHTML = html;
     };
 
+// ---------- DÖNEMSEL KARŞILAŞTIRMA (GÜNCELLENMİŞ) ----------
     window.donemselKarsilastir = async function() {
         const kurum = document.getElementById('karsKurumAdi').value;
         const seciliDonemler = Array.from(document.querySelectorAll('.donem-checkbox:checked')).map(cb=>parseInt(cb.value)).sort((a,b)=>a-b);
-        if(!kurum || seciliDonemler.length===0) { alert('Lütfen bir kurum and en az bir dönem seçin.'); return; }
+        if(!kurum || seciliDonemler.length===0) { alert('Lütfen bir kurum ve en az bir dönem seçin.'); return; }
         
         await itirazDurumlariniYukle();
         const toplamlar = {};
@@ -1911,17 +1912,25 @@
         });
         const gostergeler = Array.from(gostergeMap.values()).sort((a,b)=> (parseInt(a.kod.split('-')[2]) || 0) - (parseInt(b.kod.split('-')[2]) || 0));
         
+        // Puan ve GP verilerini haritaya ekliyoruz
         const gostergeDegerler = {};
-        tumGostergeler?.forEach(g => { gostergeDegerler[`${g.gosterge_kodu}_${g.donem}`] = { gd: g.gd, tr_ort: g.tr_ort }; });
+        tumGostergeler?.forEach(g => { 
+            gostergeDegerler[`${g.gosterge_kodu}_${g.donem}`] = { 
+                gd: g.gd, 
+                tr_ort: g.tr_ort,
+                puan: g.puan,
+                gp: g.gp
+            }; 
+        });
         
         let html = `
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <h6 class="mb-0 fw-bold"><i class="bi bi-table"></i> Karşılaştırma Sonuç Matrisi</h6>
                 <button class="btn btn-sm btn-outline-success" style="border-radius:10px;" onclick="window.exportTableToExcel('karsilastirmaTablo', '${kurum.replace(/\\s+/g, '_')}_Donemsel_Karsilastirma')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
             </div>
-            <div class="table-responsive"><table id="karsilastirmaTablo" class="table table-bordered bg-white align-middle"><thead><tr class="table-light"><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th>${formatDonemAdi(d)} <br><small class="text-muted">(GD / TR Ort)</small></th>`).join('')}</tr></thead><tbody>
-            <tr class="table-info fw-bold text-dark"><td>🏆 TOPLAM PUAN</td>${seciliDonemler.map(d=>`<td class="text-primary fs-5">${toplamlar[d].toplam_puan}</td>`).join('')}</tr>
-            <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td>${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
+            <div class="table-responsive"><table id="karsilastirmaTablo" class="table table-bordered bg-white align-middle"><thead><tr class="table-light"><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th class="text-center">${formatDonemAdi(d)} <br><small class="text-muted" style="font-size:10.5px;">(GD / TR Ort)<br>(Puan / GP)</small></th>`).join('')}</tr></thead><tbody>
+            <tr class="table-info fw-bold text-dark"><td>🏆 TOPLAM PUAN</td>${seciliDonemler.map(d=>`<td class="text-center text-primary fs-5">${toplamlar[d].toplam_puan}</td>`).join('')}</tr>
+            <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td class="text-center">${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
         
         for(let g of gostergeler) {
             html += `<tr>
@@ -1932,7 +1941,32 @@
                 </td>`;
             for(let d of seciliDonemler) {
                 const val = gostergeDegerler[`${g.kod}_${d}`];
-                html += `<td>${val && val.gd!==null ? `<b>${val.gd}</b> <span class="text-muted">/ ${val.tr_ort}</span>` : '- / -'}</td>`;
+                if (val && val.gd !== null && val.gd !== undefined) {
+                    let puanBadge = '';
+                    if (val.puan === null || val.puan === undefined || val.puan === '') {
+                        // Muaf durumu (- / -)
+                        puanBadge = `<div class="mt-1"><span class="badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; font-size:10px; font-weight:600;">- / -</span></div>`;
+                    } else {
+                        const pVal = parseFloat(val.puan);
+                        const gpVal = (val.gp !== null && val.gp !== undefined) ? val.gp : '-';
+                        if (!isNaN(pVal) && pVal === 0) {
+                            // 0 Puan Kritik Durum (Kırmızı Rozet)
+                            puanBadge = `<div class="mt-1"><span class="badge" style="background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; font-size:10px; font-weight:700;">0 / ${gpVal} Puan</span></div>`;
+                        } else {
+                            // Normal Puan (Mavi Rozet)
+                            puanBadge = `<div class="mt-1"><span class="badge" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:10px; font-weight:700;">${val.puan} / ${gpVal} Puan</span></div>`;
+                        }
+                    }
+                    html += `<td class="text-center align-middle">
+                        <div><b>${val.gd}</b> <span class="text-muted small">/ ${val.tr_ort ?? '-'}</span></div>
+                        ${puanBadge}
+                    </td>`;
+                } else {
+                    html += `<td class="text-center align-middle text-muted small">
+                        <div>- / -</div>
+                        <div class="mt-1"><span class="badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; font-size:10px; font-weight:600;">- / -</span></div>
+                    </td>`;
+                }
             }
             html += `</tr>`;
         }
