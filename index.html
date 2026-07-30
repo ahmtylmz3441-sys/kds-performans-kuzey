@@ -425,8 +425,8 @@
 
         .medical-loader-container {
             position: relative;
-            width: 180px;
-            height: 180px;
+            width: 240px; /* 180px -> 240px Büyütüldü */
+            height: 240px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -435,21 +435,21 @@
         /* Dönen İnce Medikal Halka */
         .medical-ring {
             position: absolute;
-            width: 140px;
-            height: 140px;
+            width: 190px; /* 140px -> 190px Büyütüldü */
+            height: 190px;
             border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.06);
-            border-top: 2.5px solid #4f46e5;
-            border-right: 2.5px solid #10b981;
+            border: 3px solid rgba(255, 255, 255, 0.06);
+            border-top: 3px solid #4f46e5;
+            border-right: 3px solid #10b981;
             animation: spinRing 1.2s linear infinite;
-            filter: drop-shadow(0 0 10px rgba(79, 70, 229, 0.6));
+            filter: drop-shadow(0 0 14px rgba(79, 70, 229, 0.6));
         }
 
         /* Dışta Dalgalanan Soft Halo */
         .medical-pulse-halo {
             position: absolute;
-            width: 120px;
-            height: 120px;
+            width: 160px; /* 120px -> 160px Büyütüldü */
+            height: 160px;
             border-radius: 50%;
             background: radial-gradient(circle, rgba(79, 70, 229, 0.25) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 70%);
             animation: pulseHalo 2s ease-in-out infinite;
@@ -457,13 +457,13 @@
 
         /* Ortadaki Nefes Alan Kalın Tipografi */
         .loader-breathing-text {
-            font-size: 12px;
+            font-size: 15px; /* 12px -> 15px Büyütüldü */
             font-weight: 800;
             color: #ffffff;
             text-transform: uppercase;
             z-index: 10;
             pointer-events: none;
-            text-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+            text-shadow: 0 0 14px rgba(255, 255, 255, 0.7);
             animation: breathText 2s ease-in-out infinite;
         }
 
