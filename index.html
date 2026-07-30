@@ -1872,7 +1872,7 @@
         document.getElementById('karsDonemCheckboxlarInner').innerHTML = html;
     };
 
-// ---------- DÖNEMSEL KARŞILAŞTIRMA (GÜNCELLENMİŞ) ----------
+// ---------- DÖNEMSEL KARŞILAŞTIRMA (Trafik Işığı Rozet Mantığı) ----------
     window.donemselKarsilastir = async function() {
         const kurum = document.getElementById('karsKurumAdi').value;
         const seciliDonemler = Array.from(document.querySelectorAll('.donem-checkbox:checked')).map(cb=>parseInt(cb.value)).sort((a,b)=>a-b);
@@ -1912,7 +1912,6 @@
         });
         const gostergeler = Array.from(gostergeMap.values()).sort((a,b)=> (parseInt(a.kod.split('-')[2]) || 0) - (parseInt(b.kod.split('-')[2]) || 0));
         
-        // Puan ve GP verilerini haritaya ekliyoruz
         const gostergeDegerler = {};
         tumGostergeler?.forEach(g => { 
             gostergeDegerler[`${g.gosterge_kodu}_${g.donem}`] = { 
@@ -1944,17 +1943,22 @@
                 if (val && val.gd !== null && val.gd !== undefined) {
                     let puanBadge = '';
                     if (val.puan === null || val.puan === undefined || val.puan === '') {
-                        // Muaf durumu (- / -)
+                        // ⚪ Muaf durumu (- / -)
                         puanBadge = `<div class="mt-1"><span class="badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; font-size:10px; font-weight:600;">- / -</span></div>`;
                     } else {
                         const pVal = parseFloat(val.puan);
-                        const gpVal = (val.gp !== null && val.gp !== undefined) ? val.gp : '-';
+                        const gpVal = (val.gp !== null && val.gp !== undefined) ? parseFloat(val.gp) : null;
+                        const gpText = val.gp ?? '-';
+
                         if (!isNaN(pVal) && pVal === 0) {
-                            // 0 Puan Kritik Durum (Kırmızı Rozet)
-                            puanBadge = `<div class="mt-1"><span class="badge" style="background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; font-size:10px; font-weight:700;">0 / ${gpVal} Puan</span></div>`;
+                            // 🔴 Sıfır Puan (Kritik - Soft Kırmızı Rozet)
+                            puanBadge = `<div class="mt-1"><span class="badge" style="background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; font-size:10px; font-weight:700;">0 / ${gpText} Puan</span></div>`;
+                        } else if (gpVal !== null && !isNaN(gpVal) && pVal >= gpVal) {
+                            // 🟢 Tam Puan (Tam Başarı - Soft Zümrüt Yeşili Rozet)
+                            puanBadge = `<div class="mt-1"><span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:10px; font-weight:700;">${val.puan} / ${gpText} Puan</span></div>`;
                         } else {
-                            // Normal Puan (Mavi Rozet)
-                            puanBadge = `<div class="mt-1"><span class="badge" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:10px; font-weight:700;">${val.puan} / ${gpVal} Puan</span></div>`;
+                            // 🔵 Kısmi Puan (Geliştirilebilir - Soft İndigo Mavi Rozet)
+                            puanBadge = `<div class="mt-1"><span class="badge" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:10px; font-weight:700;">${val.puan} / ${gpText} Puan</span></div>`;
                         }
                     }
                     html += `<td class="text-center align-middle">
