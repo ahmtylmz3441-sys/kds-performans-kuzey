@@ -4176,7 +4176,7 @@ function getMhrsRowMetrics(item, type) {
         const loader = document.getElementById('page-loader');
         if (loader) loader.classList.add('active');
 
-        const delayPromise = new Promise(resolve => setTimeout(resolve, 3000));
+        const delayPromise = new Promise(resolve => setTimeout(resolve, 10000));
 
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(sayfa).classList.add('active');
