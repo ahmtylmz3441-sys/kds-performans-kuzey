@@ -676,7 +676,7 @@
                     <i class="bi bi-list fs-5"></i>
                 </button>
                 <button id="back-to-hub-btn" onclick="window.anaMerkezeDon()">
-                    <i class="bi bi-grid-3x3-gap-fill me-2"></i>Ana Komuta Merkezi
+                    <i class="bi bi-grid-3x3-gap-fill me-2"></i>Ana Sayfa
                 </button>
                 <h5 id="page-title" class="mb-0 fw-bold">Genel Bakış</h5>
             </div>
@@ -714,7 +714,7 @@
                     <div class="col">
                         <div class="portal-card" onclick="window.acModul('mhrs')">
                             <div class="portal-card-header" style="background: linear-gradient(135deg, #7c3aed, #4f46e5);">
-                                <span><i class="bi bi-calendar2-week me-2"></i>MHRS RANDEVU SİSTEMİ</span>
+                                <span><i class="bi bi-calendar2-week me-2"></i>MHRS</span>
                                 <i class="bi bi-chevron-right"></i>
                             </div>
                             <div class="portal-card-body">
@@ -798,7 +798,7 @@
                         </div>
                     </div>
 
-                    <!-- 5. GELİŞMİŞ ANALİTİK & AI -->
+                    <!-- 5. GELİŞMİŞ ANALİTİK -->
                     <div class="col">
                         <div class="portal-card" onclick="window.acModul('derin-analiz')">
                             <div class="portal-card-header" style="background: linear-gradient(135deg, #e11d48, #be123c);">
@@ -820,7 +820,7 @@
                         </div>
                     </div>
 
-                    <!-- 6. KRİZ KOORDİNASYON (YATAK) -->
+                    <!-- 6. KRİZ KOORDİNASYON (YOĞUN BAKIM) -->
                     <div class="col">
                         <div class="portal-card" onclick="window.acModul('e-tablo')">
                             <div class="portal-card-header" style="background: linear-gradient(135deg, #059669, #047857);">
@@ -4493,12 +4493,12 @@ function getMhrsRowMetrics(item, type) {
     };
 
     window.anaMerkezeDon = function() {
-        // Ana Dijital Komuta Merkezine Dön
+        // Ana Sayfaya Dön
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('portal-hub').classList.add('active');
 
         // Header başlığını güncelle
-        document.getElementById('page-title').innerText = "Dijital Komuta Merkezi";
+        document.getElementById('page-title').innerText = "VERİ ANALİZ;
 
         // Filtre barını gizle
         const filterBar = document.getElementById('filter-bar');
