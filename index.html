@@ -518,92 +518,6 @@
             background: var(--bg) !important;
             color: var(--accent) !important;
         }
-        /* 3x3 DİJİTAL KOMUTA MERKEZİ PORTAL STİLLERİ */
-        .portal-header-banner {
-            background: linear-gradient(135deg, #0b1329 0%, #1e293b 100%);
-            border-radius: 16px;
-            padding: 20px 28px;
-            color: white;
-            margin-bottom: 24px;
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .portal-card {
-            background: white;
-            border-radius: 16px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            cursor: pointer;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            position: relative;
-        }
-
-        .portal-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(15, 23, 42, 0.12);
-            border-color: var(--accent);
-        }
-
-        .portal-card-header {
-            padding: 14px 20px;
-            font-weight: 700;
-            font-size: 13px;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            letter-spacing: 0.5px;
-        }
-
-        .portal-card-body {
-            padding: 20px;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            background: #ffffff;
-        }
-
-        .portal-kpi-val {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--text-main);
-            letter-spacing: -0.5px;
-        }
-
-        .portal-card-footer {
-            padding: 10px 20px;
-            background: #f8fafc;
-            border-top: 1px solid var(--border-color);
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* Top Header Ana Merkeze Dön Butonu */
-        #back-to-hub-btn {
-            display: none;
-            background: #0b1329;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 10px;
-            font-size: 12.5px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        #back-to-hub-btn:hover {
-            background: var(--accent);
-            transform: translateX(-2px);
-        }
     </style>
 </head>
 <body>
@@ -675,9 +589,6 @@
                 <button id="sidebar-toggle-btn" onclick="window.toggleSidebar()">
                     <i class="bi bi-list fs-5"></i>
                 </button>
-                <button id="back-to-hub-btn" onclick="window.anaMerkezeDon()">
-                    <i class="bi bi-grid-3x3-gap-fill me-2"></i>Ana Sayfa
-                </button>
                 <h5 id="page-title" class="mb-0 fw-bold">Genel Bakış</h5>
             </div>
             <div class="d-flex align-items-center gap-3">
@@ -694,223 +605,7 @@
             <button class="btn-sm-custom" id="kurumSorgulaBtn">🔍 Sorgula</button>
         </div>
         <div class="page-padding">
-            <!-- 3x3 İSTANBUL DİJİTAL KOMUTA MERKEZİ (PORTAL HUB) -->
-            <section id="portal-hub" class="page active">
-                <div class="portal-header-banner d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    <div>
-                        <div class="badge bg-primary-subtle text-primary border mb-2 px-3 py-1" style="border-radius:8px;"> </div>
-                        <h4 class="fw-bold mb-1"><i class="bi bi-grid-3x3-gap-fill text-info me-2"></i>VERİ İŞLEME MODULÜ</h4>
-                        <p class="text-muted small mb-0 text-light" style="opacity:0.8;">Gerçek zamanlı sağlık performansı, analitik öngörüler ve kriz koordinasyon kokpiti</p>
-                    </div>
-                    <div class="text-end">
-                        <span class="badge bg-success py-2 px-3 border border-success-subtle" style="border-radius:10px;"><i class="bi bi-broadcast me-1"></i> CANLI VERİ AKIŞI AKTİF</span>
-                    </div>
-                </div>
-
-                <!-- 3x3 MODÜLER IZGARA -->
-                <div class="row g-4 row-cols-1 row-cols-md-2 row-cols-lg-3">
-                    
-                    <!-- 1. MHRS ANALİZ -->
-                    <div class="col">
-                        <div class="portal-card" onclick="window.acModul('mhrs')">
-                            <div class="portal-card-header" style="background: linear-gradient(135deg, #7c3aed, #4f46e5);">
-                                <span><i class="bi bi-calendar2-week me-2"></i>MHRS</span>
-                                <i class="bi bi-chevron-right"></i>
-                            </div>
-                            <div class="portal-card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-secondary small fw-bold">GENEL MHRS DOLULUK</span>
-                                    <span class="badge bg-purple-subtle text-purple fs-7 fw-bold" style="background:#f3e8ff; color:#6b21a8;">LIVE DATA</span>
-                                </div>
-                                <div class="portal-kpi-val text-primary">%85.1 <small class="fs-6 text-muted font-normal">Doluluk</small></div>
-                                <div class="text-muted small mt-2"><i class="bi bi-check2-circle text-success me-1"></i>Anlık Doluluk ve Sadakat Analitiği</div>
-                            </div>
-                            <div class="portal-card-footer">
-                                <span>Detaylı MHRS Analizi</span>
-                                <i class="bi bi-arrow-right-short fs-5"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 2. GENEL BAKIŞ & BÖLGE -->
-                    <div class="col">
-                        <div class="portal-card" onclick="window.acModul('genel-bakis')">
-                            <div class="portal-card-header" style="background: linear-gradient(135deg, #0891b2, #0284c7);">
-                                <span><i class="bi bi-speedometer2 me-2"></i>GENEL BAKIŞ & BÖLGE</span>
-                                <i class="bi bi-chevron-right"></i>
-                            </div>
-                            <div class="portal-card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-secondary small fw-bold">TOPLAM AKTİF KURUM</span>
-                                    <span class="badge bg-info-subtle text-info fw-bold">BÖLGE GENELİ</span>
-                                </div>
-                                <div class="portal-kpi-val text-info">11 <small class="fs-6 text-muted font-normal">Hastane & ADSM</small></div>
-                                <div class="text-muted small mt-2"><i class="bi bi-trophy text-warning me-1"></i>En İyi Performans Gösteren Kurumlar</div>
-                            </div>
-                            <div class="portal-card-footer">
-                                <span>Özet Sıralama Paneli</span>
-                                <i class="bi bi-arrow-right-short fs-5"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 3. KURUM BAZLI ANALİZ -->
-                    <div class="col">
-                        <div class="portal-card" onclick="window.acModul('kurum-bazli')">
-                            <div class="portal-card-header" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
-                                <span><i class="bi bi-hospital me-2"></i>KURUM BAZLI KARNE</span>
-                                <i class="bi bi-chevron-right"></i>
-                            </div>
-                            <div class="portal-card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-secondary small fw-bold">GÖSTERGE PERFORMANSI</span>
-                                    <span class="badge bg-primary-subtle text-primary fw-bold">KARNE SORGULA</span>
-                                </div>
-                                <div class="portal-kpi-val text-dark">SYPG <small class="fs-6 text-muted font-normal">Kılavuz Uyum</small></div>
-                                <div class="text-muted small mt-2"><i class="bi bi-file-earmark-text text-primary me-1"></i>Kurum İçi Gösterge Puanları</div>
-                            </div>
-                            <div class="portal-card-footer">
-                                <span>Kurum Detayı Sorgula</span>
-                                <i class="bi bi-arrow-right-short fs-5"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 4. DÖNEMSEL KARŞILAŞTIRMA -->
-                    <div class="col">
-                        <div class="portal-card" onclick="window.acModul('karsilastirma')">
-                            <div class="portal-card-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
-                                <span><i class="bi bi-arrow-left-right me-2"></i>DÖNEMSEL KARŞILAŞTIRMA</span>
-                                <i class="bi bi-chevron-right"></i>
-                            </div>
-                            <div class="portal-card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-secondary small fw-bold">TREND & TRAFİK IŞIĞI</span>
-                                    <span class="badge bg-violet-subtle text-violet fw-bold" style="background:#f3e8ff; color:#6d28d9;">MATRİS ANALİZİ</span>
-                                </div>
-                                <div class="portal-kpi-val text-violet" style="color:#6d28d9;">5 Dönem <small class="fs-6 text-muted font-normal">Dinamik Karşılaştırma</small></div>
-                                <div class="text-muted small mt-2"><i class="bi bi-pie-chart text-success me-1"></i>Puan / GP Trafik Işığı Matrisi</div>
-                            </div>
-                            <div class="portal-card-footer">
-                                <span>Matris Analizini Aç</span>
-                                <i class="bi bi-arrow-right-short fs-5"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 5. GELİŞMİŞ ANALİTİK -->
-                    <div class="col">
-                        <div class="portal-card" onclick="window.acModul('derin-analiz')">
-                            <div class="portal-card-header" style="background: linear-gradient(135deg, #e11d48, #be123c);">
-                                <span><i class="bi bi-cpu-fill me-2"></i>GELİŞMİŞ ANALİTİK & AI</span>
-                                <i class="bi bi-chevron-right"></i>
-                            </div>
-                            <div class="portal-card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-secondary small fw-bold">İSTATİSTİKSEL MODELLEME</span>
-                                    <span class="badge bg-danger-subtle text-danger fw-bold">AI PROJEKSİYON</span>
-                                </div>
-                                <div class="portal-kpi-val text-danger">Pearson r <small class="fs-6 text-muted font-normal">& Z-Skoru Anomali</small></div>
-                                <div class="text-muted small mt-2"><i class="bi bi-graph-up-arrow text-danger me-1"></i>Korelasyon & Regresyon Tahminleri</div>
-                            </div>
-                            <div class="portal-card-footer">
-                                <span>İleri Analitik Modelleri</span>
-                                <i class="bi bi-arrow-right-short fs-5"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 6. KRİZ KOORDİNASYON (YOĞUN BAKIM) -->
-                    <div class="col">
-                        <div class="portal-card" onclick="window.acModul('e-tablo')">
-                            <div class="portal-card-header" style="background: linear-gradient(135deg, #059669, #047857);">
-                                <span><i class="bi bi-file-earmark-spreadsheet me-2"></i>KRİZ KOORDİNASYON (YATAK)</span>
-                                <i class="bi bi-chevron-right"></i>
-                            </div>
-                            <div class="portal-card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-secondary small fw-bold">YOĞUN BAKIM & SERVİS</span>
-                                    <span class="badge bg-success-subtle text-success fw-bold">E-TABLO CANLI</span>
-                                </div>
-                                <div class="portal-kpi-val text-success">3. Seviye YB <small class="fs-6 text-muted font-normal">Anlık Doluluk</small></div>
-                                <div class="text-muted small mt-2"><i class="bi bi-hospital text-success me-1"></i>Boş Yatak & Bekleyen Hasta Takibi</div>
-                            </div>
-                            <div class="portal-card-footer">
-                                <span>Yatak Koordinasyon Paneli</span>
-                                <i class="bi bi-arrow-right-short fs-5"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 7. HEDEF SAPMA & RAPORLAR -->
-                    <div class="col">
-                        <div class="portal-card" onclick="window.acModul('raporlar')">
-                            <div class="portal-card-header" style="background: linear-gradient(135deg, #d97706, #b45309);">
-                                <span><i class="bi bi-graph-up me-2"></i>RAPORLAR & SAPMA ANALİZİ</span>
-                                <i class="bi bi-chevron-right"></i>
-                            </div>
-                            <div class="portal-card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-secondary small fw-bold">TR ORTALAMA SAPMALARI</span>
-                                    <span class="badge bg-warning-subtle text-warning fw-bold">HEDEF SAPMA</span>
-                                </div>
-                                <div class="portal-kpi-val text-warning">Karne Sapma <small class="fs-6 text-muted font-normal">Analizi</small></div>
-                                <div class="text-muted small mt-2"><i class="bi bi-exclamation-triangle text-warning me-1"></i>Kritik Eşik Kontrol Raporları</div>
-                            </div>
-                            <div class="portal-card-footer">
-                                <span>Raporlama Merkezine Git</span>
-                                <i class="bi bi-arrow-right-short fs-5"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 8. İTİRAZ YÖNETİMİ -->
-                    <div class="col">
-                        <div class="portal-card" onclick="window.acModul('itirazlar')">
-                            <div class="portal-card-header" style="background: linear-gradient(135deg, #ea580c, #c2410c);">
-                                <span><i class="bi bi-chat-dots me-2"></i>İTİRAZ YÖNETİMİ</span>
-                                <i class="bi bi-chevron-right"></i>
-                            </div>
-                            <div class="portal-card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-secondary small fw-bold">KURUMSAL İTİRAZLAR</span>
-                                    <span class="badge bg-orange-subtle text-orange fw-bold" style="background:#ffedd5; color:#c2410c;">SÜREÇTE</span>
-                                </div>
-                                <div class="portal-kpi-val text-orange" style="color:#c2410c;">İnceleme <small class="fs-6 text-muted font-normal">Paneli</small></div>
-                                <div class="text-muted small mt-2"><i class="bi bi-clock-history text-orange me-1"></i>Gösterge İtiraz Değerlendirmeleri</div>
-                            </div>
-                            <div class="portal-card-footer">
-                                <span>İtirazları İncele</span>
-                                <i class="bi bi-arrow-right-short fs-5"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 9. KULLANICI YÖNETİMİ -->
-                    <div class="col">
-                        <div class="portal-card" onclick="window.acModul('kullanici-yonetimi')">
-                            <div class="portal-card-header" style="background: linear-gradient(135deg, #334155, #1e293b);">
-                                <span><i class="bi bi-people-fill me-2"></i>KULLANICI & YETKİ</span>
-                                <i class="bi bi-chevron-right"></i>
-                            </div>
-                            <div class="portal-card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-secondary small fw-bold">SİSTEM YETKİLİLERİ</span>
-                                    <span class="badge bg-secondary-subtle text-dark fw-bold">ADMIN</span>
-                                </div>
-                                <div class="portal-kpi-val text-dark">Erişim <small class="fs-6 text-muted font-normal">Yönetimi</small></div>
-                                <div class="text-muted small mt-2"><i class="bi bi-shield-lock text-dark me-1"></i>Kullanıcı Hesapları ve Rol Tanımları</div>
-                            </div>
-                            <div class="portal-card-footer">
-                                <span>Hesap Yönetim Paneli</span>
-                                <i class="bi bi-arrow-right-short fs-5"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-            <section id="genel-bakis" class="page">
+            <section id="genel-bakis" class="page active">
                 <div class="row g-4 mb-4">
                     <div class="col-md-4">
                         <div class="kds-card">
@@ -4475,39 +4170,7 @@ function getMhrsRowMetrics(item, type) {
             `;
         }
     }
-// ---------- İST. İL SAĞLIK KOMUTA MERKEZİ MODÜLER NAVİGASYON ----------
-    window.acModul = function(sayfaId) {
-        // Sol Sidebar'ı tam ekran çalışma alanı için otomatik gizle
-        const sidebar = document.querySelector('.sidebar');
-        if (sidebar && !sidebar.classList.contains('collapsed')) {
-            sidebar.classList.add('collapsed');
-        }
 
-        // Ana Merkeze Dön butonunu göster
-        const backBtn = document.getElementById('back-to-hub-btn');
-        if (backBtn) backBtn.style.display = 'inline-flex';
-
-        // İlgili modülü tam ekran çalıştır
-        const navItem = document.querySelector(`.nav-item[data-page="${sayfaId}"]`);
-        window.gitSayfa(sayfaId, navItem);
-    };
-
-    window.anaMerkezeDon = function() {
-        // Ana Sayfaya Dön
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById('portal-hub').classList.add('active');
-
-        // Header başlığını güncelle
-        document.getElementById('page-title').innerText = "VERİ ANALİZ";
-
-        // Filtre barını gizle
-        const filterBar = document.getElementById('filter-bar');
-        if (filterBar) filterBar.style.display = 'none';
-
-        // Butonu gizle
-        const backBtn = document.getElementById('back-to-hub-btn');
-        if (backBtn) backBtn.style.display = 'none';
-    };
     // ---------- SAYFA GEÇIŞLERI ----------
     window.gitSayfa = async function(sayfa, el) {
         const loader = document.getElementById('page-loader');
@@ -4683,7 +4346,7 @@ function getMhrsRowMetrics(item, type) {
             });
         });
         
-        window.anaMerkezeDon();
+        await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
     })();
 </script>
 </body>
