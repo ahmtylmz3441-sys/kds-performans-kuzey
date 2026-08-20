@@ -7,7 +7,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2093,16 +2092,19 @@
         document.getElementById('karsDonemCheckboxlarInner').innerHTML = html;
     };
 
-// ---------- DÖNEMSEL KARŞILAŞTIRMA (Gelişmiş Başarı Filtreli) ----------
+// ---------- DÖNEMSEL KARŞILAŞTIRMA (Son Aya / Döneme Göre Başarı Filtreli) ----------
 window.donemselKarsilastir = async function() {
     const kurum = document.getElementById('karsKurumAdi').value;
     const seciliDonemler = Array.from(document.querySelectorAll('.donem-checkbox:checked')).map(cb=>parseInt(cb.value)).sort((a,b)=>a-b);
     const puanFiltre = document.getElementById('karsPuanFiltre')?.value || 'all';
 
-    if(!kurum || seciliDonemler.length===0) { 
+    if(!kurum || seciliDonemler.length === 0) { 
         alert('Lütfen bir kurum ve en az bir dönem seçin.'); 
         return; 
     }
+
+    // Seçili dönemlerin EN SON / EN GÜNCEL olanını belirle
+    const sonSeciliDonem = seciliDonemler[seciliDonemler.length - 1];
     
     await itirazDurumlariniYukle();
     const toplamlar = {};
@@ -2148,39 +2150,53 @@ window.donemselKarsilastir = async function() {
         }; 
     });
     
+    // Bilgilendirme rozeti
+    let filtreBilgiHtml = '';
+    if (puanFiltre !== 'all') {
+        const filtreAdlari = {
+            'tam': '🟢 Tam Puan Alınanlar',
+            'eksik': '🔵 Eksik / Kısmi Puan Alınanlar',
+            'sifir': '🔴 Puan Alınamayanlar (0 Puan)'
+        };
+        filtreBilgiHtml = `<span class="badge bg-light text-dark border px-2 py-1 small"><i class="bi bi-funnel-fill text-primary"></i> Filtreleme Kriteri: <b>${formatDonemAdi(sonSeciliDonem)}</b> verisine göre (<b>${filtreAdlari[puanFiltre]}</b>)</span>`;
+    }
+
     let html = `
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-            <h6 class="mb-0 fw-bold"><i class="bi bi-table"></i> Karşılaştırma Sonuç Matrisi</h6>
+            <div class="d-flex align-items-center gap-2">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-table"></i> Karşılaştırma Sonuç Matrisi</h6>
+                ${filtreBilgiHtml}
+            </div>
             <button class="btn btn-sm btn-outline-success" style="border-radius:10px;" onclick="window.exportTableToExcel('karsilastirmaTablo', '${kurum.replace(/\\s+/g, '_')}_Donemsel_Karsilastirma')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
         </div>
-        <div class="table-responsive"><table id="karsilastirmaTablo" class="table table-bordered bg-white align-middle"><thead><tr class="table-light"><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th class="text-center">${formatDonemAdi(d)} <br><small class="text-muted" style="font-size:10.5px;">(GD / TR Ort)<br>(Puan / GP)</small></th>`).join('')}</tr></thead><tbody>
+        <div class="table-responsive"><table id="karsilastirmaTablo" class="table table-bordered bg-white align-middle"><thead><tr class="table-light"><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th class="text-center ${d===sonSeciliDonem?'table-warning border-warning':''}">${formatDonemAdi(d)} ${d===sonSeciliDonem?'<span class="badge bg-danger" style="font-size:9px;">Son Dönem</span>':''}<br><small class="text-muted" style="font-size:10.5px;">(GD / TR Ort)<br>(Puan / GP)</small></th>`).join('')}</tr></thead><tbody>
         <tr class="table-info fw-bold text-dark"><td>🏆 TOPLAM PUAN</td>${seciliDonemler.map(d=>`<td class="text-center text-primary fs-5">${toplamlar[d].toplam_puan}</td>`).join('')}</tr>
         <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td class="text-center">${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
     
     let gosterilenSayac = 0;
 
     for(let g of gostergeler) {
-        // Puan Durumunu Kontrol Et (Filtreleme Mantığı)
-        let hasTam = false;
-        let hasEksik = false;
-        let hasSifir = false;
-
-        for(let d of seciliDonemler) {
-            const val = gostergeDegerler[`${g.kod}_${d}`];
-            if (val && val.puan !== null && val.puan !== undefined && val.puan !== '') {
-                const pVal = parseFloat(val.puan);
-                const gpVal = (val.gp !== null && val.gp !== undefined) ? parseFloat(val.gp) : null;
-                if (!isNaN(pVal)) {
-                    if (pVal === 0) hasSifir = true;
-                    else if (gpVal !== null && !isNaN(gpVal) && pVal >= gpVal) hasTam = true;
-                    else if (gpVal !== null && !isNaN(gpVal) && pVal < gpVal) hasEksik = true;
-                }
+        // Filtreleme Kontrolü: SADECE EN SON SEÇİLİ DÖNEME (sonSeciliDonem) GÖRE YAPILIR
+        if (puanFiltre !== 'all') {
+            const valSon = gostergeDegerler[`${g.kod}_${sonSeciliDonem}`];
+            
+            // Son dönemde veri yoksa veya puanı tanımsızsa filtreye dahil etme
+            if (!valSon || valSon.puan === null || valSon.puan === undefined || valSon.puan === '') {
+                continue;
             }
-        }
 
-        if (puanFiltre === 'tam' && !hasTam) continue;
-        if (puanFiltre === 'eksik' && !hasEksik) continue;
-        if (puanFiltre === 'sifir' && !hasSifir) continue;
+            const pVal = parseFloat(valSon.puan);
+            const gpVal = (valSon.gp !== null && valSon.gp !== undefined) ? parseFloat(valSon.gp) : null;
+            if (isNaN(pVal)) continue;
+
+            const isSifir = (pVal === 0);
+            const isTam = (gpVal !== null && !isNaN(gpVal) && pVal >= gpVal);
+            const isEksik = (gpVal !== null && !isNaN(gpVal) && pVal > 0 && pVal < gpVal);
+
+            if (puanFiltre === 'tam' && !isTam) continue;
+            if (puanFiltre === 'eksik' && !isEksik) continue;
+            if (puanFiltre === 'sifir' && !isSifir) continue;
+        }
 
         gosterilenSayac++;
 
@@ -2192,6 +2208,8 @@ window.donemselKarsilastir = async function() {
             </td>`;
         for(let d of seciliDonemler) {
             const val = gostergeDegerler[`${g.kod}_${d}`];
+            const isLatestCol = (d === sonSeciliDonem);
+            
             if (val && val.gd !== null && val.gd !== undefined) {
                 let puanBadge = '';
                 if (val.puan === null || val.puan === undefined || val.puan === '') {
@@ -2209,12 +2227,12 @@ window.donemselKarsilastir = async function() {
                         puanBadge = `<div class="mt-1"><span class="badge" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:10px; font-weight:700;">${val.puan} / ${gpText} Puan</span></div>`;
                     }
                 }
-                html += `<td class="text-center align-middle">
+                html += `<td class="text-center align-middle ${isLatestCol ? 'bg-light-subtle' : ''}">
                     <div><b>${val.gd}</b> <span class="text-muted small">/ ${val.tr_ort ?? '-'}</span></div>
                     ${puanBadge}
                 </td>`;
             } else {
-                html += `<td class="text-center align-middle text-muted small">
+                html += `<td class="text-center align-middle text-muted small ${isLatestCol ? 'bg-light-subtle' : ''}">
                     <div>- / -</div>
                     <div class="mt-1"><span class="badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; font-size:10px; font-weight:600;">- / -</span></div>
                 </td>`;
@@ -2224,7 +2242,7 @@ window.donemselKarsilastir = async function() {
     }
 
     if (gosterilenSayac === 0) {
-        html += `<tr><td colspan="${seciliDonemler.length + 1}" class="text-center text-muted py-4"><i class="bi bi-info-circle me-1"></i> Seçilen puan başarı filtresine uygun gösterge kaydı bulunamadı.</td></tr>`;
+        html += `<tr><td colspan="${seciliDonemler.length + 1}" class="text-center text-muted py-4"><i class="bi bi-info-circle me-1"></i> Son seçili dönem olan <b>${formatDonemAdi(sonSeciliDonem)}</b> için seçilen puan kriterine uygun gösterge bulunamadı.</td></tr>`;
     }
 
     html += `</tbody></table></div>`;
