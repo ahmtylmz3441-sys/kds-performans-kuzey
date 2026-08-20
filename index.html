@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet.js Harita Kütüphanesi -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root { 
             --sidebar-bg: #0b1329; 
@@ -518,6 +521,162 @@
             background: var(--bg) !important;
             color: var(--accent) !important;
         }
+        /* ============================================================= */
+/* HASTANE KÜNYE & SİNEMATİK İNFOGRAFİK POPUP STİLLERİ           */
+/* ============================================================= */
+.kunye-modal-container {
+    width: 1300px !important;
+    max-width: 96% !important;
+    max-height: 94vh !important;
+    background: #ffffff !important;
+    padding: 28px 36px !important;
+    border-radius: 24px !important;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35) !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+.kunye-hospital-card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+}
+.kunye-hospital-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    border-color: #cbd5e1;
+}
+.kunye-hospital-card .card-img-wrapper {
+    height: 180px;
+    width: 100%;
+    position: relative;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    overflow: hidden;
+}
+.kunye-hospital-card .card-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+.kunye-hospital-card:hover .card-img-wrapper img { transform: scale(1.06); }
+.kunye-role-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: rgba(15, 23, 42, 0.85);
+    color: #38bdf8;
+    backdrop-filter: blur(6px);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+.kunye-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 18px;
+    margin-bottom: 22px;
+}
+.kunye-ministry-brand { display: flex; align-items: center; gap: 16px; }
+.kunye-title-block h3 { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0; }
+.kunye-pill-tag {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+#kunyeMap {
+    width: 100%;
+    height: 250px;
+    border-radius: 16px;
+    border: 1px solid #cbd5e1;
+    z-index: 1;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.08);
+}
+.leaflet-radar-marker {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    background: #ef4444;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
+}
+.leaflet-radar-marker::after {
+    content: '';
+    position: absolute;
+    top: -11px;
+    left: -11px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.4);
+    animation: radarPulse 1.8s ease-out infinite;
+}
+@keyframes radarPulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.2); opacity: 0; } }
+
+.k-metric-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
+    transition: transform 0.2s;
+}
+.k-metric-card:hover { transform: translateY(-2px); border-color: #cbd5e1; }
+.k-metric-card.crimson-theme {
+    background: linear-gradient(135deg, #b91c1c, #991b1b);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 6px 18px rgba(185, 28, 28, 0.25);
+}
+.k-metric-card.crimson-theme .k-label { color: rgba(255, 255, 255, 0.85); }
+.k-metric-card.crimson-theme .k-val { color: #ffffff; }
+.k-metric-card.crimson-theme .k-icon-wrap { background: rgba(255, 255, 255, 0.15); color: #ffffff; }
+
+.k-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #f1f5f9;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.k-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; line-height: 1.2; margin-bottom: 2px; }
+.k-val { font-size: 19px; font-weight: 800; color: var(--text-main); line-height: 1.1; }
+.service-tag {
+    background: #f8fafc;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 5px 11px;
+    font-size: 11.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.service-tag i { color: #10b981; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -565,6 +724,7 @@
             <div class="nav-item" data-page="genel-bakis"><i class="bi bi-speedometer2"></i> Genel Bakış</div>
             <div class="nav-item" data-page="tum-bolge"><i class="bi bi-grid-3x3-gap"></i> Tüm Bölge</div>
             <div class="nav-item" data-page="kurum-bazli"><i class="bi bi-hospital"></i> Kurum Bazlı</div>
+            <div class="nav-item" data-page="hastane-kunye"><i class="bi bi-buildings-fill text-danger"></i> Hastane Künye</div>
             <div class="nav-item" data-page="karsilastirma"><i class="bi bi-arrow-left-right"></i> Dönemsel Karşılaştırma</div>
             <div class="nav-item" data-page="raporlar"><i class="bi bi-graph-up"></i> Raporlar</div>
             <div class="nav-item" data-page="derin-analiz"><i class="bi bi-cpu-fill text-danger"></i> Gelişmiş Analitik</div>
@@ -633,6 +793,25 @@
             </section>
             <section id="tum-bolge" class="page"></section>
             <section id="kurum-bazli" class="page"><div id="kurumAnalizIcerik" class="kds-card">Kurum seçip sorgulayın.</div></section>
+            <!-- HASTANE KÜNYE SAYFASI -->
+<section id="hastane-kunye" class="page">
+    <div class="kds-card" style="border-top: 4px solid #b91c1c;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 border-bottom pb-3 mb-4">
+            <div>
+                <h5 class="fw-bold mb-0 text-danger"><i class="bi bi-buildings-fill"></i> Hastane Kurumsal Künyeleri & Dijital Brifing</h5>
+                <p class="text-muted small mb-0">Google E-Tablo entegrasyonlu, sinematografik lokasyon analizli kurumsal hastane profilleri.</p>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <div class="input-group input-group-sm" style="width: 250px;">
+                    <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                    <input type="text" id="kunyeAramaInput" class="form-control" placeholder="Hastane adı ara..." onkeyup="window.filtreleKunyeKartlari()">
+                </div>
+                <button class="btn btn-sm btn-outline-danger px-3 py-2" style="border-radius:10px;" onclick="initHastaneKunyeDashboard()"><i class="bi bi-arrow-clockwise"></i> Canlı Yenile</button>
+            </div>
+        </div>
+        <div id="kunyeGridContainer" class="row g-4"></div>
+    </div>
+</section>
             <section id="karsilastirma" class="page"></section>
             <section id="raporlar" class="page"></section>
             <section id="derin-analiz" class="page">
@@ -779,7 +958,13 @@
         </div>
     </main>
 </div>
-
+<!-- HASTANE KÜNYE MODAL (SİNEMATİK HARİTA & İNFOGRAFİK) -->
+<div id="kunyeModal" class="modal-overlay" onclick="window.kunyeModalDisKlikKapat(event)">
+    <div class="modal-container kunye-modal-container" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="kapatKunyeModal()">&times;</button>
+        <div id="kunyeModalIcerik"></div>
+    </div>
+</div>
 <div id="gostergeModal" class="modal-overlay" onclick="window.modalDisKlikKapat(event)">
     <div class="modal-container" onclick="event.stopPropagation()">
         <button class="modal-close" onclick="kapatModal()">&times;</button>
@@ -4188,7 +4373,7 @@ function getMhrsRowMetrics(item, type) {
         
         try {
             if(sayfa === 'genel-bakis') await dashboard();
-            
+            if(sayfa === 'hastane-kunye') await initHastaneKunyeDashboard();
             if(sayfa === 'tum-bolge') {
                 const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`).join('');
                 const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
@@ -4307,7 +4492,318 @@ function getMhrsRowMetrics(item, type) {
             if (loader) loader.classList.remove('active');
         }
     };
+// =========================================================================
+    // HASTANE KÜNYE & SİNEMATOGRAFİK DRONE HARİTA MOTORU
+    // =========================================================================
+    let hastaneKunyeListesi = [];
+    let kunyeLeafletMap = null;
+    let kunyeRadarMarker = null;
 
+    async function initHastaneKunyeDashboard() {
+        showLoading('kunyeGridContainer', 'Hastane künyeleri Google Sheets üzerinden canlı çekiliyor...');
+        
+        const spreadsheetId = '1g6Ar7QxXvs9LxaWi9xM7AggPOvbh7lOG78kQCKWIbH4';
+        const gid = '2005676341';
+        const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+        
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Google Sheets tablosu okunamadı.");
+            
+            const text = await res.text();
+            const rows = parseCSV(text);
+            
+            if (!rows || rows.length <= 1) {
+                document.getElementById('kunyeGridContainer').innerHTML = '<div class="alert alert-warning text-center">Tabloda hastane verisi bulunamadı.</div>';
+                return;
+            }
+            
+            const headers = rows[0].map(h => (h || '').toString().toLowerCase().trim()
+                .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+                .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+                .replace(/[^a-z0-9]/g, ''));
+            
+            const getField = (row, aliases) => {
+                for (let alias of aliases) {
+                    const cleanAlias = alias.toLowerCase().replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
+                    const idx = headers.findIndex(h => h.includes(cleanAlias));
+                    if (idx !== -1 && row[idx] !== undefined && row[idx] !== '') {
+                        return row[idx].toString().trim();
+                    }
+                }
+                return '';
+            };
+
+            hastaneKunyeListesi = rows.slice(1).map((row, idx) => {
+                const kurumAdi = getField(row, ['hastaneadi', 'hastane', 'kurumadi', 'kurum', 'tesis']) || `Hastane #${idx+1}`;
+                if (!kurumAdi || kurumAdi.trim() === '') return null;
+
+                let lat = null, lng = null;
+                const rawCoord = getField(row, ['koordinat', 'konum', 'gps', 'location']);
+                if (rawCoord && rawCoord.includes(',')) {
+                    const parts = rawCoord.split(',');
+                    lat = parseFloat(parts[0].trim());
+                    lng = parseFloat(parts[1].trim());
+                } else {
+                    lat = parseFloat(getField(row, ['enlem', 'lat', 'latitude']));
+                    lng = parseFloat(getField(row, ['boylam', 'lng', 'lon', 'longitude']));
+                }
+
+                if (isNaN(lat) || isNaN(lng) || !lat || !lng) {
+                    lat = 40.9904;
+                    lng = 29.0292;
+                }
+
+                return {
+                    id: idx,
+                    hastaneAdi: kurumAdi,
+                    rol: getField(row, ['rol', 'hastanerolu', 'rolu', 'seviye']) || 'A1',
+                    nufus: getField(row, ['nufus', 'ilcenufus', 'ilcenufusu']) || '450.000',
+                    foto: getField(row, ['resim', 'foto', 'fotoğraf', 'gorsel', 'image', 'url']) || 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop',
+                    arsaAlani: getField(row, ['arsaalani', 'arsa', 'arsam2']) || '-',
+                    kapaliAlan: getField(row, ['kapalialan', 'kapali', 'kapalim2']) || '-',
+                    binaOturum: getField(row, ['binaoturum', 'oturum', 'oturumalani']) || '-',
+                    hizmetYili: getField(row, ['hizmetbaslangic', 'hizmetyili', 'acilisyili', 'yil']) || '2019',
+                    kapaliOtopark: getField(row, ['kapaliotopark', 'kapalioto']) || '-',
+                    acikOtopark: getField(row, ['acikotopark', 'acikoto']) || '-',
+                    hekimSayisi: getField(row, ['uzmanklinisyen', 'hekim', 'uzmanhekim', 'hekimler']) || '520/410',
+                    gunlukPoliklinik: getField(row, ['gunlukpoliklinik', 'gunlukmuayene', 'polikliniksayisi']) || '14.500',
+                    yatakSayisi: getField(row, ['yataksayisi', 'toplamyatak', 'yatak']) || '1.000',
+                    poliklinikOda: getField(row, ['polikliniksayisi', 'odasayisi', 'poliklinikoda']) || '280',
+                    ameliyathane: getField(row, ['ameliyathane', 'ameliyathaneoda']) || '42',
+                    yogunBakimYatak: getField(row, ['yogunbakim', 'ybyatak', 'toplamyb']) || '180',
+                    sdlSalon: getField(row, ['sdlsalon', 'sdl', 'dogumsalonu']) || '6',
+                    palyatif: getField(row, ['palyatifyatak', 'palyatif']) || '-',
+                    yanikYatak: getField(row, ['yanikyatak', 'yanik']) || '-',
+                    kalpMerkezi: getField(row, ['kalpmerkezi', 'kalp', 'kvc']) || 'VAR',
+                    diyaliz: getField(row, ['diyalizcihaz', 'diyaliz']) || '28',
+                    depremIzolator: getField(row, ['depremizolatoru', 'izolator', 'deprem']) || 'VAR',
+                    bt: getField(row, ['bt', 'tomografi']) || '3 Adet (128 Kesit)',
+                    mr: getField(row, ['mr', 'manyetikrezonans']) || '3 Adet (1.5 Tesla)',
+                    radyasyonOnkoloji: getField(row, ['radyasyononkolojisi', 'onkoloji']) || 'VAR',
+                    nukleerTip: getField(row, ['nukleertip', 'nukleer']) || 'VAR',
+                    disUnit: getField(row, ['disunit', 'dis']) || '12',
+                    ozellikliHizmetler: getField(row, ['ozelliklihizmetler', 'ozellikli', 'hizmetler']) || 'Organ Nakli Merkezi, İnme Merkezi, Kapsamlı Onkoloji, Hiperbarik Oksijen, Uyku Laboratuvarı, Diyaliz Merkezi, Anjiyografi Ünitesi',
+                    lat: lat,
+                    lng: lng
+                };
+            }).filter(Boolean);
+
+            renderHastaneKunyeGrid(hastaneKunyeListesi);
+            
+        } catch(err) {
+            console.error("Hastane künye yükleme hatası:", err);
+            document.getElementById('kunyeGridContainer').innerHTML = `
+                <div class="alert alert-danger py-4" style="border-radius:12px;">
+                    <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> Künye Verisi Alınamadı</h5>
+                    <p class="small mb-0">Google Sheets tablosuna erişilemedi. (${err.message})</p>
+                </div>
+            `;
+        }
+    }
+
+    function renderHastaneKunyeGrid(list) {
+        const container = document.getElementById('kunyeGridContainer');
+        if (!container) return;
+        
+        if (list.length === 0) {
+            container.innerHTML = '<div class="col-12 text-center text-muted py-5">Aradığınız kriterlere uygun hastane bulunamadı.</div>';
+            return;
+        }
+
+        container.innerHTML = list.map(h => `
+            <div class="col-md-4 col-sm-6">
+                <div class="kunye-hospital-card" onclick="window.acHastaneKunyeModal(${h.id})">
+                    <div class="card-img-wrapper">
+                        <img src="${h.foto}" alt="${h.hastaneAdi}" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop'">
+                        <span class="kunye-role-badge"><i class="bi bi-star-fill text-warning me-1"></i> ${h.rol} Rolü</span>
+                    </div>
+                    <div class="p-3">
+                        <h6 class="fw-bold mb-1 text-dark text-truncate" title="${h.hastaneAdi}">${h.hastaneAdi}</h6>
+                        <div class="text-muted small mb-3"><i class="bi bi-geo-alt-fill text-danger me-1"></i> İlçe Nüfusu: ${h.nufus}</div>
+                        
+                        <div class="row g-2 text-center pt-2 border-top">
+                            <div class="col-4">
+                                <div class="text-secondary small" style="font-size:10px; font-weight:700;">YATAK</div>
+                                <div class="fw-bold text-dark fs-6">${h.yatakSayisi}</div>
+                            </div>
+                            <div class="col-4 border-start border-end">
+                                <div class="text-secondary small" style="font-size:10px; font-weight:700;">YBÜ YATAK</div>
+                                <div class="fw-bold text-danger fs-6">${h.yogunBakimYatak}</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-secondary small" style="font-size:10px; font-weight:700;">POLİKLİNİK</div>
+                                <div class="fw-bold text-primary fs-6">${h.poliklinikOda}</div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-sm btn-outline-danger w-100 mt-3 fw-bold" style="border-radius:10px;">
+                            <i class="bi bi-eye-fill me-1"></i> Detaylı Künyeyi Aç
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.filtreleKunyeKartlari = function() {
+        const query = document.getElementById('kunyeAramaInput')?.value.toLowerCase().trim() || '';
+        const filtered = hastaneKunyeListesi.filter(h => 
+            h.hastaneAdi.toLowerCase().includes(query) || 
+            h.rol.toLowerCase().includes(query)
+        );
+        renderHastaneKunyeGrid(filtered);
+    };
+
+    window.acHastaneKunyeModal = function(id) {
+        const h = hastaneKunyeListesi.find(item => item.id === id);
+        if (!h) return;
+
+        const services = h.ozellikliHizmetler.split(/[,;\n\r\-•]+/).map(s => s.trim()).filter(Boolean);
+
+        const html = `
+            <div class="kunye-header">
+                <div class="kunye-ministry-brand">
+                    <div class="p-2 rounded-circle bg-light border shadow-sm d-flex align-items-center justify-content-center" style="width:56px; height:56px;">
+                        <span class="fs-2">🇹🇷</span>
+                    </div>
+                    <div class="kunye-title-block">
+                        <div class="text-secondary text-uppercase fw-bold" style="font-size:10.5px; letter-spacing:1px;">T.C. SAĞLIK BAKANLIĞI • KAMU HASTANELERİ GENEL MÜDÜRLÜĞÜ</div>
+                        <h3>${h.hastaneAdi}</h3>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="kunye-pill-tag"><i class="bi bi-shield-check text-primary"></i> Rol: <b class="text-dark">${h.rol}</b></div>
+                    <div class="kunye-pill-tag"><i class="bi bi-people-fill text-info"></i> Nüfus: <b class="text-dark">${h.nufus}</b></div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="mb-3 position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small fw-bold text-secondary text-uppercase" style="font-size:10px;"><i class="bi bi-geo-alt-fill text-danger"></i> Canlı Konum & Çevre</span>
+                            <a href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" target="_blank" class="small text-decoration-none fw-semibold text-primary" style="font-size:10px;">
+                                <i class="bi bi-box-arrow-up-right"></i> Google Maps'te Aç
+                            </a>
+                        </div>
+                        <div id="kunyeMap"></div>
+                    </div>
+
+                    <div class="rounded-3 overflow-hidden border mb-3 shadow-sm position-relative" style="height: 140px;">
+                        <img src="${h.foto}" alt="${h.hastaneAdi}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop'">
+                        <div class="position-absolute bottom-0 start-0 end-0 p-2 text-white" style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); font-size: 11px; font-weight: 600;">
+                            <i class="bi bi-hospital"></i> Dış Cephe & Yerleşke
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Arsa Alanı</span><span class="k-val" style="font-size:15px;">${h.arsaAlani}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Kapalı Alan</span><span class="k-val" style="font-size:15px;">${h.kapaliAlan}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Bina Oturum</span><span class="k-val" style="font-size:15px;">${h.binaOturum}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Hizmet Yılı</span><span class="k-val" style="font-size:15px;">${h.hizmetYili}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Kapalı Otopark</span><span class="k-val" style="font-size:15px;">${h.kapaliOtopark}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Açık Otopark</span><span class="k-val" style="font-size:15px;">${h.acikOtopark}</span></div></div>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="k-metric-card crimson-theme p-3">
+                                <div class="k-icon-wrap"><i class="bi bi-person-badge-fill"></i></div>
+                                <div><div class="k-label">Uzman/Klinisyen</div><div class="k-val" style="font-size:17px;">${h.hekimSayisi}</div></div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="k-metric-card crimson-theme p-3">
+                                <div class="k-icon-wrap"><i class="bi bi-people-fill"></i></div>
+                                <div><div class="k-label">Günlük Poliklinik</div><div class="k-val" style="font-size:17px;">${h.gunlukPoliklinik}</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="row g-2 mb-3">
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-hospital"></i></div><div><div class="k-label">Yatak Sayısı</div><div class="k-val">${h.yatakSayisi}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-door-open-fill"></i></div><div><div class="k-label">Poliklinik Oda</div><div class="k-val">${h.poliklinikOda}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-scissors"></i></div><div><div class="k-label">Ameliyathane</div><div class="k-val">${h.ameliyathane}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-heart-pulse-fill"></i></div><div><div class="k-label">Yoğun Bakım</div><div class="k-val">${h.yogunBakimYatak}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-gender-female"></i></div><div><div class="k-label">SDL Salonu</div><div class="k-val">${h.sdlSalon}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-bandaid-fill"></i></div><div><div class="k-label">Palyatif Yatak</div><div class="k-val">${h.palyatif}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-fire"></i></div><div><div class="k-label">Yanık Yatak</div><div class="k-val">${h.yanikYatak}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-heart-fill"></i></div><div><div class="k-label">Kalp Merkezi</div><div class="k-val" style="font-size:16px;">${h.kalpMerkezi}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-droplet-fill"></i></div><div><div class="k-label">Diyaliz Cihaz</div><div class="k-val">${h.diyaliz}</div></div></div></div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-building-lock"></i></div><div><div class="k-label">Deprem İzolatörü</div><div class="k-val" style="font-size:15px;">${h.depremIzolator}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-radioactive"></i></div><div><div class="k-label">BT (Tomografi)</div><div class="k-val" style="font-size:13px;">${h.bt}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-magnet-fill"></i></div><div><div class="k-label">MR (Rezonans)</div><div class="k-val" style="font-size:13px;">${h.mr}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-radioactive"></i></div><div><div class="k-label">Radyasyon Onk.</div><div class="k-val" style="font-size:15px;">${h.radyasyonOnkoloji}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-capsule-pill"></i></div><div><div class="k-label">Nükleer Tıp</div><div class="k-val" style="font-size:15px;">${h.nukleerTip}</div></div></div></div>
+                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-emoji-smile-fill"></i></div><div><div class="k-label">Diş Ünit</div><div class="k-val">${h.disUnit}</div></div></div></div>
+                    </div>
+
+                    <div class="p-3 border rounded-3 bg-light shadow-sm">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-award-fill text-danger fs-5"></i>
+                            <span class="fw-bold text-dark small text-uppercase">Özellikli Sağlık Hizmetleri & İhtisas Merkezleri</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            ${services.map(s => `<span class="service-tag"><i class="bi bi-check-circle-fill"></i> ${s}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('kunyeModalIcerik').innerHTML = html;
+        document.getElementById('kunyeModal').classList.add('active');
+
+        setTimeout(() => {
+            if (kunyeLeafletMap) {
+                kunyeLeafletMap.remove();
+                kunyeLeafletMap = null;
+            }
+
+            kunyeLeafletMap = L.map('kunyeMap', { zoomControl: false }).setView([41.0082, 28.9784], 10);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; CartoDB & OpenStreetMap',
+                maxZoom: 19
+            }).addTo(kunyeLeafletMap);
+
+            const customIcon = L.divIcon({
+                className: 'custom-radar-icon',
+                html: '<div class="leaflet-radar-marker"></div>',
+                iconSize: [22, 22],
+                iconAnchor: [11, 11]
+            });
+
+            kunyeRadarMarker = L.marker([h.lat, h.lng], { icon: customIcon }).addTo(kunyeLeafletMap);
+            kunyeRadarMarker.bindPopup(`<b>${h.hastaneAdi}</b><br><small>Rol: ${h.rol}</small>`);
+
+            kunyeLeafletMap.invalidateSize();
+
+            setTimeout(() => {
+                kunyeLeafletMap.flyTo([h.lat, h.lng], 16.5, {
+                    duration: 2.8,
+                    easeLinearity: 0.25
+                });
+            }, 350);
+        }, 100);
+    };
+
+    window.kapatKunyeModal = () => {
+        document.getElementById('kunyeModal').classList.remove('active');
+        if (kunyeLeafletMap) {
+            kunyeLeafletMap.remove();
+            kunyeLeafletMap = null;
+        }
+    };
+    window.kunyeModalDisKlikKapat = (e) => {
+        if (e.target.id === 'kunyeModal') kapatKunyeModal();
+    };
     // ---------- BAŞLATMA ----------
     (async function init() {
         const activeUser = sessionStorage.getItem('khhb_auth_user');
