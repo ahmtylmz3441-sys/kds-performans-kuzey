@@ -2093,130 +2093,162 @@
         document.getElementById('karsDonemCheckboxlarInner').innerHTML = html;
     };
 
-// ---------- DÖNEMSEL KARŞILAŞTIRMA (Trafik Işığı Rozet Mantığı) ----------
-    window.donemselKarsilastir = async function() {
-        const kurum = document.getElementById('karsKurumAdi').value;
-        const seciliDonemler = Array.from(document.querySelectorAll('.donem-checkbox:checked')).map(cb=>parseInt(cb.value)).sort((a,b)=>a-b);
-        if(!kurum || seciliDonemler.length===0) { alert('Lütfen bir kurum ve en az bir dönem seçin.'); return; }
-        
-        await itirazDurumlariniYukle();
-        const toplamlar = {};
-        for(let d of seciliDonemler) {
-            const { data } = await _supabase.from('toplam_puanlar').select('toplam_puan, rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', d).maybeSingle();
-            toplamlar[d] = data || { toplam_puan: '-', rol_ortalamasi: '-' };
-        }
-        
-        const { data: tumGostergeler } = await _supabase.from('performans').select('id, gosterge_kodu, gosterge_adi, gosterge_yonu, donem, gd, tr_ort, puan, gp, kurum_tipi').eq('kurum_adi', kurum).in('donem', seciliDonemler);
-        const gostergeMap = new Map();
-        tumGostergeler?.forEach(g => { 
-            if(!gostergeMap.has(g.gosterge_kodu)) {
-                gostergeMap.set(g.gosterge_kodu, { 
-                    id: g.id,
-                    kod: g.gosterge_kodu, 
-                    ad: g.gosterge_adi, 
-                    yon: g.gosterge_yonu,
-                    gp: g.gp,
-                    puan: g.puan,
-                    kurum_tipi: g.kurum_tipi,
-                    gd: g.gd,
-                    tr_ort: g.tr_ort
-                }); 
-            } else {
-                const existing = gostergeMap.get(g.gosterge_kodu);
-                existing.id = g.id;
-                existing.gp = g.gp;
-                existing.puan = g.puan;
-                existing.gd = g.gd;
-                existing.tr_ort = g.tr_ort;
-                existing.kurum_tipi = g.kurum_tipi;
-            }
-        });
-        const gostergeler = Array.from(gostergeMap.values()).sort((a,b)=> (parseInt(a.kod.split('-')[2]) || 0) - (parseInt(b.kod.split('-')[2]) || 0));
-        
-        const gostergeDegerler = {};
-        tumGostergeler?.forEach(g => { 
-            gostergeDegerler[`${g.gosterge_kodu}_${g.donem}`] = { 
-                gd: g.gd, 
-                tr_ort: g.tr_ort,
-                puan: g.puan,
-                gp: g.gp
-            }; 
-        });
-        
-        let html = `
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <h6 class="mb-0 fw-bold"><i class="bi bi-table"></i> Karşılaştırma Sonuç Matrisi</h6>
-                <button class="btn btn-sm btn-outline-success" style="border-radius:10px;" onclick="window.exportTableToExcel('karsilastirmaTablo', '${kurum.replace(/\\s+/g, '_')}_Donemsel_Karsilastirma')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
-            </div>
-            <div class="table-responsive"><table id="karsilastirmaTablo" class="table table-bordered bg-white align-middle"><thead><tr class="table-light"><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th class="text-center">${formatDonemAdi(d)} <br><small class="text-muted" style="font-size:10.5px;">(GD / TR Ort)<br>(Puan / GP)</small></th>`).join('')}</tr></thead><tbody>
-            <tr class="table-info fw-bold text-dark"><td>🏆 TOPLAM PUAN</td>${seciliDonemler.map(d=>`<td class="text-center text-primary fs-5">${toplamlar[d].toplam_puan}</td>`).join('')}</tr>
-            <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td class="text-center">${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
-        
-        for(let g of gostergeler) {
-            html += `<tr>
-                <td>
-                    <a href="#" class="text-decoration-none fw-semibold text-dark" onclick="window.gostergeDetayGoster('${g.id}','${g.ad.replace(/'/g, "\\'")}', '${g.gd ?? ''}', '${g.tr_ort ?? ''}', '${g.puan ?? ''}', '${g.gp ?? ''}', '${g.yon}', '${g.kod}', '${g.kurum_tipi}'); return false;">
-                        <small class="text-muted font-monospace">${g.kod}</small> - ${g.ad}
-                    </a>
-                </td>`;
-            for(let d of seciliDonemler) {
-                const val = gostergeDegerler[`${g.kod}_${d}`];
-                if (val && val.gd !== null && val.gd !== undefined) {
-                    let puanBadge = '';
-                    if (val.puan === null || val.puan === undefined || val.puan === '') {
-                        // ⚪ Muaf durumu (- / -)
-                        puanBadge = `<div class="mt-1"><span class="badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; font-size:10px; font-weight:600;">- / -</span></div>`;
-                    } else {
-                        const pVal = parseFloat(val.puan);
-                        const gpVal = (val.gp !== null && val.gp !== undefined) ? parseFloat(val.gp) : null;
-                        const gpText = val.gp ?? '-';
+// ---------- DÖNEMSEL KARŞILAŞTIRMA (Gelişmiş Başarı Filtreli) ----------
+window.donemselKarsilastir = async function() {
+    const kurum = document.getElementById('karsKurumAdi').value;
+    const seciliDonemler = Array.from(document.querySelectorAll('.donem-checkbox:checked')).map(cb=>parseInt(cb.value)).sort((a,b)=>a-b);
+    const puanFiltre = document.getElementById('karsPuanFiltre')?.value || 'all';
 
-                        if (!isNaN(pVal) && pVal === 0) {
-                            // 🔴 Sıfır Puan (Kritik - Soft Kırmızı Rozet)
-                            puanBadge = `<div class="mt-1"><span class="badge" style="background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; font-size:10px; font-weight:700;">0 / ${gpText} Puan</span></div>`;
-                        } else if (gpVal !== null && !isNaN(gpVal) && pVal >= gpVal) {
-                            // 🟢 Tam Puan (Tam Başarı - Soft Zümrüt Yeşili Rozet)
-                            puanBadge = `<div class="mt-1"><span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:10px; font-weight:700;">${val.puan} / ${gpText} Puan</span></div>`;
-                        } else {
-                            // 🔵 Kısmi Puan (Geliştirilebilir - Soft İndigo Mavi Rozet)
-                            puanBadge = `<div class="mt-1"><span class="badge" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:10px; font-weight:700;">${val.puan} / ${gpText} Puan</span></div>`;
-                        }
-                    }
-                    html += `<td class="text-center align-middle">
-                        <div><b>${val.gd}</b> <span class="text-muted small">/ ${val.tr_ort ?? '-'}</span></div>
-                        ${puanBadge}
-                    </td>`;
-                } else {
-                    html += `<td class="text-center align-middle text-muted small">
-                        <div>- / -</div>
-                        <div class="mt-1"><span class="badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; font-size:10px; font-weight:600;">- / -</span></div>
-                    </td>`;
+    if(!kurum || seciliDonemler.length===0) { 
+        alert('Lütfen bir kurum ve en az bir dönem seçin.'); 
+        return; 
+    }
+    
+    await itirazDurumlariniYukle();
+    const toplamlar = {};
+    for(let d of seciliDonemler) {
+        const { data } = await _supabase.from('toplam_puanlar').select('toplam_puan, rol_ortalamasi').eq('kurum_adi', kurum).eq('donem', d).maybeSingle();
+        toplamlar[d] = data || { toplam_puan: '-', rol_ortalamasi: '-' };
+    }
+    
+    const { data: tumGostergeler } = await _supabase.from('performans').select('id, gosterge_kodu, gosterge_adi, gosterge_yonu, donem, gd, tr_ort, puan, gp, kurum_tipi').eq('kurum_adi', kurum).in('donem', seciliDonemler);
+    const gostergeMap = new Map();
+    tumGostergeler?.forEach(g => { 
+        if(!gostergeMap.has(g.gosterge_kodu)) {
+            gostergeMap.set(g.gosterge_kodu, { 
+                id: g.id,
+                kod: g.gosterge_kodu, 
+                ad: g.gosterge_adi, 
+                yon: g.gosterge_yonu,
+                gp: g.gp,
+                puan: g.puan,
+                kurum_tipi: g.kurum_tipi,
+                gd: g.gd,
+                tr_ort: g.tr_ort
+            }); 
+        } else {
+            const existing = gostergeMap.get(g.gosterge_kodu);
+            existing.id = g.id;
+            existing.gp = g.gp;
+            existing.puan = g.puan;
+            existing.gd = g.gd;
+            existing.tr_ort = g.tr_ort;
+            existing.kurum_tipi = g.kurum_tipi;
+        }
+    });
+    const gostergeler = Array.from(gostergeMap.values()).sort((a,b)=> (parseInt(a.kod.split('-')[2]) || 0) - (parseInt(b.kod.split('-')[2]) || 0));
+    
+    const gostergeDegerler = {};
+    tumGostergeler?.forEach(g => { 
+        gostergeDegerler[`${g.gosterge_kodu}_${g.donem}`] = { 
+            gd: g.gd, 
+            tr_ort: g.tr_ort,
+            puan: g.puan,
+            gp: g.gp
+        }; 
+    });
+    
+    let html = `
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-table"></i> Karşılaştırma Sonuç Matrisi</h6>
+            <button class="btn btn-sm btn-outline-success" style="border-radius:10px;" onclick="window.exportTableToExcel('karsilastirmaTablo', '${kurum.replace(/\\s+/g, '_')}_Donemsel_Karsilastirma')"><i class="bi bi-file-earmark-excel"></i> Excel'e Aktar</button>
+        </div>
+        <div class="table-responsive"><table id="karsilastirmaTablo" class="table table-bordered bg-white align-middle"><thead><tr class="table-light"><th>Gösterge Listesi</th>${seciliDonemler.map(d=>`<th class="text-center">${formatDonemAdi(d)} <br><small class="text-muted" style="font-size:10.5px;">(GD / TR Ort)<br>(Puan / GP)</small></th>`).join('')}</tr></thead><tbody>
+        <tr class="table-info fw-bold text-dark"><td>🏆 TOPLAM PUAN</td>${seciliDonemler.map(d=>`<td class="text-center text-primary fs-5">${toplamlar[d].toplam_puan}</td>`).join('')}</tr>
+        <tr class="table-light text-secondary"><td>📊 ROL ORTALAMASI</td>${seciliDonemler.map(d=>`<td class="text-center">${toplamlar[d].rol_ortalamasi}</td>`).join('')}</tr>`;
+    
+    let gosterilenSayac = 0;
+
+    for(let g of gostergeler) {
+        // Puan Durumunu Kontrol Et (Filtreleme Mantığı)
+        let hasTam = false;
+        let hasEksik = false;
+        let hasSifir = false;
+
+        for(let d of seciliDonemler) {
+            const val = gostergeDegerler[`${g.kod}_${d}`];
+            if (val && val.puan !== null && val.puan !== undefined && val.puan !== '') {
+                const pVal = parseFloat(val.puan);
+                const gpVal = (val.gp !== null && val.gp !== undefined) ? parseFloat(val.gp) : null;
+                if (!isNaN(pVal)) {
+                    if (pVal === 0) hasSifir = true;
+                    else if (gpVal !== null && !isNaN(gpVal) && pVal >= gpVal) hasTam = true;
+                    else if (gpVal !== null && !isNaN(gpVal) && pVal < gpVal) hasEksik = true;
                 }
             }
-            html += `</tr>`;
         }
-        html += `</tbody></table></div>`;
-        
-        const puanlar = seciliDonemler.map(d => toplamlar[d].toplam_puan !== '-' ? toplamlar[d].toplam_puan : 0);
-        html += `<div class="mt-4 p-3 bg-white border rounded" style="border-radius:12px;"><h6>📈 Dönemsel Toplam Puan Trend Grafiği</h6><div style="height:220px; position:relative;"><canvas id="karsilastirmaChart"></canvas></div></div>`;
-        
-        document.getElementById('karsilastirmaSonuc').innerHTML = html;
-        
-        setTimeout(() => {
-            const ctx = document.getElementById('karsilastirmaChart')?.getContext('2d');
-            if(ctx) {
-                if(window.karsChart) window.karsChart.destroy();
-                window.karsChart = new Chart(ctx, { 
-                    type: 'line', 
-                    data: { 
-                        labels: seciliDonemler.map(d=>formatDonemAdi(d)), 
-                        datasets: [{ label: 'Kurum Toplam Puanı', data: puanlar, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', tension: 0.1, fill: true }] 
-                    }, 
-                    options: { responsive: true, maintainAspectRatio: false } 
-                });
+
+        if (puanFiltre === 'tam' && !hasTam) continue;
+        if (puanFiltre === 'eksik' && !hasEksik) continue;
+        if (puanFiltre === 'sifir' && !hasSifir) continue;
+
+        gosterilenSayac++;
+
+        html += `<tr>
+            <td>
+                <a href="#" class="text-decoration-none fw-semibold text-dark" onclick="window.gostergeDetayGoster('${g.id}','${g.ad.replace(/'/g, "\\'")}', '${g.gd ?? ''}', '${g.tr_ort ?? ''}', '${g.puan ?? ''}', '${g.gp ?? ''}', '${g.yon}', '${g.kod}', '${g.kurum_tipi}'); return false;">
+                    <small class="text-muted font-monospace">${g.kod}</small> - ${g.ad}
+                </a>
+            </td>`;
+        for(let d of seciliDonemler) {
+            const val = gostergeDegerler[`${g.kod}_${d}`];
+            if (val && val.gd !== null && val.gd !== undefined) {
+                let puanBadge = '';
+                if (val.puan === null || val.puan === undefined || val.puan === '') {
+                    puanBadge = `<div class="mt-1"><span class="badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; font-size:10px; font-weight:600;">- / -</span></div>`;
+                } else {
+                    const pVal = parseFloat(val.puan);
+                    const gpVal = (val.gp !== null && val.gp !== undefined) ? parseFloat(val.gp) : null;
+                    const gpText = val.gp ?? '-';
+
+                    if (!isNaN(pVal) && pVal === 0) {
+                        puanBadge = `<div class="mt-1"><span class="badge" style="background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; font-size:10px; font-weight:700;">0 / ${gpText} Puan</span></div>`;
+                    } else if (gpVal !== null && !isNaN(gpVal) && pVal >= gpVal) {
+                        puanBadge = `<div class="mt-1"><span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:10px; font-weight:700;">${val.puan} / ${gpText} Puan</span></div>`;
+                    } else {
+                        puanBadge = `<div class="mt-1"><span class="badge" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; font-size:10px; font-weight:700;">${val.puan} / ${gpText} Puan</span></div>`;
+                    }
+                }
+                html += `<td class="text-center align-middle">
+                    <div><b>${val.gd}</b> <span class="text-muted small">/ ${val.tr_ort ?? '-'}</span></div>
+                    ${puanBadge}
+                </td>`;
+            } else {
+                html += `<td class="text-center align-middle text-muted small">
+                    <div>- / -</div>
+                    <div class="mt-1"><span class="badge" style="background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; font-size:10px; font-weight:600;">- / -</span></div>
+                </td>`;
             }
-        }, 100);
-    };
+        }
+        html += `</tr>`;
+    }
+
+    if (gosterilenSayac === 0) {
+        html += `<tr><td colspan="${seciliDonemler.length + 1}" class="text-center text-muted py-4"><i class="bi bi-info-circle me-1"></i> Seçilen puan başarı filtresine uygun gösterge kaydı bulunamadı.</td></tr>`;
+    }
+
+    html += `</tbody></table></div>`;
+    
+    const puanlar = seciliDonemler.map(d => toplamlar[d].toplam_puan !== '-' ? toplamlar[d].toplam_puan : 0);
+    html += `<div class="mt-4 p-3 bg-white border rounded" style="border-radius:12px;"><h6>📈 Dönemsel Toplam Puan Trend Grafiği</h6><div style="height:220px; position:relative;"><canvas id="karsilastirmaChart"></canvas></div></div>`;
+    
+    document.getElementById('karsilastirmaSonuc').innerHTML = html;
+    
+    setTimeout(() => {
+        const ctx = document.getElementById('karsilastirmaChart')?.getContext('2d');
+        if(ctx) {
+            if(window.karsChart) window.karsChart.destroy();
+            window.karsChart = new Chart(ctx, { 
+                type: 'line', 
+                data: { 
+                    labels: seciliDonemler.map(d=>formatDonemAdi(d)), 
+                    datasets: [{ label: 'Kurum Toplam Puanı', data: puanlar, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', tension: 0.1, fill: true }] 
+                }, 
+                options: { responsive: true, maintainAspectRatio: false } 
+            });
+        }
+    }, 100);
+};
 
     // ---------- GOOGLE E-TABLO CANLI VERI VE ANALIZ ENTEGRASYONU ----------
     async function initETabloDashboard() {
@@ -4518,7 +4550,7 @@ function getMhrsRowMetrics(item, type) {
                     <div class="kds-card">
                         <h6><i class="bi bi-calendar-range"></i> Gelişmiş Dönemsel Karşılaştırma</h6>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label small fw-bold">Kurum Türü</label>
                                 <select id="karsKurumTip" class="form-select" style="border-radius:10px;">
                                     <option value="">Tümü</option>
@@ -4526,10 +4558,19 @@ function getMhrsRowMetrics(item, type) {
                                     <option value="ADSM">ADSM/ADSH</option>
                                 </select>
                             </div>
-                            <div class="col-md-8">
+                            <div class="col-md-5">
                                 <label class="form-label small fw-bold">Kurum Adı</label>
                                 <select id="karsKurumAdi" class="form-select" style="border-radius:10px;">
                                     <option value="">Önce tür seçin</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Puan Başarı Filtresi</label>
+                                <select id="karsPuanFiltre" class="form-select" style="border-radius:10px;">
+                                    <option value="all">Tümü (Tüm Göstergeler)</option>
+                                    <option value="tam">🟢 Tam Puan Alınanlar</option>
+                                    <option value="eksik">🔵 Eksik / Kısmi Puan Alınanlar</option>
+                                    <option value="sifir">🔴 Puan Alınamayanlar (0 Puan)</option>
                                 </select>
                             </div>
                         </div>
@@ -4544,6 +4585,7 @@ function getMhrsRowMetrics(item, type) {
                     </div>`;
                 document.getElementById('karsKurumTip').onchange = () => window.karsilastirmaKurumListesiGuncelle();
                 document.getElementById('karsKurumAdi').onchange = () => window.karsilastirmaDonemListesiGuncelle();
+                document.getElementById('karsPuanFiltre').onchange = () => { if(document.getElementById('karsKurumAdi').value) window.donemselKarsilastir(); };
                 document.getElementById('karsilastirBtn').onclick = () => window.donemselKarsilastir();
                 await window.karsilastirmaKurumListesiGuncelle();
             }
