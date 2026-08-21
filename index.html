@@ -4660,7 +4660,7 @@ function getMhrsRowMetrics(item, type) {
             .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
             .replace(/[^a-z0-9]/g, ''));
 
-        // Akıllı Dinamik Başlık Bulucu (fallbackCol desteği ile)
+        // Akıllı Dinamik Başlık Bulucu
         const getField = (row, keywords, fallbackCol = null) => {
             for (let kw of keywords) {
                 const cleanKw = kw.toLowerCase().replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
@@ -4687,7 +4687,7 @@ function getMhrsRowMetrics(item, type) {
             return !gecersizKelimeler.some(g => upAd === g || upAd.startsWith(g));
         });
 
-        // Güncellenmiş Özellikli Hizmetler Listesi (yeni anahtar kelimeler eklendi)
+        // Özellikli Hizmetler Listesi
         const bilinenHizmetler = [
             { kw: 'organnakli', label: 'Organ Nakli Merkezi' },
             { kw: 'inme', label: 'İnme Merkezi' },
@@ -4708,7 +4708,6 @@ function getMhrsRowMetrics(item, type) {
             { kw: 'robotik', label: 'Robotik Cerrahi' },
             { kw: 'cyberknife', label: 'Cyberknife' },
             { kw: 'tomoterapi', label: 'Tomoterapi' },
-            // Yeni eklenenler:
             { kw: 'noromuskuler', label: 'Nöromüsküler Hastalıklar Merkezi' },
             { kw: 'rop', label: 'ROP Tanı ve Tedavi Merkezi' },
             { kw: 'kit', label: 'KİT (Kemik İliği Nakil) Merkezi' },
@@ -4750,7 +4749,7 @@ function getMhrsRowMetrics(item, type) {
                 yatakMetni = getField(row, ['yataksayisi', 'toplamyatak', 'yatak']);
             }
 
-            // Hekim Sayısı (Uzman ve Klinisyen) – fallback eklendi
+            // Hekim Sayısı (Uzman BK / Klinisyen BL)
             const uzmanSayi = getField(row, ['uzmantabip', 'uzmanhekim', 'uzmansayisi', 'toplamuzman', 'uzman'], 'BK');
             const klinisyenSayi = getField(row, ['klinisyen', 'klinisyentabip', 'klinisyenhekim'], 'BL');
             let hekimGosterim = '-';
@@ -4762,17 +4761,30 @@ function getMhrsRowMetrics(item, type) {
                 hekimGosterim = getField(row, ['toplamhekim', 'hekimsayisi', 'hekimler', 'hekim', 'tabip']);
             }
 
-            // Yoğun Bakım – fallback BW eklendi
+            // Yoğun Bakım (Aktif Filli BW)
             const ybYatak = getField(row, ['yogunbakimyatak', 'yogunbakim', 'ybuyatak', 'toplamybu', 'toplamyb', 'ybu', '3seviyeyb', 'yogun'], 'BW');
 
-            // SDL, Palyatif, Yanık, Diyaliz, Diş
-            const sdlVal = getField(row, ['sdlsalon', 'dogumsalon', 'sdlsayisi', 'sdl', 'travay', 'dogum']);
-            const palyatifVal = getField(row, ['palyatifyatak', 'palyatifbakim', 'palyatif']);
-            const yanikVal = getField(row, ['yanikyatak', 'yanikunite', 'yaniktedavi', 'yanik']);
-            const diyalizVal = getField(row, ['diyalizcihaz', 'diyalizunite', 'hemodiyaliz', 'diyaliz']);
-            const disVal = getField(row, ['disunite', 'disunit', 'unitdis', 'dis']);
+            // Palyatif (Tescilli CP / Fiili CQ) - Birleştirilmiş gösterim
+            const palyatifTescilli = getField(row, ['palyatifyataktescilli', 'palyatif_tescilli', 'palyatif'], 'CP');
+            const palyatifFiili = getField(row, ['palyatifyatakfiili', 'palyatif_fiili'], 'CQ');
+            let palyatifMetni = '-';
+            if (palyatifTescilli !== '-' && palyatifFiili !== '-') {
+                palyatifMetni = palyatifTescilli + ' / ' + palyatifFiili;
+            } else if (palyatifFiili !== '-') {
+                palyatifMetni = palyatifFiili;
+            } else if (palyatifTescilli !== '-') {
+                palyatifMetni = palyatifTescilli;
+            }
 
-            // Onkoloji & Nükleer Tıp & Kalp & Deprem – deprem fallback D eklendi
+            // SDL / TDL Salonu (AW)
+            const sdlVal = getField(row, ['sdlsalon', 'dogumsalon', 'sdlsayisi', 'sdl', 'travay', 'dogum', 'tdl'], 'AW');
+            
+            // Diğer alanlar (doğru sütun harfleriyle)
+            const yanikVal = getField(row, ['yanikyatak', 'yanikunite', 'yaniktedavi', 'yanik'], 'DE');
+            const diyalizVal = getField(row, ['diyalizcihaz', 'diyalizunite', 'hemodiyaliz', 'diyaliz'], 'CX');
+            const disVal = getField(row, ['disunite', 'disunit', 'unitdis', 'dis'], 'CS');
+
+            // Onkoloji & Nükleer Tıp & Kalp & Deprem
             const radOnk = getField(row, ['radyasyononkoloji', 'radyasyon', 'linac', 'onkoloji']);
             const nukTip = getField(row, ['nukleertip', 'nukleer', 'petct', 'spect']);
             const kalpVal = getField(row, ['kalpmerkezi', 'kvc', 'kalp', 'anjiyo']);
@@ -4813,20 +4825,20 @@ function getMhrsRowMetrics(item, type) {
                 acikOtopark: getField(row, ['acikotopark', 'acikarac', 'acikoto']),
                 
                 hekimSayisi: hekimGosterim,
-                gunlukPoliklinik: getField(row, ['gunlukpoliklinik', 'gunlukmuayene', 'gunlukbasvuru', 'muayenesayisi'], 'CU'), // fallback CU eklendi
+                gunlukPoliklinik: getField(row, ['gunlukpoliklinik', 'gunlukmuayene', 'gunlukbasvuru', 'muayenesayisi'], 'CV'), // Günlük Toplam Poliklinik Sayısı
                 
                 yatakSayisi: yatakMetni,
-                poliklinikOda: getField(row, ['poliklinikoda', 'aktifpoliklinik', 'odasayisi', 'polikliniksayisi'], 'CV'),
-                ameliyathane: getField(row, ['ameliyathaneoda', 'ameliyathane', 'ameliyathanemasasi'], 'DI'),
-                yogunBakimYatak: ybYatak, // artık fallback BW ile geliyor
-                sdlSalon: sdlVal,
-                palyatif: palyatifVal,
+                poliklinikOda: getField(row, ['poliklinikoda', 'aktifpoliklinik', 'odasayisi', 'polikliniksayisi'], 'CW'), // Poliklinik Oda Sayısı
+                ameliyathane: getField(row, ['ameliyathaneoda', 'ameliyathane', 'ameliyathanemasasi'], 'DH'), // Ameliyathane Masa Sayısı
+                yogunBakimYatak: ybYatak,
+                sdlSalon: sdlVal, // TDL / SDL Salonu (AW)
+                palyatif: palyatifMetni, // Tescilli/Fiili birleştirildi
                 yanikYatak: yanikVal,
                 kalpMerkezi: kalpVal,
                 diyaliz: diyalizVal,
-                depremIzolator: depremVal, // fallback D ile geliyor
-                bt: getField(row, ['bilgisayarlitomografi', 'tomografi', 'btcihaz', 'bt'], 'DE'),
-                mr: getField(row, ['manyetikrezonans', 'mrcihaz', 'mr'], 'DG'),
+                depremIzolator: depremVal,
+                bt: getField(row, ['bilgisayarlitomografi', 'tomografi', 'btcihaz', 'bt'], 'DF'), // BT Cihaz Sayısı
+                mr: getField(row, ['manyetikrezonans', 'mrcihaz', 'mr'], 'DG'), // MR Cihaz Sayısı
                 radyasyonOnkoloji: radOnk,
                 nukleerTip: nukTip,
                 disUnit: disVal,
@@ -4843,50 +4855,6 @@ function getMhrsRowMetrics(item, type) {
         document.getElementById('kunyeGridContainer').innerHTML = '<div class="alert alert-danger py-4" style="border-radius:12px;"><h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> Künye Verisi Alınamadı</h5><p class="small mb-0">Google Sheets tablosuna erişilemedi. (' + err.message + ')</p></div>';
     }
 }
-
-    function renderHastaneKunyeGrid(list) {
-        const container = document.getElementById('kunyeGridContainer');
-        if (!container) return;
-        
-        if (list.length === 0) {
-            container.innerHTML = '<div class="col-12 text-center text-muted py-5">Aradığınız kriterlere uygun hastane bulunamadı.</div>';
-            return;
-        }
-
-        container.innerHTML = list.map(h => `
-            <div class="col-md-4 col-sm-6">
-                <div class="kunye-hospital-card" onclick="window.acHastaneKunyeModal(${h.id})">
-                    <div class="card-img-wrapper">
-                        <img src="${h.foto}" alt="${h.hastaneAdi}" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop'">
-                        <span class="kunye-role-badge"><i class="bi bi-star-fill text-warning me-1"></i> ${h.rol} Rolü</span>
-                    </div>
-                    <div class="p-3">
-                        <h6 class="fw-bold mb-1 text-dark text-truncate" title="${h.hastaneAdi}">${h.hastaneAdi}</h6>
-                        <div class="text-muted small mb-3"><i class="bi bi-geo-alt-fill text-danger me-1"></i> İlçe Nüfusu: ${h.nufus}</div>
-                        
-                        <div class="row g-2 text-center pt-2 border-top">
-                            <div class="col-4">
-                                <div class="text-secondary small" style="font-size:10px; font-weight:700;">YATAK</div>
-                                <div class="fw-bold text-dark fs-6">${h.yatakSayisi}</div>
-                            </div>
-                            <div class="col-4 border-start border-end">
-                                <div class="text-secondary small" style="font-size:10px; font-weight:700;">YBÜ YATAK</div>
-                                <div class="fw-bold text-danger fs-6">${h.yogunBakimYatak}</div>
-                            </div>
-                            <div class="col-4">
-                                <div class="text-secondary small" style="font-size:10px; font-weight:700;">POLİKLİNİK</div>
-                                <div class="fw-bold text-primary fs-6">${h.poliklinikOda}</div>
-                            </div>
-                        </div>
-
-                        <button class="btn btn-sm btn-outline-danger w-100 mt-3 fw-bold" style="border-radius:10px;">
-                            <i class="bi bi-eye-fill me-1"></i> Detaylı Künyeyi Aç
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
 
     window.filtreleKunyeKartlari = function() {
         const query = document.getElementById('kunyeAramaInput')?.value.toLowerCase().trim() || '';
