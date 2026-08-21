@@ -4625,8 +4625,26 @@ function getMhrsRowMetrics(item, type) {
     let kunyeLeafletMap = null;
     let kunyeRadarMarker = null;
 
+    // =========================================================================
+    // HASTANE KÜNYE & OTOMATİK SEMANTİK BAŞLIK EŞLEŞTİRME MOTORU
+    // =========================================================================
+    let hastaneKunyeListesi = [];
+    let kunyeLeafletMap = null;
+    let kunyeRadarMarker = null;
+
+    // Excel Sütun Harfini (örn: 'BQ', 'DI') Dizi İndeksine Çeviren Güvence Fonksiyonu
+    function colToIdx(colStr) {
+        if (!colStr) return 0;
+        let col = 0;
+        colStr = colStr.toUpperCase().trim();
+        for (let i = 0; i < colStr.length; i++) {
+            col = col * 26 + (colStr.charCodeAt(i) - 64);
+        }
+        return col - 1;
+    }
+
     async function initHastaneKunyeDashboard() {
-        showLoading('kunyeGridContainer', 'Hastane künyeleri Google Sheets üzerinden canlı çekiliyor...');
+        showLoading('kunyeGridContainer', 'Hastane künyeleri Google Sheets üzerinden canlı taranıyor...');
         
         const spreadsheetId = '1g6Ar7QxXvs9LxaWi9xM7AggPOvbh7lOG78kQCKWIbH4';
         const gid = '2005676341';
@@ -4643,36 +4661,58 @@ function getMhrsRowMetrics(item, type) {
                 document.getElementById('kunyeGridContainer').innerHTML = '<div class="alert alert-warning text-center">Tabloda hastane verisi bulunamadı.</div>';
                 return;
             }
-            
-            const headers = rows[0].map(h => (h || '').toString().toLowerCase().trim()
+
+            // 1. Satırdaki Başlıkları Normalleştirip Haritalayalım
+            const rawHeaders = rows[0] || [];
+            const cleanHeaders = rawHeaders.map(h => (h || '').toString().toLowerCase()
                 .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
                 .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
                 .replace(/[^a-z0-9]/g, ''));
-            
-            const getField = (row, aliases) => {
-                for (let alias of aliases) {
-                    const cleanAlias = alias.toLowerCase().replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
-                    const idx = headers.findIndex(h => h.includes(cleanAlias));
-                    if (idx !== -1 && row[idx] !== undefined && row[idx] !== '') {
+
+            // Akıllı Başlık Bulucu: Belirtilen anahtar kelimelere uyan sütunu otomatik bulur
+            const getField = (row, keywords, fallbackCol = null) => {
+                for (let kw of keywords) {
+                    const cleanKw = kw.toLowerCase().replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
+                    const idx = cleanHeaders.findIndex(h => h.includes(cleanKw));
+                    if (idx !== -1 && row[idx] !== undefined && row[idx] !== null && row[idx].toString().trim() !== '') {
                         return row[idx].toString().trim();
                     }
                 }
-                return '';
+                // Başlık bulunamazsa garanti sütun harfinden oku
+                if (fallbackCol) {
+                    const fIdx = colToIdx(fallbackCol);
+                    if (row[fIdx] !== undefined && row[fIdx] !== null && row[fIdx].toString().trim() !== '') {
+                        return row[fIdx].toString().trim();
+                    }
+                }
+                return '-';
             };
 
-            hastaneKunyeListesi = rows.slice(1).map((row, idx) => {
-                const kurumAdi = getField(row, ['hastaneadi', 'hastane', 'kurumadi', 'kurum', 'tesis']) || `Hastane #${idx+1}`;
-                if (!kurumAdi || kurumAdi.trim() === '') return null;
+            // Başlık veya özet satırlarını filtreleyip sadece gerçek 13 hastaneyi alalım
+            const gecersizKelimeler = ['HASTANE ADI', 'KURUM ADI', 'TOPLAM', 'SIRA NO', 'GENEL', 'TESIS ADI'];
+            const hastaneSatirlari = rows.slice(1).filter(row => {
+                const ad = (row[0] || '').toString().trim();
+                if (!ad || ad.length < 3) return false;
+                const upAd = ad.toUpperCase();
+                return !gecersizKelimeler.some(g => upAd === g || upAd.startsWith(g));
+            });
 
+            // 13 Hastaneyi Akıllı Mantıkla Eşleştir
+            hastaneKunyeListesi = hastaneSatirlari.map((row, idx) => {
+                const kurumAdi = row[0]?.toString().trim() || `Hastane #${idx+1}`;
+
+                // Koordinat Çözücü
                 let lat = null, lng = null;
-                const rawCoord = getField(row, ['koordinat', 'konum', 'gps', 'location']);
-                if (rawCoord && rawCoord.includes(',')) {
-                    const parts = rawCoord.split(',');
+                const coordRaw = getField(row, ['koordinat', 'konum', 'gps', 'location', 'maps']);
+                if (coordRaw && coordRaw !== '-' && coordRaw.includes(',')) {
+                    const parts = coordRaw.split(',');
                     lat = parseFloat(parts[0].trim());
                     lng = parseFloat(parts[1].trim());
                 } else {
-                    lat = parseFloat(getField(row, ['enlem', 'lat', 'latitude']));
-                    lng = parseFloat(getField(row, ['boylam', 'lng', 'lon', 'longitude']));
+                    const enlemVal = getField(row, ['enlem', 'latitude', 'lat']);
+                    const boylamVal = getField(row, ['boylam', 'longitude', 'lng', 'lon']);
+                    if (enlemVal !== '-') lat = parseFloat(enlemVal);
+                    if (boylamVal !== '-') lng = parseFloat(boylamVal);
                 }
 
                 if (isNaN(lat) || isNaN(lng) || !lat || !lng) {
@@ -4680,40 +4720,55 @@ function getMhrsRowMetrics(item, type) {
                     lng = 29.0292;
                 }
 
+                // Yatak Sayısı (Tescilli / Fiili)
+                const tescilliYatak = getField(row, ['tescilliyatak', 'tescilli'], 'BQ');
+                const fiiliYatak = getField(row, ['fiiliyat', 'fiili'], 'BR');
+                let yatakMetni = '-';
+                if (tescilliYatak !== '-' && fiiliYatak !== '-') {
+                    yatakMetni = `${tescilliYatak} / ${fiiliYatak}`;
+                } else if (fiiliYatak !== '-') {
+                    yatakMetni = fiiliYatak;
+                } else if (tescilliYatak !== '-') {
+                    yatakMetni = tescilliYatak;
+                } else {
+                    yatakMetni = getField(row, ['yataksayisi', 'toplamyatak', 'yatak']);
+                }
+
                 return {
                     id: idx,
                     hastaneAdi: kurumAdi,
-                    rol: getField(row, ['rol', 'hastanerolu', 'rolu', 'seviye']) || 'A1',
-                    nufus: getField(row, ['nufus', 'ilcenufus', 'ilcenufusu']) || '450.000',
-                    foto: getField(row, ['resim', 'foto', 'fotoğraf', 'gorsel', 'image', 'url']) || 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop',
-                    arsaAlani: getField(row, ['arsaalani', 'arsa', 'arsam2']) || '-',
-                    kapaliAlan: getField(row, ['kapalialan', 'kapali', 'kapalim2']) || '-',
-                    binaOturum: getField(row, ['binaoturum', 'oturum', 'oturumalani']) || '-',
-                    hizmetYili: getField(row, ['hizmetbaslangic', 'hizmetyili', 'acilisyili', 'yil']) || '2019',
-                    kapaliOtopark: getField(row, ['kapaliotopark', 'kapalioto']) || '-',
-                    acikOtopark: getField(row, ['acikotopark', 'acikoto']) || '-',
-                    hekimSayisi: getField(row, ['uzmanklinisyen', 'hekim', 'uzmanhekim', 'hekimler']) || '520/410',
-                    gunlukPoliklinik: getField(row, ['gunlukpoliklinik', 'gunlukmuayene', 'polikliniksayisi']) || '14.500',
-                    yatakSayisi: getField(row, ['yataksayisi', 'toplamyatak', 'yatak']) || '1.000',
-                    poliklinikOda: getField(row, ['polikliniksayisi', 'odasayisi', 'poliklinikoda']) || '280',
-                    ameliyathane: getField(row, ['ameliyathane', 'ameliyathaneoda']) || '42',
-                    yogunBakimYatak: getField(row, ['yogunbakim', 'ybyatak', 'toplamyb']) || '180',
-                    sdlSalon: getField(row, ['sdlsalon', 'sdl', 'dogumsalonu']) || '6',
-                    palyatif: getField(row, ['palyatifyatak', 'palyatif']) || '-',
-                    yanikYatak: getField(row, ['yanikyatak', 'yanik']) || '-',
-                    kalpMerkezi: getField(row, ['kalpmerkezi', 'kalp', 'kvc']) || 'VAR',
-                    diyaliz: getField(row, ['diyalizcihaz', 'diyaliz']) || '28',
-                    depremIzolator: getField(row, ['depremizolatoru', 'izolator', 'deprem']) || 'VAR',
-                    bt: getField(row, ['bt', 'tomografi']) || '3 Adet (128 Kesit)',
-                    mr: getField(row, ['mr', 'manyetikrezonans']) || '3 Adet (1.5 Tesla)',
-                    radyasyonOnkoloji: getField(row, ['radyasyononkolojisi', 'onkoloji']) || 'VAR',
-                    nukleerTip: getField(row, ['nukleertip', 'nukleer']) || 'VAR',
-                    disUnit: getField(row, ['disunit', 'dis']) || '12',
-                    ozellikliHizmetler: getField(row, ['ozelliklihizmetler', 'ozellikli', 'hizmetler']) || 'Organ Nakli Merkezi, İnme Merkezi, Kapsamlı Onkoloji, Hiperbarik Oksijen, Uyku Laboratuvarı, Diyaliz Merkezi, Anjiyografi Ünitesi',
+                    rol: getField(row, ['hastanerolu', 'rolu', 'rol', 'seviye']),
+                    nufus: getField(row, ['ilcenufusu', 'ilcenufus', 'nufus']),
+                    foto: getField(row, ['resim', 'foto', 'fotograf', 'gorsel', 'image', 'url']),
+                    arsaAlani: getField(row, ['arsaalani', 'arsa', 'arsam2']),
+                    kapaliAlan: getField(row, ['kapalialan', 'kapali', 'kapalim2']),
+                    binaOturum: getField(row, ['binaoturumu', 'binaoturum', 'oturumalani', 'oturum']),
+                    hizmetYili: getField(row, ['hizmetebaslama', 'hizmetbaslangic', 'hizmetyili', 'acilisyili', 'yil']),
+                    kapaliOtopark: getField(row, ['kapaliotopark', 'kapaliarac', 'kapalioto']),
+                    acikOtopark: getField(row, ['acikotopark', 'acikarac', 'acikoto']),
+                    hekimSayisi: getField(row, ['uzmantabip', 'klinisyen', 'uzmanhekim', 'hekimler', 'hekim']),
+                    gunlukPoliklinik: getField(row, ['gunlukpoliklinik', 'gunlukmuayene', 'gunlukbasvuru']),
+                    
+                    yatakSayisi: yatakMetni,
+                    poliklinikOda: getField(row, ['poliklinikoda', 'aktifpoliklinik', 'odasayisi', 'polikliniksayisi'], 'CV'),
+                    ameliyathane: getField(row, ['ameliyathaneoda', 'ameliyathane', 'ameliyathanemasasi'], 'DI'),
+                    yogunBakimYatak: getField(row, ['yogunbakimyatak', 'yogunbakim', 'ybuyatak', 'ybu']),
+                    sdlSalon: getField(row, ['sdlsalon', 'dogumsalonu', 'sdl']),
+                    palyatif: getField(row, ['palyatifyatak', 'palyatif']),
+                    yanikYatak: getField(row, ['yanikyatak', 'yanikunitesi', 'yanik']),
+                    kalpMerkezi: getField(row, ['kalpmerkezi', 'kvc', 'kalp']),
+                    diyaliz: getField(row, ['diyalizcihaz', 'diyaliz', 'hemodiyaliz']),
+                    depremIzolator: getField(row, ['depremizolatoru', 'izolator', 'sismik', 'deprem']),
+                    bt: getField(row, ['bilgisayarlitomografi', 'tomografi', 'btcihaz', 'bt'], 'DE'),
+                    mr: getField(row, ['manyetikrezonans', 'mrcihaz', 'mr'], 'DG'),
+                    radyasyonOnkoloji: getField(row, ['radyasyononkolojisi', 'radyasyon', 'onkoloji']),
+                    nukleerTip: getField(row, ['nukleertip', 'nukleer', 'petct']),
+                    disUnit: getField(row, ['disunite', 'disunit', 'dis']),
+                    ozellikliHizmetler: getField(row, ['ozelliklihizmetler', 'ozelliklibirimler', 'ihtisasmerkezleri', 'ozellikli']),
                     lat: lat,
                     lng: lng
                 };
-            }).filter(Boolean);
+            });
 
             renderHastaneKunyeGrid(hastaneKunyeListesi);
             
