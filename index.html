@@ -4619,14 +4619,16 @@ function getMhrsRowMetrics(item, type) {
         }
     };
 
-    // =========================================================================
-    // HASTANE KÜNYE & OTOMATİK SEMANTİK BAŞLIK MOTORU (TAM DİNAMİK)
-    // =========================================================================
-    let hastaneKunyeListesi = [];
-    let kunyeLeafletMap = null;
-    let kunyeRadarMarker = null;
+// ============================================================
+// HASTANE KÜNYE – TAM FONKSİYON SETİ (HATASIZ)
+// ============================================================
 
-    async function initHastaneKunyeDashboard() {
+let hastaneKunyeListesi = [];
+let kunyeLeafletMap = null;
+let kunyeRadarMarker = null;
+
+// ---------- 1. ANA YÜKLEME FONKSİYONU ----------
+async function initHastaneKunyeDashboard() {
     showLoading('kunyeGridContainer', 'Hastane künyeleri Google Sheets üzerinden taranıyor...');
     
     const spreadsheetId = '1g6Ar7QxXvs9LxaWi9xM7AggPOvbh7lOG78kQCKWIbH4';
@@ -4653,14 +4655,12 @@ function getMhrsRowMetrics(item, type) {
             return c - 1;
         };
 
-        // 1. Satırdaki başlıkları normalleştir
         const rawHeaders = rows[0] || [];
         const cleanHeaders = rawHeaders.map(h => (h || '').toString().toLowerCase()
             .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
             .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
             .replace(/[^a-z0-9]/g, ''));
 
-        // Akıllı Dinamik Başlık Bulucu
         const getField = (row, keywords, fallbackCol = null) => {
             for (let kw of keywords) {
                 const cleanKw = kw.toLowerCase().replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
@@ -4678,7 +4678,7 @@ function getMhrsRowMetrics(item, type) {
             return '-';
         };
 
-        // Başlık veya özet satırlarını ele
+        // Başlık/özet satırlarını temizle
         const gecersizKelimeler = ['HASTANE ADI', 'KURUM ADI', 'TOPLAM', 'SIRA NO', 'GENEL', 'TESIS ADI', 'TEDAVİ OLAN'];
         const hastaneSatirlari = rows.slice(1).filter(row => {
             const ad = (row[0] || '').toString().trim();
@@ -4687,7 +4687,7 @@ function getMhrsRowMetrics(item, type) {
             return !gecersizKelimeler.some(g => upAd === g || upAd.startsWith(g));
         });
 
-        // Özellikli Hizmetler Listesi
+        // Özellikli hizmet anahtar kelimeleri (güncel)
         const bilinenHizmetler = [
             { kw: 'organnakli', label: 'Organ Nakli Merkezi' },
             { kw: 'inme', label: 'İnme Merkezi' },
@@ -4714,6 +4714,7 @@ function getMhrsRowMetrics(item, type) {
             { kw: 'gebeokulu', label: 'Gebe Okulu' }
         ];
 
+        // Hastane verilerini işle
         hastaneKunyeListesi = hastaneSatirlari.map((row, idx) => {
             const kurumAdi = row[0]?.toString().trim() || ('Hastane #' + (idx + 1));
 
@@ -4735,7 +4736,7 @@ function getMhrsRowMetrics(item, type) {
                 lng = 29.0292;
             }
 
-            // Yatak Sayısı (Tescilli BQ / Fiili BR)
+            // ---- YATAK (BQ / BR) ----
             const tescilliYatak = getField(row, ['tescilliyatak', 'tescilli', 'tescil'], 'BQ');
             const fiiliYatak = getField(row, ['fiiliyat', 'fiili'], 'BR');
             let yatakMetni = '-';
@@ -4749,7 +4750,7 @@ function getMhrsRowMetrics(item, type) {
                 yatakMetni = getField(row, ['yataksayisi', 'toplamyatak', 'yatak']);
             }
 
-            // Hekim Sayısı (Uzman BK / Klinisyen BL)
+            // ---- HEKİM (Uzman BK / Klinisyen BL) ----
             const uzmanSayi = getField(row, ['uzmantabip', 'uzmanhekim', 'uzmansayisi', 'toplamuzman', 'uzman'], 'BK');
             const klinisyenSayi = getField(row, ['klinisyen', 'klinisyentabip', 'klinisyenhekim'], 'BL');
             let hekimGosterim = '-';
@@ -4761,10 +4762,10 @@ function getMhrsRowMetrics(item, type) {
                 hekimGosterim = getField(row, ['toplamhekim', 'hekimsayisi', 'hekimler', 'hekim', 'tabip']);
             }
 
-            // Yoğun Bakım (Aktif Filli BW)
+            // ---- YOĞUN BAKIM (Aktif Filli BW) ----
             const ybYatak = getField(row, ['yogunbakimyatak', 'yogunbakim', 'ybuyatak', 'toplamybu', 'toplamyb', 'ybu', '3seviyeyb', 'yogun'], 'BW');
 
-            // Palyatif (Tescilli CP / Fiili CQ) - Birleştirilmiş gösterim
+            // ---- PALYATİF (Tescilli CP / Fiili CQ) ----
             const palyatifTescilli = getField(row, ['palyatifyataktescilli', 'palyatif_tescilli', 'palyatif'], 'CP');
             const palyatifFiili = getField(row, ['palyatifyatakfiili', 'palyatif_fiili'], 'CQ');
             let palyatifMetni = '-';
@@ -4776,21 +4777,19 @@ function getMhrsRowMetrics(item, type) {
                 palyatifMetni = palyatifTescilli;
             }
 
-            // SDL / TDL Salonu (AW)
+            // ---- TDL / SDL SALONU (AW) ----
             const sdlVal = getField(row, ['sdlsalon', 'dogumsalon', 'sdlsayisi', 'sdl', 'travay', 'dogum', 'tdl'], 'AW');
             
-            // Diğer alanlar (doğru sütun harfleriyle)
+            // ---- DİĞER SÜTUNLAR (DOĞRU HARFLER) ----
             const yanikVal = getField(row, ['yanikyatak', 'yanikunite', 'yaniktedavi', 'yanik'], 'DE');
             const diyalizVal = getField(row, ['diyalizcihaz', 'diyalizunite', 'hemodiyaliz', 'diyaliz'], 'CX');
             const disVal = getField(row, ['disunite', 'disunit', 'unitdis', 'dis'], 'CS');
-
-            // Onkoloji & Nükleer Tıp & Kalp & Deprem
             const radOnk = getField(row, ['radyasyononkoloji', 'radyasyon', 'linac', 'onkoloji']);
             const nukTip = getField(row, ['nukleertip', 'nukleer', 'petct', 'spect']);
             const kalpVal = getField(row, ['kalpmerkezi', 'kvc', 'kalp', 'anjiyo']);
             const depremVal = getField(row, ['depremizolatoru', 'izolator', 'sismik', 'deprem'], 'D');
 
-            // Özellikli Hizmetler Listesi
+            // ---- ÖZELLİKLİ HİZMETLER ----
             let aktifHizmetler = [];
             const direktMetinHizmet = getField(row, ['ozelliklihizmetler', 'ozelliklibirimler', 'ihtisasmerkezleri', 'ozellikli']);
             if (direktMetinHizmet !== '-' && direktMetinHizmet.length > 5) {
@@ -4806,7 +4805,6 @@ function getMhrsRowMetrics(item, type) {
                     }
                 });
             }
-
             if (aktifHizmetler.length === 0) {
                 aktifHizmetler = ['Acil Servis & Kriz Yönetimi', 'Genel Yoğun Bakım Hizmetleri', 'Diyaliz Ünitesi', 'Görüntüleme & Laboratuvar'];
             }
@@ -4823,22 +4821,20 @@ function getMhrsRowMetrics(item, type) {
                 hizmetYili: getField(row, ['hizmetebaslama', 'hizmetbaslangic', 'hizmetyili', 'acilisyili', 'yil']),
                 kapaliOtopark: getField(row, ['kapaliotopark', 'kapaliarac', 'kapalioto']),
                 acikOtopark: getField(row, ['acikotopark', 'acikarac', 'acikoto']),
-                
                 hekimSayisi: hekimGosterim,
-                gunlukPoliklinik: getField(row, ['gunlukpoliklinik', 'gunlukmuayene', 'gunlukbasvuru', 'muayenesayisi'], 'CV'), // Günlük Toplam Poliklinik Sayısı
-                
+                gunlukPoliklinik: getField(row, ['gunlukpoliklinik', 'gunlukmuayene', 'gunlukbasvuru', 'muayenesayisi'], 'CV'),
                 yatakSayisi: yatakMetni,
-                poliklinikOda: getField(row, ['poliklinikoda', 'aktifpoliklinik', 'odasayisi', 'polikliniksayisi'], 'CW'), // Poliklinik Oda Sayısı
-                ameliyathane: getField(row, ['ameliyathaneoda', 'ameliyathane', 'ameliyathanemasasi'], 'DH'), // Ameliyathane Masa Sayısı
+                poliklinikOda: getField(row, ['poliklinikoda', 'aktifpoliklinik', 'odasayisi', 'polikliniksayisi'], 'CW'),
+                ameliyathane: getField(row, ['ameliyathaneoda', 'ameliyathane', 'ameliyathanemasasi'], 'DH'),
                 yogunBakimYatak: ybYatak,
-                sdlSalon: sdlVal, // TDL / SDL Salonu (AW)
-                palyatif: palyatifMetni, // Tescilli/Fiili birleştirildi
+                sdlSalon: sdlVal,
+                palyatif: palyatifMetni,
                 yanikYatak: yanikVal,
                 kalpMerkezi: kalpVal,
                 diyaliz: diyalizVal,
                 depremIzolator: depremVal,
-                bt: getField(row, ['bilgisayarlitomografi', 'tomografi', 'btcihaz', 'bt'], 'DF'), // BT Cihaz Sayısı
-                mr: getField(row, ['manyetikrezonans', 'mrcihaz', 'mr'], 'DG'), // MR Cihaz Sayısı
+                bt: getField(row, ['bilgisayarlitomografi', 'tomografi', 'btcihaz', 'bt'], 'DF'),
+                mr: getField(row, ['manyetikrezonans', 'mrcihaz', 'mr'], 'DG'),
                 radyasyonOnkoloji: radOnk,
                 nukleerTip: nukTip,
                 disUnit: disVal,
@@ -4848,6 +4844,7 @@ function getMhrsRowMetrics(item, type) {
             };
         });
 
+        // Kartları çiz (BURADA FONKSİYON TANIMLI OLMAZSA HATA ALIRSIN – aşağıda tanımlı)
         renderHastaneKunyeGrid(hastaneKunyeListesi);
         
     } catch(err) {
@@ -4856,208 +4853,253 @@ function getMhrsRowMetrics(item, type) {
     }
 }
 
-    window.filtreleKunyeKartlari = function() {
-        const query = document.getElementById('kunyeAramaInput')?.value.toLowerCase().trim() || '';
-        const filtered = hastaneKunyeListesi.filter(h => 
-            h.hastaneAdi.toLowerCase().includes(query) || 
-            h.rol.toLowerCase().includes(query)
-        );
-        renderHastaneKunyeGrid(filtered);
-    };
 
-    window.switchKunyeView = function(mode) {
-        const stage = document.getElementById('kunyeMapStage');
-        const btnMap = document.getElementById('btnViewMap');
-        const btnStreet = document.getElementById('btnViewStreet');
-        if (!stage) return;
-        
-        if (mode === 'street') {
-            stage.classList.add('street-active');
-            btnStreet?.classList.add('active');
-            btnMap?.classList.remove('active');
-        } else {
-            stage.classList.remove('street-active');
-            btnMap?.classList.add('active');
-            btnStreet?.classList.remove('active');
-            if (kunyeLeafletMap) kunyeLeafletMap.invalidateSize();
-        }
-    };
+// ---------- 2. KARTLARI ÇİZEN FONKSİYON ----------
+function renderHastaneKunyeGrid(list) {
+    const container = document.getElementById('kunyeGridContainer');
+    if (!container) return;
+    
+    if (list.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-muted py-5">Aradığınız kriterlere uygun hastane bulunamadı.</div>';
+        return;
+    }
 
-    window.acHastaneKunyeModal = function(id) {
-        const h = hastaneKunyeListesi.find(item => item.id === id);
-        if (!h) return;
-
-        const services = h.ozellikliHizmetler.split(/[,;\n\r\-•]+/).map(s => s.trim()).filter(Boolean);
-        const streetViewUrl = `https://maps.google.com/maps?layer=c&cbll=${h.lat},${h.lng}&cbp=12,0,0,0,0&output=svembed`;
-
-        const html = `
-            <div class="kunye-header">
-                <div class="kunye-ministry-brand">
-                    <div class="p-2 rounded-circle bg-light border shadow-sm d-flex align-items-center justify-content-center" style="width:56px; height:56px;">
-                        <span class="fs-2">🇹🇷</span>
+    container.innerHTML = list.map(h => `
+        <div class="col-md-4 col-sm-6">
+            <div class="kunye-hospital-card" onclick="window.acHastaneKunyeModal(${h.id})">
+                <div class="card-img-wrapper">
+                    <img src="${h.foto}" alt="${h.hastaneAdi}" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop'">
+                    <span class="kunye-role-badge"><i class="bi bi-star-fill text-warning me-1"></i> ${h.rol} Rolü</span>
+                </div>
+                <div class="p-3">
+                    <h6 class="fw-bold mb-1 text-dark text-truncate" title="${h.hastaneAdi}">${h.hastaneAdi}</h6>
+                    <div class="text-muted small mb-3"><i class="bi bi-geo-alt-fill text-danger me-1"></i> İlçe Nüfusu: ${h.nufus}</div>
+                    
+                    <div class="row g-2 text-center pt-2 border-top">
+                        <div class="col-4">
+                            <div class="text-secondary small" style="font-size:10px; font-weight:700;">YATAK</div>
+                            <div class="fw-bold text-dark fs-6">${h.yatakSayisi}</div>
+                        </div>
+                        <div class="col-4 border-start border-end">
+                            <div class="text-secondary small" style="font-size:10px; font-weight:700;">YBÜ YATAK</div>
+                            <div class="fw-bold text-danger fs-6">${h.yogunBakimYatak}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-secondary small" style="font-size:10px; font-weight:700;">POLİKLİNİK</div>
+                            <div class="fw-bold text-primary fs-6">${h.poliklinikOda}</div>
+                        </div>
                     </div>
-                    <div class="kunye-title-block">
-                        <div class="text-secondary text-uppercase fw-bold" style="font-size:10.5px; letter-spacing:1px;"> </div>
-                        <h3>${h.hastaneAdi}</h3>
+
+                    <button class="btn btn-sm btn-outline-danger w-100 mt-3 fw-bold" style="border-radius:10px;">
+                        <i class="bi bi-eye-fill me-1"></i> Detaylı Künyeyi Aç
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+
+// ---------- 3. FİLTRELEME FONKSİYONU ----------
+window.filtreleKunyeKartlari = function() {
+    const query = document.getElementById('kunyeAramaInput')?.value.toLowerCase().trim() || '';
+    const filtered = hastaneKunyeListesi.filter(h => 
+        h.hastaneAdi.toLowerCase().includes(query) || 
+        h.rol.toLowerCase().includes(query)
+    );
+    renderHastaneKunyeGrid(filtered);
+};
+
+
+// ---------- 4. HARİTA / STREET VIEW GEÇİŞ ----------
+window.switchKunyeView = function(mode) {
+    const stage = document.getElementById('kunyeMapStage');
+    const btnMap = document.getElementById('btnViewMap');
+    const btnStreet = document.getElementById('btnViewStreet');
+    if (!stage) return;
+    
+    if (mode === 'street') {
+        stage.classList.add('street-active');
+        btnStreet?.classList.add('active');
+        btnMap?.classList.remove('active');
+    } else {
+        stage.classList.remove('street-active');
+        btnMap?.classList.add('active');
+        btnStreet?.classList.remove('active');
+        if (kunyeLeafletMap) kunyeLeafletMap.invalidateSize();
+    }
+};
+
+
+// ---------- 5. DETAY MODALINI AÇMA ----------
+window.acHastaneKunyeModal = function(id) {
+    const h = hastaneKunyeListesi.find(item => item.id === id);
+    if (!h) return;
+
+    const services = h.ozellikliHizmetler.split(/[,;\n\r\-•]+/).map(s => s.trim()).filter(Boolean);
+    const streetViewUrl = `https://maps.google.com/maps?layer=c&cbll=${h.lat},${h.lng}&cbp=12,0,0,0,0&output=svembed`;
+
+    const html = `
+        <div class="kunye-header">
+            <div class="kunye-ministry-brand">
+                <div class="p-2 rounded-circle bg-light border shadow-sm d-flex align-items-center justify-content-center" style="width:56px; height:56px;">
+                    <span class="fs-2">🇹🇷</span>
+                </div>
+                <div class="kunye-title-block">
+                    <div class="text-secondary text-uppercase fw-bold" style="font-size:10.5px; letter-spacing:1px;">T.C. SAĞLIK BAKANLIĞI • KAMU HASTANELERİ GENEL MÜDÜRLÜĞÜ</div>
+                    <h3>${h.hastaneAdi}</h3>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="kunye-pill-tag"><i class="bi bi-shield-check text-primary"></i> Rol: <b class="text-dark">${h.rol}</b></div>
+                <div class="kunye-pill-tag"><i class="bi bi-people-fill text-info"></i> Nüfus: <b class="text-dark">${h.nufus}</b></div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <!-- Sinematik Harita & 360° Sokak -->
+                <div class="mb-3 position-relative">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small fw-bold text-secondary text-uppercase" style="font-size:10px;"><i class="bi bi-camera-video-fill text-danger me-1"></i> Harita & 360° Sokak Görünümü</span>
+                        <a href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" target="_blank" class="small text-decoration-none fw-semibold text-primary" style="font-size:10px;">
+                            <i class="bi bi-box-arrow-up-right"></i> Haritalarda Aç
+                        </a>
+                    </div>
+                    
+                    <div id="kunyeMapStage" class="kunye-map-stage">
+                        <div class="kunye-view-toggle">
+                            <button id="btnViewMap" class="active" onclick="window.switchKunyeView('map')"><i class="bi bi-map-fill"></i> Harita</button>
+                            <button id="btnViewStreet" onclick="window.switchKunyeView('street')"><i class="bi bi-person-walking"></i> 360° Cadde</button>
+                        </div>
+                        <div id="kunyeMap"></div>
+                        <iframe id="kunyeStreetFrame" src="" allowfullscreen loading="lazy"></iframe>
                     </div>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="kunye-pill-tag"><i class="bi bi-shield-check text-primary"></i> Rol: <b class="text-dark">${h.rol}</b></div>
-                    <div class="kunye-pill-tag"><i class="bi bi-people-fill text-info"></i> Nüfus: <b class="text-dark">${h.nufus}</b></div>
+
+                <div class="rounded-3 overflow-hidden border mb-3 shadow-sm position-relative" style="height: 120px;">
+                    <img src="${h.foto}" alt="${h.hastaneAdi}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop'">
+                    <div class="position-absolute bottom-0 start-0 end-0 p-2 text-white" style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); font-size: 11px; font-weight: 600;">
+                        <i class="bi bi-hospital"></i> Dış Cephe & Yerleşke Fotoğrafı
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Arsa Alanı</span><span class="k-val" style="font-size:15px;">${h.arsaAlani}</span></div></div>
+                    <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Kapalı Alan</span><span class="k-val" style="font-size:15px;">${h.kapaliAlan}</span></div></div>
+                    <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Bina Oturum</span><span class="k-val" style="font-size:15px;">${h.binaOturum}</span></div></div>
+                    <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Hizmet Yılı</span><span class="k-val" style="font-size:15px;">${h.hizmetYili}</span></div></div>
+                    <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Kapalı Otopark</span><span class="k-val" style="font-size:15px;">${h.kapaliOtopark}</span></div></div>
+                    <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Açık Otopark</span><span class="k-val" style="font-size:15px;">${h.acikOtopark}</span></div></div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="k-metric-card crimson-theme p-3">
+                            <div class="k-icon-wrap"><i class="bi bi-person-badge-fill"></i></div>
+                            <div><div class="k-label">Uzman/Klinisyen</div><div class="k-val" style="font-size:17px;">${h.hekimSayisi}</div></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="k-metric-card crimson-theme p-3">
+                            <div class="k-icon-wrap"><i class="bi bi-people-fill"></i></div>
+                            <div><div class="k-label">Günlük Poliklinik</div><div class="k-val" style="font-size:17px;">${h.gunlukPoliklinik}</div></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="row g-4">
-                <div class="col-lg-5">
-                    <!-- Sinematik Harita & 360 Street View Katmanı -->
-                    <div class="mb-3 position-relative">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="small fw-bold text-secondary text-uppercase" style="font-size:10px;"><i class="bi bi-camera-video-fill text-danger me-1"></i> Harita & 360° Sokak Görünümü</span>
-                            <a href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" target="_blank" class="small text-decoration-none fw-semibold text-primary" style="font-size:10px;">
-                                <i class="bi bi-box-arrow-up-right"></i> Haritalarda Aç
-                            </a>
-                        </div>
-                        
-                        <div id="kunyeMapStage" class="kunye-map-stage">
-                            <!-- Görünüm Değiştirme Butonları -->
-                            <div class="kunye-view-toggle">
-                                <button id="btnViewMap" class="active" onclick="window.switchKunyeView('map')"><i class="bi bi-map-fill"></i> Harita</button>
-                                <button id="btnViewStreet" onclick="window.switchKunyeView('street')"><i class="bi bi-person-walking"></i> 360° Cadde</button>
-                            </div>
-                            
-                            <!-- Katman 1: Drone Uçuş Haritası -->
-                            <div id="kunyeMap"></div>
-                            
-                            <!-- Katman 2: Google Street View 360 Panoraması -->
-                            <iframe id="kunyeStreetFrame" src="" allowfullscreen loading="lazy"></iframe>
-                        </div>
-                    </div>
-
-                    <div class="rounded-3 overflow-hidden border mb-3 shadow-sm position-relative" style="height: 120px;">
-                        <img src="${h.foto}" alt="${h.hastaneAdi}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop'">
-                        <div class="position-absolute bottom-0 start-0 end-0 p-2 text-white" style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); font-size: 11px; font-weight: 600;">
-                            <i class="bi bi-hospital"></i> Dış Cephe & Yerleşke Fotoğrafı
-                        </div>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Arsa Alanı</span><span class="k-val" style="font-size:15px;">${h.arsaAlani}</span></div></div>
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Kapalı Alan</span><span class="k-val" style="font-size:15px;">${h.kapaliAlan}</span></div></div>
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Bina Oturum</span><span class="k-val" style="font-size:15px;">${h.binaOturum}</span></div></div>
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Hizmet Yılı</span><span class="k-val" style="font-size:15px;">${h.hizmetYili}</span></div></div>
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Kapalı Otopark</span><span class="k-val" style="font-size:15px;">${h.kapaliOtopark}</span></div></div>
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Açık Otopark</span><span class="k-val" style="font-size:15px;">${h.acikOtopark}</span></div></div>
-                    </div>
-
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <div class="k-metric-card crimson-theme p-3">
-                                <div class="k-icon-wrap"><i class="bi bi-person-badge-fill"></i></div>
-                                <div><div class="k-label">Uzman/Klinisyen</div><div class="k-val" style="font-size:17px;">${h.hekimSayisi}</div></div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="k-metric-card crimson-theme p-3">
-                                <div class="k-icon-wrap"><i class="bi bi-people-fill"></i></div>
-                                <div><div class="k-label">Günlük Poliklinik</div><div class="k-val" style="font-size:17px;">${h.gunlukPoliklinik}</div></div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="col-lg-7">
+                <div class="row g-2 mb-3">
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-hospital"></i></div><div><div class="k-label">Yatak Sayısı</div><div class="k-val">${h.yatakSayisi}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-door-open-fill"></i></div><div><div class="k-label">Poliklinik Oda</div><div class="k-val">${h.poliklinikOda}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-scissors"></i></div><div><div class="k-label">Ameliyathane</div><div class="k-val">${h.ameliyathane}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-heart-pulse-fill"></i></div><div><div class="k-label">Yoğun Bakım</div><div class="k-val">${h.yogunBakimYatak}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-gender-female"></i></div><div><div class="k-label">TDL Salonu</div><div class="k-val">${h.sdlSalon}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-bandaid-fill"></i></div><div><div class="k-label">Palyatif Yatak</div><div class="k-val">${h.palyatif}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-fire"></i></div><div><div class="k-label">Yanık Yatak</div><div class="k-val">${h.yanikYatak}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-heart-fill"></i></div><div><div class="k-label">Kalp Merkezi</div><div class="k-val" style="font-size:16px;">${h.kalpMerkezi}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-droplet-fill"></i></div><div><div class="k-label">Diyaliz Cihaz</div><div class="k-val">${h.diyaliz}</div></div></div></div>
                 </div>
 
-                <div class="col-lg-7">
-                    <div class="row g-2 mb-3">
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-hospital"></i></div><div><div class="k-label">Yatak Sayısı</div><div class="k-val">${h.yatakSayisi}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-door-open-fill"></i></div><div><div class="k-label">Poliklinik Oda</div><div class="k-val">${h.poliklinikOda}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-scissors"></i></div><div><div class="k-label">Ameliyathane</div><div class="k-val">${h.ameliyathane}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-heart-pulse-fill"></i></div><div><div class="k-label">Yoğun Bakım</div><div class="k-val">${h.yogunBakimYatak}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-gender-female"></i></div><div><div class="k-label">SDL Salonu</div><div class="k-val">${h.sdlSalon}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-bandaid-fill"></i></div><div><div class="k-label">Palyatif Yatak</div><div class="k-val">${h.palyatif}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-fire"></i></div><div><div class="k-label">Yanık Yatak</div><div class="k-val">${h.yanikYatak}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-heart-fill"></i></div><div><div class="k-label">Kalp Merkezi</div><div class="k-val" style="font-size:16px;">${h.kalpMerkezi}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-droplet-fill"></i></div><div><div class="k-label">Diyaliz Cihaz</div><div class="k-val">${h.diyaliz}</div></div></div></div>
-                    </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-building-lock"></i></div><div><div class="k-label">Deprem İzolatörü</div><div class="k-val" style="font-size:15px;">${h.depremIzolator}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-radioactive"></i></div><div><div class="k-label">BT (Tomografi)</div><div class="k-val" style="font-size:13px;">${h.bt}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-magnet-fill"></i></div><div><div class="k-label">MR (Rezonans)</div><div class="k-val" style="font-size:13px;">${h.mr}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-radioactive"></i></div><div><div class="k-label">Radyasyon Onk.</div><div class="k-val" style="font-size:15px;">${h.radyasyonOnkoloji}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-capsule-pill"></i></div><div><div class="k-label">Nükleer Tıp</div><div class="k-val" style="font-size:15px;">${h.nukleerTip}</div></div></div></div>
+                    <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-emoji-smile-fill"></i></div><div><div class="k-label">Diş Ünit</div><div class="k-val">${h.disUnit}</div></div></div></div>
+                </div>
 
-                    <div class="row g-2 mb-3">
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-building-lock"></i></div><div><div class="k-label">Deprem İzolatörü</div><div class="k-val" style="font-size:15px;">${h.depremIzolator}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-radioactive"></i></div><div><div class="k-label">BT (Tomografi)</div><div class="k-val" style="font-size:13px;">${h.bt}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-magnet-fill"></i></div><div><div class="k-label">MR (Rezonans)</div><div class="k-val" style="font-size:13px;">${h.mr}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-radioactive"></i></div><div><div class="k-label">Radyasyon Onk.</div><div class="k-val" style="font-size:15px;">${h.radyasyonOnkoloji}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-capsule-pill"></i></div><div><div class="k-label">Nükleer Tıp</div><div class="k-val" style="font-size:15px;">${h.nukleerTip}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-emoji-smile-fill"></i></div><div><div class="k-label">Diş Ünit</div><div class="k-val">${h.disUnit}</div></div></div></div>
+                <div class="p-3 border rounded-3 bg-light shadow-sm">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-award-fill text-danger fs-5"></i>
+                        <span class="fw-bold text-dark small text-uppercase">Özellikli Sağlık Hizmetleri & İhtisas Merkezleri</span>
                     </div>
-
-                    <div class="p-3 border rounded-3 bg-light shadow-sm">
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <i class="bi bi-award-fill text-danger fs-5"></i>
-                            <span class="fw-bold text-dark small text-uppercase">Özellikli Sağlık Hizmetleri & İhtisas Merkezleri</span>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            ${services.map(s => `<span class="service-tag"><i class="bi bi-check-circle-fill"></i> ${s}</span>`).join('')}
-                        </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        ${services.map(s => `<span class="service-tag"><i class="bi bi-check-circle-fill"></i> ${s}</span>`).join('')}
                     </div>
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
-        document.getElementById('kunyeModalIcerik').innerHTML = html;
-        document.getElementById('kunyeModal').classList.add('active');
+    document.getElementById('kunyeModalIcerik').innerHTML = html;
+    document.getElementById('kunyeModal').classList.add('active');
 
-        // Street View iframe kaynağını hazırla
-        const streetFrame = document.getElementById('kunyeStreetFrame');
-        if (streetFrame) streetFrame.src = streetViewUrl;
+    // Street View frame
+    const streetFrame = document.getElementById('kunyeStreetFrame');
+    if (streetFrame) streetFrame.src = streetViewUrl;
 
-        setTimeout(() => {
-            if (kunyeLeafletMap) {
-                kunyeLeafletMap.remove();
-                kunyeLeafletMap = null;
-            }
-
-            // 1. Faz: Yüksek İrtifa Geniş Başlangıç (Zoom: 10.5)
-            kunyeLeafletMap = L.map('kunyeMap', { zoomControl: false }).setView([41.0082, 28.9784], 10.5);
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CartoDB & OpenStreetMap',
-                maxZoom: 19
-            }).addTo(kunyeLeafletMap);
-
-            const customIcon = L.divIcon({
-                className: 'custom-radar-icon',
-                html: '<div class="leaflet-radar-marker"></div>',
-                iconSize: [22, 22],
-                iconAnchor: [11, 11]
-            });
-
-            kunyeRadarMarker = L.marker([h.lat, h.lng], { icon: customIcon }).addTo(kunyeLeafletMap);
-
-            kunyeLeafletMap.invalidateSize();
-
-            // 2. Faz: Drone Dalışı (flyTo Zoom: 17.5)
-            setTimeout(() => {
-                kunyeLeafletMap.flyTo([h.lat, h.lng], 17.5, {
-                    duration: 2.5,
-                    easeLinearity: 0.25
-                });
-            }, 300);
-
-            // 3. Faz: Tam iniş anında (2.8 saniye sonra) 360° Street View'a Sinematik Erime / Fade Geçişi
-            setTimeout(() => {
-                window.switchKunyeView('street');
-            }, 2800);
-
-        }, 100);
-    };
-
-    window.kapatKunyeModal = () => {
-        document.getElementById('kunyeModal').classList.remove('active');
+    setTimeout(() => {
         if (kunyeLeafletMap) {
             kunyeLeafletMap.remove();
             kunyeLeafletMap = null;
         }
-    };
-    window.kunyeModalDisKlikKapat = (e) => {
-        if (e.target.id === 'kunyeModal') kapatKunyeModal();
-    };
+
+        kunyeLeafletMap = L.map('kunyeMap', { zoomControl: false }).setView([41.0082, 28.9784], 10.5);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CartoDB & OpenStreetMap',
+            maxZoom: 19
+        }).addTo(kunyeLeafletMap);
+
+        const customIcon = L.divIcon({
+            className: 'custom-radar-icon',
+            html: '<div class="leaflet-radar-marker"></div>',
+            iconSize: [22, 22],
+            iconAnchor: [11, 11]
+        });
+
+        kunyeRadarMarker = L.marker([h.lat, h.lng], { icon: customIcon }).addTo(kunyeLeafletMap);
+        kunyeLeafletMap.invalidateSize();
+
+        setTimeout(() => {
+            kunyeLeafletMap.flyTo([h.lat, h.lng], 17.5, {
+                duration: 2.5,
+                easeLinearity: 0.25
+            });
+        }, 300);
+
+        setTimeout(() => {
+            window.switchKunyeView('street');
+        }, 2800);
+
+    }, 100);
+};
+
+
+// ---------- 6. MODAL KAPATMA ----------
+window.kapatKunyeModal = function() {
+    document.getElementById('kunyeModal').classList.remove('active');
+    if (kunyeLeafletMap) {
+        kunyeLeafletMap.remove();
+        kunyeLeafletMap = null;
+    }
+};
+
+window.kunyeModalDisKlikKapat = function(e) {
+    if (e.target.id === 'kunyeModal') kapatKunyeModal();
+};
     // ---------- BAŞLATMA ----------
     (async function init() {
         const activeUser = sessionStorage.getItem('khhb_auth_user');
