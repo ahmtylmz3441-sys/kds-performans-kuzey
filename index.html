@@ -4678,7 +4678,6 @@ async function initHastaneKunyeDashboard() {
             return '-';
         };
 
-        // Başlık/özet satırlarını temizle
         const gecersizKelimeler = ['HASTANE ADI', 'KURUM ADI', 'TOPLAM', 'SIRA NO', 'GENEL', 'TESIS ADI', 'TEDAVİ OLAN'];
         const hastaneSatirlari = rows.slice(1).filter(row => {
             const ad = (row[0] || '').toString().trim();
@@ -4687,7 +4686,6 @@ async function initHastaneKunyeDashboard() {
             return !gecersizKelimeler.some(g => upAd === g || upAd.startsWith(g));
         });
 
-        // Özellikli hizmet anahtar kelimeleri (güncel)
         const bilinenHizmetler = [
             { kw: 'organnakli', label: 'Organ Nakli Merkezi' },
             { kw: 'inme', label: 'İnme Merkezi' },
@@ -4714,7 +4712,6 @@ async function initHastaneKunyeDashboard() {
             { kw: 'gebeokulu', label: 'Gebe Okulu' }
         ];
 
-        // Hastane verilerini işle
         hastaneKunyeListesi = hastaneSatirlari.map((row, idx) => {
             const kurumAdi = row[0]?.toString().trim() || ('Hastane #' + (idx + 1));
 
@@ -4762,8 +4759,17 @@ async function initHastaneKunyeDashboard() {
                 hekimGosterim = getField(row, ['toplamhekim', 'hekimsayisi', 'hekimler', 'hekim', 'tabip']);
             }
 
-            // ---- YOĞUN BAKIM (Aktif Filli BW) ----
-            const ybYatak = getField(row, ['yogunbakimyatak', 'yogunbakim', 'ybuyatak', 'toplamybu', 'toplamyb', 'ybu', '3seviyeyb', 'yogun'], 'BW');
+            // ---- YOĞUN BAKIM (Tescilli BV / Filli BW) ----
+            const ybTescilli = getField(row, ['yogunbakimtescilli', 'ybu_tescilli', 'yogunbakim'], 'BV');
+            const ybFiili = getField(row, ['yogunbakimfiili', 'ybu_fiili', 'yogunbakim'], 'BW');
+            let ybMetni = '-';
+            if (ybTescilli !== '-' && ybFiili !== '-') {
+                ybMetni = ybTescilli + ' / ' + ybFiili;
+            } else if (ybFiili !== '-') {
+                ybMetni = ybFiili;
+            } else if (ybTescilli !== '-') {
+                ybMetni = ybTescilli;
+            }
 
             // ---- PALYATİF (Tescilli CP / Fiili CQ) ----
             const palyatifTescilli = getField(row, ['palyatifyataktescilli', 'palyatif_tescilli', 'palyatif'], 'CP');
@@ -4780,10 +4786,12 @@ async function initHastaneKunyeDashboard() {
             // ---- TDL / SDL SALONU (AW) ----
             const sdlVal = getField(row, ['sdlsalon', 'dogumsalon', 'sdlsayisi', 'sdl', 'travay', 'dogum', 'tdl'], 'AW');
             
-            // ---- DİĞER SÜTUNLAR (DOĞRU HARFLER) ----
-            const yanikVal = getField(row, ['yanikyatak', 'yanikunite', 'yaniktedavi', 'yanik'], 'DE');
+            // ---- DİĞER (DOĞRU SÜTUN HARFLERİ) ----
+            const yanikVal = getField(row, ['yanikyatak', 'yanikunite', 'yaniktedavi', 'yanik'], 'DE');   // Yanık Yatak Sayısı
             const diyalizVal = getField(row, ['diyalizcihaz', 'diyalizunite', 'hemodiyaliz', 'diyaliz'], 'CX');
             const disVal = getField(row, ['disunite', 'disunit', 'unitdis', 'dis'], 'CS');
+
+            // Onkoloji & Nükleer Tıp & Kalp & Deprem
             const radOnk = getField(row, ['radyasyononkoloji', 'radyasyon', 'linac', 'onkoloji']);
             const nukTip = getField(row, ['nukleertip', 'nukleer', 'petct', 'spect']);
             const kalpVal = getField(row, ['kalpmerkezi', 'kvc', 'kalp', 'anjiyo']);
@@ -4822,19 +4830,19 @@ async function initHastaneKunyeDashboard() {
                 kapaliOtopark: getField(row, ['kapaliotopark', 'kapaliarac', 'kapalioto']),
                 acikOtopark: getField(row, ['acikotopark', 'acikarac', 'acikoto']),
                 hekimSayisi: hekimGosterim,
-                gunlukPoliklinik: getField(row, ['gunlukpoliklinik', 'gunlukmuayene', 'gunlukbasvuru', 'muayenesayisi'], 'CV'),
+                gunlukPoliklinik: getField(row, ['gunlukpoliklinik', 'gunlukmuayene', 'gunlukbasvuru', 'muayenesayisi'], 'CV'), // Günlük Toplam Poliklinik Sayısı
                 yatakSayisi: yatakMetni,
-                poliklinikOda: getField(row, ['poliklinikoda', 'aktifpoliklinik', 'odasayisi', 'polikliniksayisi'], 'CW'),
-                ameliyathane: getField(row, ['ameliyathaneoda', 'ameliyathane', 'ameliyathanemasasi'], 'DH'),
-                yogunBakimYatak: ybYatak,
-                sdlSalon: sdlVal,
-                palyatif: palyatifMetni,
+                poliklinikOda: getField(row, ['poliklinikoda', 'aktifpoliklinik', 'odasayisi', 'polikliniksayisi'], 'CW'), // Poliklinik Oda Sayısı (DOĞRU)
+                ameliyathane: getField(row, ['ameliyathaneoda', 'ameliyathane', 'ameliyathanemasasi'], 'DH'), // Ameliyathane Masa Sayısı
+                yogunBakimYatak: ybMetni, // Tescilli / Fiili (BV / BW)
+                sdlSalon: sdlVal, // TDL Odası (AW)
+                palyatif: palyatifMetni, // Tescilli / Fiili (CP / CQ)
                 yanikYatak: yanikVal,
                 kalpMerkezi: kalpVal,
                 diyaliz: diyalizVal,
                 depremIzolator: depremVal,
-                bt: getField(row, ['bilgisayarlitomografi', 'tomografi', 'btcihaz', 'bt'], 'DF'),
-                mr: getField(row, ['manyetikrezonans', 'mrcihaz', 'mr'], 'DG'),
+                bt: getField(row, ['bilgisayarlitomografi', 'tomografi', 'btcihaz', 'bt'], 'DF'), // BT Cihaz Sayısı
+                mr: getField(row, ['manyetikrezonans', 'mrcihaz', 'mr'], 'DG'), // MR Cihaz Sayısı
                 radyasyonOnkoloji: radOnk,
                 nukleerTip: nukTip,
                 disUnit: disVal,
@@ -4844,7 +4852,6 @@ async function initHastaneKunyeDashboard() {
             };
         });
 
-        // Kartları çiz (BURADA FONKSİYON TANIMLI OLMAZSA HATA ALIRSIN – aşağıda tanımlı)
         renderHastaneKunyeGrid(hastaneKunyeListesi);
         
     } catch(err) {
