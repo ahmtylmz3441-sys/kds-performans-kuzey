@@ -524,11 +524,11 @@
 /* HASTANE KÜNYE & SİNEMATİK İNFOGRAFİK POPUP STİLLERİ           */
 /* ============================================================= */
 .kunye-modal-container {
-    width: 1300px !important;
-    max-width: 96% !important;
+    width: 1520px !important;
+    max-width: 97% !important;
     max-height: 94vh !important;
     background: #ffffff !important;
-    padding: 28px 36px !important;
+    padding: 26px 34px !important;
     border-radius: 24px !important;
     box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35) !important;
     border: 1px solid rgba(226, 232, 240, 0.8) !important;
@@ -4620,7 +4620,7 @@ function getMhrsRowMetrics(item, type) {
     };
 
 // =========================================================================
-    // HASTANE KÜNYE & SÜTUN HARİTASI TAM EŞLEŞTİRME MOTORU (A -> DS)
+    // HASTANE KÜNYE & 20 KARTLI OPERASYONEL YÖNETİCİ MOTORU
     // =========================================================================
     let hastaneKunyeListesi = [];
     let kunyeLeafletMap = null;
@@ -4645,7 +4645,6 @@ function getMhrsRowMetrics(item, type) {
                 return;
             }
 
-            // Sütun harfini doğrudan dizi indeksine çevirir (örn: 'A' -> 0, 'BR' -> 69, 'DJ' -> 113)
             const colToIdx = (colStr) => {
                 if (!colStr) return -1;
                 let c = 0;
@@ -4654,7 +4653,6 @@ function getMhrsRowMetrics(item, type) {
                 return c - 1;
             };
 
-            // Güvenli Sütun Değeri Okuyucu
             const getCol = (row, colStr) => {
                 const idx = colToIdx(colStr);
                 if (idx === -1 || row[idx] === undefined || row[idx] === null) return '-';
@@ -4662,15 +4660,19 @@ function getMhrsRowMetrics(item, type) {
                 return (val === '' || val === 'null' || val === 'undefined') ? '-' : val;
             };
 
-            // Sayı Formatlayıcı (Binlik basamaklar için)
-            const formatNumStr = (val) => {
-                if (!val || val === '-') return '-';
+            const parseNum = (val) => {
+                if (!val || val === '-') return 0;
                 const clean = val.toString().replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, '');
                 const num = parseFloat(clean);
-                return isNaN(num) ? val : Math.round(num).toLocaleString('tr-TR');
+                return isNaN(num) ? 0 : num;
             };
 
-            // Başlık veya özet satırlarını ele (13 Gerçek Hastaneyi Al)
+            const formatNumStr = (val) => {
+                if (!val || val === '-') return '-';
+                const num = parseNum(val);
+                return num === 0 ? (val === '0' ? '0' : '-') : Math.round(num).toLocaleString('tr-TR');
+            };
+
             const gecersizKelimeler = ['HASTANE ADI', 'KURUM ADI', 'TOPLAM', 'SIRA NO', 'GENEL', 'TESİS ADI', 'TEDAVİ OLAN'];
             const hastaneSatirlari = rows.slice(1).filter(row => {
                 const ad = (row[0] || '').toString().trim();
@@ -4679,7 +4681,6 @@ function getMhrsRowMetrics(item, type) {
                 return !gecersizKelimeler.some(g => upAd === g || upAd.startsWith(g));
             });
 
-            // 13 Hastaneyi Birebir Sütun Listesine Göre Eşle
             hastaneKunyeListesi = hastaneSatirlari.map((row, idx) => {
                 const kurumAdi = getCol(row, 'A');
 
@@ -4696,60 +4697,169 @@ function getMhrsRowMetrics(item, type) {
                     lng = 29.0292;
                 }
 
-                // BR (Tescilli) / BS (Fiili Yatak)
+                // 1. Yatak (BR / BS)
                 const yatakTescil = getCol(row, 'BR');
                 const yatakFiili = getCol(row, 'BS');
                 let yatakGosterim = '-';
                 if (yatakTescil !== '-' && yatakFiili !== '-') yatakGosterim = `${formatNumStr(yatakTescil)} / ${formatNumStr(yatakFiili)}`;
                 else if (yatakFiili !== '-') yatakGosterim = formatNumStr(yatakFiili);
-                else if (yatakTescil !== '-') yatakGosterim = formatNumStr(yatakTescil);
 
-                // BL (Uzman) / BM (Klinisyen Hekim)
+                // 2. Poliklinik Oda (CW)
+                const poliOda = getCol(row, 'CW');
+                const poliOdaNum = parseNum(poliOda);
+
+                // 3. Ameliyathane Masa (DJ)
+                const ameliyatMasa = getCol(row, 'DJ');
+                const ameliyatMasaNum = parseNum(ameliyatMasa);
+
+                // 4. Nitelikli Cerrahi A+B+C (DK+DL+DM) ve Oranı
+                const aGrp = parseNum(getCol(row, 'DK'));
+                const bGrp = parseNum(getCol(row, 'DL'));
+                const cGrp = parseNum(getCol(row, 'DM'));
+                const abcToplam = aGrp + bGrp + cGrp;
+                const toplamAmeliyatNum = parseNum(getCol(row, 'DS'));
+                let nitelikliGosterim = '-';
+                if (abcToplam > 0 && toplamAmeliyatNum > 0) {
+                    const oran = ((abcToplam / toplamAmeliyatNum) * 100).toFixed(0);
+                    nitelikliGosterim = `${abcToplam.toLocaleString('tr-TR')} (%${oran})`;
+                } else if (abcToplam > 0) {
+                    nitelikliGosterim = abcToplam.toLocaleString('tr-TR');
+                }
+
+                // 5. Yoğun Bakım (BW / BX)
+                const ybTescil = getCol(row, 'BW');
+                const ybFiili = getCol(row, 'BX');
+                let ybGosterim = '-';
+                if (ybTescil !== '-' && ybFiili !== '-') ybGosterim = `${formatNumStr(ybTescil)} / ${formatNumStr(ybFiili)}`;
+                else if (ybFiili !== '-') ybGosterim = formatNumStr(ybFiili);
+
+                // 6. 3. Seviye Erişkin YBÜ (CC Yatak / CD Doluluk %)
+                const yb3Yatak = getCol(row, 'CC');
+                const yb3Doluluk = getCol(row, 'CD');
+                let yb3Gosterim = '-';
+                if (yb3Yatak !== '-' && yb3Doluluk !== '-') {
+                    const dolulukVal = parseNum(yb3Doluluk) <= 1 ? (parseNum(yb3Doluluk)*100).toFixed(0) : parseNum(yb3Doluluk).toFixed(0);
+                    yb3Gosterim = `${formatNumStr(yb3Yatak)} (%${dolulukVal})`;
+                } else if (yb3Yatak !== '-') {
+                    yb3Gosterim = `${formatNumStr(yb3Yatak)} Yatak`;
+                }
+
+                // 7. Günlük Ortalama Ameliyat (Toplam Ameliyat DS / 22 İş Günü)
+                let gunlukAmeliyatGosterim = '-';
+                if (toplamAmeliyatNum > 0) {
+                    const gunlukAmeliyat = Math.round(toplamAmeliyatNum / 22);
+                    gunlukAmeliyatGosterim = `${gunlukAmeliyat.toLocaleString('tr-TR')} / Gün`;
+                }
+
+                // 8. Masa Başına Düşen Ameliyat (DS / DJ)
+                let masaBasinaGosterim = '-';
+                if (toplamAmeliyatNum > 0 && ameliyatMasaNum > 0) {
+                    const masaBasina = Math.round(toplamAmeliyatNum / ameliyatMasaNum);
+                    masaBasinaGosterim = `${masaBasina.toLocaleString('tr-TR')} Ameliyat`;
+                }
+
+                // 9. Palyatif (CQ / CR)
+                const palyatifTescil = getCol(row, 'CQ');
+                const palyatifFiili = getCol(row, 'CR');
+                let palyatifGosterim = '-';
+                if (palyatifTescil !== '-' && palyatifFiili !== '-') palyatifGosterim = `${formatNumStr(palyatifTescil)} / ${formatNumStr(palyatifFiili)}`;
+                else if (palyatifFiili !== '-') palyatifGosterim = formatNumStr(palyatifFiili);
+
+                // 10. Klinik Yatak Doluluk Oranı (BV)
+                const yatakDolulukRaw = getCol(row, 'BV');
+                let dolulukGosterim = '-';
+                if (yatakDolulukRaw !== '-') {
+                    const dNum = parseNum(yatakDolulukRaw);
+                    dolulukGosterim = dNum <= 1 ? `%${(dNum * 100).toFixed(1)}` : `%${dNum.toFixed(1)}`;
+                }
+
+                // 11. Toplam Acil Başvuru (CY + CZ + DA)
+                const acilEriskin = parseNum(getCol(row, 'CY'));
+                const acilCocuk = parseNum(getCol(row, 'CZ'));
+                const acilKadin = parseNum(getCol(row, 'DA'));
+                const toplamAcil = acilEriskin + acilCocuk + acilKadin;
+                const acilGosterim = toplamAcil > 0 ? toplamAcil.toLocaleString('tr-TR') : '-';
+
+                // 12. Acil Müşahede Yatak (DB + DC + DD)
+                const musahedeEriskin = parseNum(getCol(row, 'DB'));
+                const musahedeCocuk = parseNum(getCol(row, 'DC'));
+                const musahedeKadin = parseNum(getCol(row, 'DD'));
+                const toplamMusahede = musahedeEriskin + musahedeCocuk + musahedeKadin;
+                const musahedeGosterim = toplamMusahede > 0 ? `${toplamMusahede} Yatak` : '-';
+
+                // 13. Günlük Poliklinik (MHRS / Ayaktan Dağılımı: CT / CU)
+                const mhrsGunluk = parseNum(getCol(row, 'CT'));
+                const ayaktanGunluk = parseNum(getCol(row, 'CU'));
+                const gunlukPoliNum = parseNum(getCol(row, 'CV'));
+                let poliDagitimGosterim = '-';
+                if (mhrsGunluk > 0 && gunlukPoliNum > 0) {
+                    const mhrsOran = ((mhrsGunluk / gunlukPoliNum) * 100).toFixed(0);
+                    poliDagitimGosterim = `${mhrsGunluk.toLocaleString('tr-TR')} (%${mhrsOran} MHRS)`;
+                } else if (mhrsGunluk > 0 && ayaktanGunluk > 0) {
+                    poliDagitimGosterim = `${mhrsGunluk.toLocaleString('tr-TR')} / ${ayaktanGunluk.toLocaleString('tr-TR')}`;
+                } else if (gunlukPoliNum > 0) {
+                    poliDagitimGosterim = gunlukPoliNum.toLocaleString('tr-TR');
+                }
+
+                // 14. Oda Başına Günlük Hasta (CV / CW)
+                let odaBasinaGosterim = '-';
+                if (gunlukPoliNum > 0 && poliOdaNum > 0) {
+                    const hastaOda = Math.round(gunlukPoliNum / poliOdaNum);
+                    odaBasinaGosterim = `${hastaOda} Hasta / Oda`;
+                }
+
+                // 15. BT (DF / DG)
+                const btAdet = getCol(row, 'DF');
+                const btDetay = getCol(row, 'DG');
+                let btGosterim = '-';
+                if (btAdet !== '-' && btDetay !== '-') btGosterim = `${btAdet} Adet (${btDetay})`;
+                else if (btAdet !== '-') btGosterim = `${btAdet} Adet`;
+
+                // 16. MR (DH / DI)
+                const mrAdet = getCol(row, 'DH');
+                const mrDetay = getCol(row, 'DI');
+                let mrGosterim = '-';
+                if (mrAdet !== '-' && mrDetay !== '-') mrGosterim = `${mrAdet} Adet (${mrDetay})`;
+                else if (mrAdet !== '-') mrGosterim = `${mrAdet} Adet`;
+
+                // 17. Diyaliz Cihaz (CX)
+                const diyalizCihaz = getCol(row, 'CX');
+
+                // 18. Primer Sezaryen Oranı (AZ)
+                const sezaryenRaw = getCol(row, 'AZ');
+                let sezaryenGosterim = '-';
+                if (sezaryenRaw !== '-') {
+                    const sNum = parseNum(sezaryenRaw);
+                    sezaryenGosterim = sNum <= 1 && sNum > 0 ? `%${(sNum * 100).toFixed(1)}` : `%${sNum.toFixed(1)}`;
+                }
+
+                // 19. Hemşire & Ebe Gücü (BN Hemşire / BO Ebe)
+                const hemsireSayi = getCol(row, 'BN');
+                const ebeSayi = getCol(row, 'BO');
+                let hemsireEbeGosterim = '-';
+                if (hemsireSayi !== '-' && ebeSayi !== '-') hemsireEbeGosterim = `${formatNumStr(hemsireSayi)} / ${formatNumStr(ebeSayi)}`;
+                else if (hemsireSayi !== '-') hemsireEbeGosterim = formatNumStr(hemsireSayi);
+
+                // 20. Günübirlik Cerrahi Sayısı (DP + DQ + DR)
+                const gunubirlikD = parseNum(getCol(row, 'DP'));
+                const gunubirlikE = parseNum(getCol(row, 'DQ'));
+                const gunubirlikABC = parseNum(getCol(row, 'DR'));
+                const toplamGunubirlik = gunubirlikD + gunubirlikE + gunubirlikABC;
+                const gunubirlikGosterim = toplamGunubirlik > 0 ? `${toplamGunubirlik.toLocaleString('tr-TR')} Ameliyat` : '-';
+
+                // Hekim Sayısı (BL / BM)
                 const hekimUzman = getCol(row, 'BL');
                 const hekimKlinisyen = getCol(row, 'BM');
                 let hekimGosterim = '-';
                 if (hekimUzman !== '-' && hekimKlinisyen !== '-') hekimGosterim = `${formatNumStr(hekimUzman)} / ${formatNumStr(hekimKlinisyen)}`;
                 else if (hekimUzman !== '-') hekimGosterim = formatNumStr(hekimUzman);
 
-                // BW (Yoğun Bakım Tescilli) / BX (Yoğun Bakım Fiili)
-                const ybTescil = getCol(row, 'BW');
-                const ybFiili = getCol(row, 'BX');
-                let ybGosterim = '-';
-                if (ybTescil !== '-' && ybFiili !== '-') ybGosterim = `${formatNumStr(ybTescil)} / ${formatNumStr(ybFiili)}`;
-                else if (ybFiili !== '-') ybGosterim = formatNumStr(ybFiili);
-                else if (ybTescil !== '-') ybGosterim = formatNumStr(ybTescil);
-
-                // CQ (Palyatif Tescilli) / CR (Palyatif Fiili)
-                const palyatifTescil = getCol(row, 'CQ');
-                const palyatifFiili = getCol(row, 'CR');
-                let palyatifGosterim = '-';
-                if (palyatifTescil !== '-' && palyatifFiili !== '-') palyatifGosterim = `${formatNumStr(palyatifTescil)} / ${formatNumStr(palyatifFiili)}`;
-                else if (palyatifFiili !== '-') palyatifGosterim = formatNumStr(palyatifFiili);
-                else if (palyatifTescil !== '-') palyatifGosterim = formatNumStr(palyatifTescil);
-
-                // DF (BT Adet) + DG (BT Detay)
-                const btAdet = getCol(row, 'DF');
-                const btDetay = getCol(row, 'DG');
-                let btGosterim = '-';
-                if (btAdet !== '-' && btDetay !== '-') btGosterim = `${btAdet} Adet (${btDetay})`;
-                else if (btAdet !== '-') btGosterim = `${btAdet} Adet`;
-                else if (btDetay !== '-') btGosterim = btDetay;
-
-                // DH (MR Adet) + DI (MR Detay)
-                const mrAdet = getCol(row, 'DH');
-                const mrDetay = getCol(row, 'DI');
-                let mrGosterim = '-';
-                if (mrAdet !== '-' && mrDetay !== '-') mrGosterim = `${mrAdet} Adet (${mrDetay})`;
-                else if (mrAdet !== '-') mrGosterim = `${mrAdet} Adet`;
-                else if (mrDetay !== '-') mrGosterim = mrDetay;
-
-                // N Sütunu: Özellikli Hizmetler
+                // Özellikli Hizmetler (N)
                 let aktifHizmetler = [];
                 const ozellikliMetin = getCol(row, 'N');
                 if (ozellikliMetin !== '-' && ozellikliMetin.length > 3) {
                     aktifHizmetler = ozellikliMetin.split(/[,;\n\r\-•]+/).map(s => s.trim()).filter(Boolean);
                 } else {
-                    // Sütun bazlı kontroller (O - AW arası)
                     if (getCol(row, 'O') !== '-' && getCol(row, 'O').toUpperCase() !== 'YOK') aktifHizmetler.push('Kalp Merkezi');
                     if (getCol(row, 'Q') !== '-' && getCol(row, 'Q').toUpperCase() !== 'YOK') aktifHizmetler.push('Yanık Ünitesi');
                     if (getCol(row, 'S') !== '-' && getCol(row, 'S').toUpperCase() !== 'YOK') aktifHizmetler.push('Hiperbarik Oksijen Merkezi');
@@ -4763,9 +4873,18 @@ function getMhrsRowMetrics(item, type) {
                     if (getCol(row, 'AW') !== '-' && getCol(row, 'AW').toUpperCase() !== 'YOK') aktifHizmetler.push('Terapötik Aferez Merkezi');
                     if (getCol(row, 'BJ') !== '-' && getCol(row, 'BJ').toUpperCase() !== 'YOK') aktifHizmetler.push('Üremeye Yardımcı Tedavi M. (Tüp Bebek)');
                 }
-
                 if (aktifHizmetler.length === 0) {
                     aktifHizmetler = ['Acil Sağlık Hizmetleri', 'Yoğun Bakım Hizmetleri', 'Diyaliz Ünitesi', 'Görüntüleme Hizmetleri'];
+                }
+
+                // DT: Google Drive Dış Cephe Fotoğrafı
+                const rawLink = getCol(row, 'DT');
+                let fotoUrl = 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop';
+                if (rawLink && rawLink !== '-' && rawLink.includes('drive.google.com')) {
+                    const match = rawLink.match(/\/d\/([a-zA-Z0-9_-]+)/) || rawLink.match(/id=([a-zA-Z0-9_-]+)/);
+                    if (match && match[1]) fotoUrl = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1200`;
+                } else if (rawLink && rawLink !== '-') {
+                    fotoUrl = rawLink;
                 }
 
                 return {
@@ -4773,37 +4892,38 @@ function getMhrsRowMetrics(item, type) {
                     hastaneAdi: kurumAdi,
                     rol: getCol(row, 'F'),
                     nufus: formatNumStr(getCol(row, 'E')),
-                    foto: (() => {
-    const rawLink = getCol(row, 'DT');
-    if (rawLink && rawLink !== '-' && rawLink.includes('drive.google.com')) {
-        const match = rawLink.match(/\/d\/([a-zA-Z0-9_-]+)/) || rawLink.match(/id=([a-zA-Z0-9_-]+)/);
-        if (match && match[1]) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1200`;
-    }
-    return (rawLink && rawLink !== '-') ? rawLink : 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop';
-})(),
+                    foto: fotoUrl,
                     arsaAlani: formatNumStr(getCol(row, 'G')),
                     binaOturum: formatNumStr(getCol(row, 'H')),
                     kapaliAlan: formatNumStr(getCol(row, 'I')),
                     hizmetYili: getCol(row, 'C'),
                     kapaliOtopark: formatNumStr(getCol(row, 'J')),
                     acikOtopark: formatNumStr(getCol(row, 'K')),
-                    radyasyonOnkoloji: getCol(row, 'L'),
-                    nukleerTip: getCol(row, 'M'),
-                    kalpMerkezi: getCol(row, 'O'),
-                    sdlSalon: getCol(row, 'AX'), // Doğum Hizmetleri (TDL Odası)
-                    hekimSayisi: hekimGosterim, // BL / BM
-                    yatakSayisi: yatakGosterim, // BR / BS
-                    yogunBakimYatak: ybGosterim, // BW / BX
-                    palyatif: palyatifGosterim, // CQ / CR
-                    disUnit: formatNumStr(getCol(row, 'CS')),
-                    gunlukPoliklinik: formatNumStr(getCol(row, 'CV')), // Günlük Toplam Poliklinik Sayısı
-                    poliklinikOda: formatNumStr(getCol(row, 'CW')), // Poliklinik Oda Sayısı
-                    diyaliz: getCol(row, 'CX'), // Diyaliz Cihaz Sayısı
-                    yanikYatak: getCol(row, 'DE'), // Yanık Yatak Sayısı
-                    bt: btGosterim, // DF + DG
-                    mr: mrGosterim, // DH + DI
-                    ameliyathane: formatNumStr(getCol(row, 'DJ')), // Ameliyathane Masa Sayısı
-                    depremIzolator: getCol(row, 'D'),
+                    hekimSayisi: hekimGosterim,
+                    gunlukPoliklinik: formatNumStr(getCol(row, 'CV')),
+                    
+                    // 20 Kırmızı Kutu
+                    yatakSayisi: yatakGosterim,             // 1
+                    poliklinikOda: formatNumStr(poliOda),   // 2
+                    ameliyathane: formatNumStr(ameliyatMasa), // 3
+                    nitelikliCerrahi: nitelikliGosterim,    // 4
+                    yogunBakimYatak: ybGosterim,           // 5
+                    yb3Seviye: yb3Gosterim,                 // 6 (YENİ)
+                    gunlukAmeliyat: gunlukAmeliyatGosterim, // 7
+                    masaBasinaAmeliyat: masaBasinaGosterim, // 8
+                    palyatif: palyatifGosterim,             // 9
+                    yatakDoluluk: dolulukGosterim,          // 10
+                    toplamAcil: acilGosterim,               // 11
+                    acilMusahede: musahedeGosterim,         // 12
+                    poliklinikDagitim: poliDagitimGosterim, // 13 (YENİ)
+                    odaBasinaHasta: odaBasinaGosterim,      // 14
+                    bt: btGosterim,                         // 15
+                    mr: mrGosterim,                         // 16
+                    diyaliz: diyalizCihaz,                  // 17
+                    primerSezaryen: sezaryenGosterim,       // 18 (YENİ)
+                    hemsireEbe: hemsireEbeGosterim,         // 19 (YENİ)
+                    gunubirlikCerrahi: gunubirlikGosterim,  // 20 (YENİ)
+                    
                     ozellikliHizmetler: aktifHizmetler.join(', '),
                     lat: lat,
                     lng: lng
@@ -4818,86 +4938,78 @@ function getMhrsRowMetrics(item, type) {
         }
     }
 
+    function renderHastaneKunyeGrid(list) {
+        const container = document.getElementById('kunyeGridContainer');
+        if (!container) return;
+        
+        if (list.length === 0) {
+            container.innerHTML = '<div class="col-12 text-center text-muted py-5">Aradığınız kriterlere uygun hastane bulunamadı.</div>';
+            return;
+        }
 
-// ---------- 2. KARTLARI ÇİZEN FONKSİYON ----------
-function renderHastaneKunyeGrid(list) {
-    const container = document.getElementById('kunyeGridContainer');
-    if (!container) return;
-    
-    if (list.length === 0) {
-        container.innerHTML = '<div class="col-12 text-center text-muted py-5">Aradığınız kriterlere uygun hastane bulunamadı.</div>';
-        return;
-    }
-
-    container.innerHTML = list.map(h => `
-        <div class="col-md-4 col-sm-6">
-            <div class="kunye-hospital-card" onclick="window.acHastaneKunyeModal(${h.id})">
-                <div class="card-img-wrapper">
-                    <img src="${h.foto}" alt="${h.hastaneAdi}" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop'">
-                    <span class="kunye-role-badge"><i class="bi bi-star-fill text-warning me-1"></i> ${h.rol} Rolü</span>
-                </div>
-                <div class="p-3">
-                    <h6 class="fw-bold mb-1 text-dark text-truncate" title="${h.hastaneAdi}">${h.hastaneAdi}</h6>
-                    <div class="text-muted small mb-3"><i class="bi bi-geo-alt-fill text-danger me-1"></i> İlçe Nüfusu: ${h.nufus}</div>
-                    
-                    <div class="row g-2 text-center pt-2 border-top">
-                        <div class="col-4">
-                            <div class="text-secondary small" style="font-size:10px; font-weight:700;">YATAK</div>
-                            <div class="fw-bold text-dark fs-6">${h.yatakSayisi}</div>
-                        </div>
-                        <div class="col-4 border-start border-end">
-                            <div class="text-secondary small" style="font-size:10px; font-weight:700;">YBÜ YATAK</div>
-                            <div class="fw-bold text-danger fs-6">${h.yogunBakimYatak}</div>
-                        </div>
-                        <div class="col-4">
-                            <div class="text-secondary small" style="font-size:10px; font-weight:700;">POLİKLİNİK</div>
-                            <div class="fw-bold text-primary fs-6">${h.poliklinikOda}</div>
-                        </div>
+        container.innerHTML = list.map(h => `
+            <div class="col-md-4 col-sm-6">
+                <div class="kunye-hospital-card" onclick="window.acHastaneKunyeModal(${h.id})">
+                    <div class="card-img-wrapper">
+                        <img src="${h.foto}" alt="${h.hastaneAdi}" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop'">
+                        <span class="kunye-role-badge"><i class="bi bi-star-fill text-warning me-1"></i> ${h.rol} Rolü</span>
                     </div>
+                    <div class="p-3">
+                        <h6 class="fw-bold mb-1 text-dark text-truncate" title="${h.hastaneAdi}">${h.hastaneAdi}</h6>
+                        <div class="text-muted small mb-3"><i class="bi bi-geo-alt-fill text-danger me-1"></i> İlçe Nüfusu: ${h.nufus}</div>
+                        
+                        <div class="row g-2 text-center pt-2 border-top">
+                            <div class="col-4">
+                                <div class="text-secondary small" style="font-size:10px; font-weight:700;">YATAK (T/F)</div>
+                                <div class="fw-bold text-dark fs-6" style="font-size:13px !important;">${h.yatakSayisi}</div>
+                            </div>
+                            <div class="col-4 border-start border-end">
+                                <div class="text-secondary small" style="font-size:10px; font-weight:700;">YBÜ YATAK</div>
+                                <div class="fw-bold text-danger fs-6">${h.yogunBakimYatak}</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-secondary small" style="font-size:10px; font-weight:700;">POLİKLİNİK</div>
+                                <div class="fw-bold text-primary fs-6">${h.poliklinikOda}</div>
+                            </div>
+                        </div>
 
-                    <button class="btn btn-sm btn-outline-danger w-100 mt-3 fw-bold" style="border-radius:10px;">
-                        <i class="bi bi-eye-fill me-1"></i> Detaylı Künyeyi Aç
-                    </button>
+                        <button class="btn btn-sm btn-outline-danger w-100 mt-3 fw-bold" style="border-radius:10px;">
+                            <i class="bi bi-eye-fill me-1"></i> Detaylı Künyeyi Aç
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    `).join('');
-}
-
-
-// ---------- 3. FİLTRELEME FONKSİYONU ----------
-window.filtreleKunyeKartlari = function() {
-    const query = document.getElementById('kunyeAramaInput')?.value.toLowerCase().trim() || '';
-    const filtered = hastaneKunyeListesi.filter(h => 
-        h.hastaneAdi.toLowerCase().includes(query) || 
-        h.rol.toLowerCase().includes(query)
-    );
-    renderHastaneKunyeGrid(filtered);
-};
-
-
-// ---------- 4. HARİTA / STREET VIEW GEÇİŞ ----------
-window.switchKunyeView = function(mode) {
-    const stage = document.getElementById('kunyeMapStage');
-    const btnMap = document.getElementById('btnViewMap');
-    const btnStreet = document.getElementById('btnViewStreet');
-    if (!stage) return;
-    
-    if (mode === 'street') {
-        stage.classList.add('street-active');
-        btnStreet?.classList.add('active');
-        btnMap?.classList.remove('active');
-    } else {
-        stage.classList.remove('street-active');
-        btnMap?.classList.add('active');
-        btnStreet?.classList.remove('active');
-        if (kunyeLeafletMap) kunyeLeafletMap.invalidateSize();
+        `).join('');
     }
-};
 
+    window.filtreleKunyeKartlari = function() {
+        const query = document.getElementById('kunyeAramaInput')?.value.toLowerCase().trim() || '';
+        const filtered = hastaneKunyeListesi.filter(h => 
+            h.hastaneAdi.toLowerCase().includes(query) || 
+            h.rol.toLowerCase().includes(query)
+        );
+        renderHastaneKunyeGrid(filtered);
+    };
 
-// ---------- 5. DETAY MODALINI AÇMA ----------
-window.acHastaneKunyeModal = function(id) {
+    window.switchKunyeView = function(mode) {
+        const stage = document.getElementById('kunyeMapStage');
+        const btnMap = document.getElementById('btnViewMap');
+        const btnStreet = document.getElementById('btnViewStreet');
+        if (!stage) return;
+        
+        if (mode === 'street') {
+            stage.classList.add('street-active');
+            btnStreet?.classList.add('active');
+            btnMap?.classList.remove('active');
+        } else {
+            stage.classList.remove('street-active');
+            btnMap?.classList.add('active');
+            btnStreet?.classList.remove('active');
+            if (kunyeLeafletMap) kunyeLeafletMap.invalidateSize();
+        }
+    };
+
+    window.acHastaneKunyeModal = function(id) {
         const h = hastaneKunyeListesi.find(item => item.id === id);
         if (!h) return;
 
@@ -4921,13 +5033,13 @@ window.acHastaneKunyeModal = function(id) {
             </div>
 
             <div class="row g-4">
-                <div class="col-lg-5">
-                    <!-- Sinematik Harita & 360 Street View Katmanı -->
+                <!-- Sol Kolon: Harita, Fotoğraf ve Fiziki Alanlar -->
+                <div class="col-lg-4">
                     <div class="mb-3 position-relative">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="small fw-bold text-secondary text-uppercase" style="font-size:10px;"><i class="bi bi-camera-video-fill text-danger me-1"></i> Harita & 360° Sokak Görünümü</span>
                             <a href="https://www.google.com/maps/search/?api=1&query=${h.lat},${h.lng}" target="_blank" class="small text-decoration-none fw-semibold text-primary" style="font-size:10px;">
-                                <i class="bi bi-box-arrow-up-right"></i> Haritalarda Aç
+                                <i class="bi bi-box-arrow-up-right"></i> Haritada Aç
                             </a>
                         </div>
                         
@@ -4941,60 +5053,73 @@ window.acHastaneKunyeModal = function(id) {
                         </div>
                     </div>
 
-                    <div class="rounded-3 overflow-hidden border mb-3 shadow-sm position-relative" style="height: 120px;">
+                    <div class="rounded-3 overflow-hidden border mb-3 shadow-sm position-relative" style="height: 130px;">
                         <img src="${h.foto}" alt="${h.hastaneAdi}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop'">
                         <div class="position-absolute bottom-0 start-0 end-0 p-2 text-white" style="background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); font-size: 11px; font-weight: 600;">
-                            <i class="bi bi-hospital"></i>  
+                            <i class="bi bi-hospital"></i> Dış Cephe & Yerleşke Fotoğrafı
                         </div>
                     </div>
 
                     <div class="row g-2 mb-3">
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Arsa Alanı</span><span class="k-val" style="font-size:15px;">${h.arsaAlani}</span></div></div>
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Kapalı Alan</span><span class="k-val" style="font-size:15px;">${h.kapaliAlan}</span></div></div>
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Bina Oturum</span><span class="k-val" style="font-size:15px;">${h.binaOturum}</span></div></div>
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Hizmet Yılı</span><span class="k-val" style="font-size:15px;">${h.hizmetYili}</span></div></div>
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Kapalı Otopark</span><span class="k-val" style="font-size:15px;">${h.kapaliOtopark}</span></div></div>
-                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Açık Otopark</span><span class="k-val" style="font-size:15px;">${h.acikOtopark}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Arsa Alanı</span><span class="k-val" style="font-size:14px;">${h.arsaAlani}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Kapalı Alan</span><span class="k-val" style="font-size:14px;">${h.kapaliAlan}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Bina Oturum</span><span class="k-val" style="font-size:14px;">${h.binaOturum}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Hizmet Yılı</span><span class="k-val" style="font-size:14px;">${h.hizmetYili}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Kapalı Otopark</span><span class="k-val" style="font-size:14px;">${h.kapaliOtopark}</span></div></div>
+                        <div class="col-4"><div class="k-metric-card p-2 flex-column text-center align-items-center"><span class="k-label">Açık Otopark</span><span class="k-val" style="font-size:14px;">${h.acikOtopark}</span></div></div>
                     </div>
 
                     <div class="row g-2">
                         <div class="col-6">
-                            <div class="k-metric-card crimson-theme p-3">
-                                <div class="k-icon-wrap"><i class="bi bi-person-badge-fill"></i></div>
-                                <div><div class="k-label">Uzman / Klinisyen</div><div class="k-val" style="font-size:17px;">${h.hekimSayisi}</div></div>
+                            <div class="k-metric-card crimson-theme p-2 text-center flex-column align-items-center">
+                                <div class="k-label">Uzman / Klinisyen</div>
+                                <div class="k-val" style="font-size:16px;">${h.hekimSayisi}</div>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="k-metric-card crimson-theme p-3">
-                                <div class="k-icon-wrap"><i class="bi bi-people-fill"></i></div>
-                                <div><div class="k-label">Günlük Poliklinik</div><div class="k-val" style="font-size:17px;">${h.gunlukPoliklinik}</div></div>
+                            <div class="k-metric-card crimson-theme p-2 text-center flex-column align-items-center">
+                                <div class="k-label">Günlük Poliklinik</div>
+                                <div class="k-val" style="font-size:16px;">${h.gunlukPoliklinik}</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-7">
+                <!-- Sağ Kolon: 20 Kırmızı Kutu Grid (4x5) -->
+                <div class="col-lg-8">
                     <div class="row g-2 mb-3">
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-hospital"></i></div><div><div class="k-label">Yatak Sayısı (T/F)</div><div class="k-val" style="font-size:16px;">${h.yatakSayisi}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-door-open-fill"></i></div><div><div class="k-label">Poliklinik Oda</div><div class="k-val">${h.poliklinikOda}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-scissors"></i></div><div><div class="k-label">Ameliyathane Masa</div><div class="k-val">${h.ameliyathane}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-heart-pulse-fill"></i></div><div><div class="k-label">Yoğun Bakım (T/F)</div><div class="k-val" style="font-size:16px;">${h.yogunBakimYatak}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-gender-female"></i></div><div><div class="k-label">TDL / SDL Salonu</div><div class="k-val">${h.sdlSalon}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-bandaid-fill"></i></div><div><div class="k-label">Palyatif Yatak (T/F)</div><div class="k-val" style="font-size:16px;">${h.palyatif}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-fire"></i></div><div><div class="k-label">Yanık Yatak</div><div class="k-val">${h.yanikYatak}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-heart-fill"></i></div><div><div class="k-label">Kalp Merkezi</div><div class="k-val" style="font-size:16px;">${h.kalpMerkezi}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-droplet-fill"></i></div><div><div class="k-label">Diyaliz Cihaz</div><div class="k-val">${h.diyaliz}</div></div></div></div>
+                        <!-- Satır 1 -->
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-hospital"></i></div><div><div class="k-label">Yatak Sayısı (T/F)</div><div class="k-val" style="font-size:14px;">${h.yatakSayisi}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-door-open-fill"></i></div><div><div class="k-label">Poliklinik Oda</div><div class="k-val">${h.poliklinikOda}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-scissors"></i></div><div><div class="k-label">Ameliyathane Masa</div><div class="k-val">${h.ameliyathane}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-award-fill"></i></div><div><div class="k-label">Nitelikli Cerrahi (ABC)</div><div class="k-val" style="font-size:13px;">${h.nitelikliCerrahi}</div></div></div></div>
+
+                        <!-- Satır 2 -->
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-heart-pulse-fill"></i></div><div><div class="k-label">Yoğun Bakım (T/F)</div><div class="k-val" style="font-size:14px;">${h.yogunBakimYatak}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-activity"></i></div><div><div class="k-label">3. Seviye Erişkin YBÜ</div><div class="k-val" style="font-size:13px;">${h.yb3Seviye}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-calendar2-check-fill"></i></div><div><div class="k-label">Günlük Ort. Ameliyat</div><div class="k-val" style="font-size:14px;">${h.gunlukAmeliyat}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-speedometer2"></i></div><div><div class="k-label">Masa Başına Ameliyat</div><div class="k-val" style="font-size:13px;">${h.masaBasinaAmeliyat}</div></div></div></div>
+
+                        <!-- Satır 3 -->
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-bandaid-fill"></i></div><div><div class="k-label">Palyatif Yatak (T/F)</div><div class="k-val" style="font-size:14px;">${h.palyatif}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-pie-chart-fill"></i></div><div><div class="k-label">Yatak Doluluk Oranı</div><div class="k-val" style="font-size:15px;">${h.yatakDoluluk}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-lightning-charge-fill"></i></div><div><div class="k-label">Toplam Acil Başvuru</div><div class="k-val" style="font-size:14px;">${h.toplamAcil}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-hospital-fill"></i></div><div><div class="k-label">Acil Müşahede Yatak</div><div class="k-val" style="font-size:14px;">${h.acilMusahede}</div></div></div></div>
+
+                        <!-- Satır 4 -->
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-calendar2-week-fill"></i></div><div><div class="k-label">MHRS / Ayaktan Dağılımı</div><div class="k-val" style="font-size:13px;">${h.poliklinikDagitim}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-person-check-fill"></i></div><div><div class="k-label">Oda Başına Hasta</div><div class="k-val" style="font-size:13px;">${h.odaBasinaHasta}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-radioactive"></i></div><div><div class="k-label">BT (Tomografi)</div><div class="k-val" style="font-size:12px;">${h.bt}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-magnet-fill"></i></div><div><div class="k-label">MR (Rezonans)</div><div class="k-val" style="font-size:12px;">${h.mr}</div></div></div></div>
+
+                        <!-- Satır 5 -->
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-droplet-fill"></i></div><div><div class="k-label">Diyaliz Cihaz</div><div class="k-val">${h.diyaliz}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-gender-female"></i></div><div><div class="k-label">Primer Sezaryen %</div><div class="k-val" style="font-size:14px;">${h.primerSezaryen}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-people-fill"></i></div><div><div class="k-label">Hemşire / Ebe Gücü</div><div class="k-val" style="font-size:13px;">${h.hemsireEbe}</div></div></div></div>
+                        <div class="col-3"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-clock-history"></i></div><div><div class="k-label">Günübirlik Cerrahi</div><div class="k-val" style="font-size:13px;">${h.gunubirlikCerrahi}</div></div></div></div>
                     </div>
 
-                    <div class="row g-2 mb-3">
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-building-lock"></i></div><div><div class="k-label">Deprem İzolatörü</div><div class="k-val" style="font-size:15px;">${h.depremIzolator}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-radioactive"></i></div><div><div class="k-label">BT (Tomografi)</div><div class="k-val" style="font-size:13px;">${h.bt}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-magnet-fill"></i></div><div><div class="k-label">MR (Rezonans)</div><div class="k-val" style="font-size:13px;">${h.mr}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-radioactive"></i></div><div><div class="k-label">Radyasyon Onk.</div><div class="k-val" style="font-size:15px;">${h.radyasyonOnkoloji}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-capsule-pill"></i></div><div><div class="k-label">Nükleer Tıp</div><div class="k-val" style="font-size:15px;">${h.nukleerTip}</div></div></div></div>
-                        <div class="col-4"><div class="k-metric-card crimson-theme"><div class="k-icon-wrap"><i class="bi bi-emoji-smile-fill"></i></div><div><div class="k-label">Diş Ünit</div><div class="k-val">${h.disUnit}</div></div></div></div>
-                    </div>
-
+                    <!-- Özellikli Hizmetler Rozetleri -->
                     <div class="p-3 border rounded-3 bg-light shadow-sm">
                         <div class="d-flex align-items-center gap-2 mb-2">
                             <i class="bi bi-award-fill text-danger fs-5"></i>
@@ -5022,8 +5147,8 @@ window.acHastaneKunyeModal = function(id) {
 
             kunyeLeafletMap = L.map('kunyeMap', { zoomControl: false }).setView([41.0082, 28.9784], 10.5);
             
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CartoDB & OpenStreetMap',
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
                 maxZoom: 19
             }).addTo(kunyeLeafletMap);
 
@@ -5046,7 +5171,6 @@ window.acHastaneKunyeModal = function(id) {
             }, 2800);
         }, 100);
     };
-
 
 // ---------- 6. MODAL KAPATMA ----------
 window.kapatKunyeModal = function() {
