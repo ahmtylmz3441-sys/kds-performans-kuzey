@@ -4773,7 +4773,14 @@ function getMhrsRowMetrics(item, type) {
                     hastaneAdi: kurumAdi,
                     rol: getCol(row, 'F'),
                     nufus: formatNumStr(getCol(row, 'E')),
-                    foto: 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop',
+                    foto: (() => {
+    const rawLink = getCol(row, 'DT');
+    if (rawLink && rawLink !== '-' && rawLink.includes('drive.google.com')) {
+        const match = rawLink.match(/\/d\/([a-zA-Z0-9_-]+)/) || rawLink.match(/id=([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1200`;
+    }
+    return (rawLink && rawLink !== '-') ? rawLink : 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?q=80&w=1000&auto=format&fit=crop';
+})(),
                     arsaAlani: formatNumStr(getCol(row, 'G')),
                     binaOturum: formatNumStr(getCol(row, 'H')),
                     kapaliAlan: formatNumStr(getCol(row, 'I')),
