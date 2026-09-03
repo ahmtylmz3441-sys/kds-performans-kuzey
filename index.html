@@ -5183,45 +5183,71 @@ window.kunyeModalDisKlikKapat = function(e) {
         if (el) el.innerText = val.toUpperCase();
     };
 
-    // LOGOYU TUVALDE ÇİZİP KUSURSUZ PNG'YE DÖNÜŞTÜREN MOTOR
-    function getSafeMinistryLogoData() {
+    // =============================================================
+    // RESMİ İSTANBUL İL SAĞLIK MÜDÜRLÜĞÜ AMBLEMİ (DOĞRUDAN KODDA ÇİZİLİR)
+    // =============================================================
+    function getOfficialIstanbulLogoBase64() {
         const canvas = document.createElement('canvas');
-        canvas.width = 160;
-        canvas.height = 160;
+        canvas.width = 240;
+        canvas.height = 240;
         const ctx = canvas.getContext('2d');
 
-        // Beyaz Zemin
+        // 1. Arka Plandaki Kırmızı Noktalı Geçiş Deseni (Halftone Grid)
+        for (let x = 120; x < 240; x += 12) {
+            for (let y = 30; y < 210; y += 12) {
+                const dist = Math.sqrt(Math.pow(x - 120, 2) + Math.pow(y - 120, 2));
+                const radius = Math.max(1, 4 - (dist / 40));
+                ctx.fillStyle = "rgba(185, 28, 28, 0.4)";
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 2. Beyaz Yuvarlak Amblem Tabanı
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(80, 80, 78, 0, Math.PI * 2);
+        ctx.arc(100, 100, 86, 0, Math.PI * 2);
         ctx.fill();
 
-        // Kırmızı Dış Halka
+        // 3. Kırmızı Dış ve İç Çerçeveler
         ctx.strokeStyle = "#b91c1c";
         ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(80, 80, 76, 0, Math.PI * 2);
+        ctx.arc(100, 100, 82, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Kırmızı Hilal
-        ctx.fillStyle = "#b91c1c";
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(80, 80, 52, 0, Math.PI * 2);
+        ctx.arc(100, 100, 68, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 4. "T.C. SAĞLIK BAKANLIĞI" ve "İSTANBUL İL SAĞLIK MÜDÜRLÜĞÜ" Yazıları
+        ctx.fillStyle = "#b91c1c";
+        ctx.font = "bold 9px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("T.C. SAĞLIK BAKANLIĞI", 100, 36);
+        ctx.font = "bold 7px Arial";
+        ctx.fillText("İSTANBUL İL SAĞLIK MÜDÜRLÜĞÜ", 100, 168);
+
+        // 5. Kırmızı Hilal & Yıldız
+        ctx.beginPath();
+        ctx.arc(100, 85, 24, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(92, 80, 42, 0, Math.PI * 2);
+        ctx.arc(107, 85, 19, 0, Math.PI * 2);
         ctx.fill();
 
-        // Ortadaki Asa ve Haç/Yılan Vurgusu
+        // 6. Tıp Sembolü (Asa ve Yılanlar)
         ctx.strokeStyle = "#b91c1c";
-        ctx.lineWidth = 6;
+        ctx.lineWidth = 4;
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.moveTo(80, 35);
-        ctx.lineTo(80, 125);
-        ctx.moveTo(55, 80);
-        ctx.lineTo(105, 80);
+        ctx.moveTo(100, 60);
+        ctx.lineTo(100, 138);
+        ctx.moveTo(82, 98);
+        ctx.lineTo(118, 98);
         ctx.stroke();
 
         return canvas.toDataURL('image/png');
@@ -5231,8 +5257,9 @@ window.kunyeModalDisKlikKapat = function(e) {
     window.olusturSlaytTablolari = function() {
         // Ekrana Logoyu Bas
         const logoImg = document.getElementById('slideRenderLogo');
-        if (logoImg) logoImg.src = getSafeMinistryLogoData();
-
+if (logoImg) {
+    logoImg.src = getOfficialIstanbulLogoBase64();
+}
         const wrapper = document.getElementById('slideTablesWrapper');
         if (!wrapper) return;
 
@@ -5365,12 +5392,12 @@ window.kunyeModalDisKlikKapat = function(e) {
                 fill: { color: 'B91C1C' }, line: { color: 'B91C1C' }
             });
 
-            // 2. KESİN GÖRÜNEN PNG LOGO (Asla Kırmızı Çarpı Çıkmaz)
-            const safeLogoData = getSafeMinistryLogoData();
-            slide.addImage({
-                data: safeLogoData,
-                x: 0.35, y: 0.12, w: 0.72, h: 0.72
-            });
+            // 2. RESMİ İSTANBUL İL SAĞLIK MÜDÜRLÜĞÜ AMBLEMİ
+const officialLogoPng = getOfficialIstanbulLogoBase64();
+slide.addImage({
+    data: officialLogoPng,
+    x: 0.35, y: 0.08, w: 0.88, h: 0.88
+});
 
             // 3. BAŞLIKLAR
             if (baslikMetni) {
