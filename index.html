@@ -5317,8 +5317,8 @@ window.kunyeModalDisKlikKapat = function(e) {
         selected.forEach(c => c.innerText = '');
     };
 
-    // =============================================================
-    // ORİJİNAL ŞABLONLU & ASLA TAŞMAYAN MİLİMETRİK POWERPOINT MOTORU
+   // =============================================================
+    // KESİN VE MİLİMETRİK POWERPOINT (.PPTX) MOTORU (SIFIR TAŞMA)
     // =============================================================
     const RESMI_SLAYT_SABLON_URL = "https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od";
 
@@ -5330,24 +5330,33 @@ window.kunyeModalDisKlikKapat = function(e) {
 
         try {
             const pptx = new PptxGenJS();
-            pptx.layout = 'LAYOUT_16x9'; // 13.33 inç x 7.5 inç
+            
+            // 1. SLAYT BOYUTUNU 16:9 OLARAK MİLİMETRİK KİLİTLE (13.333 x 7.5 inç)
+            pptx.defineLayout({ name: 'CUSTOM_16_9', width: 13.333, height: 7.5 });
+            pptx.layout = 'CUSTOM_16_9';
 
             const slide = pptx.addSlide();
 
-            // 1. ORİJİNAL ARKA PLAN ŞABLONUNU TAM SAYFA YERLEŞTİR (LOGO & KIRMIZI ŞERİT BİREBİR GELİR)
-            slide.background = { path: RESMI_SLAYT_SABLON_URL };
+            // 2. RESMİ ŞABLONU TAM SLAYT BOYUTUNDA EN ARKA PLANA YERLEŞTİR
+            slide.addImage({
+                path: RESMI_SLAYT_SABLON_URL,
+                x: 0,
+                y: 0,
+                w: 13.333,
+                h: 7.5
+            });
 
             const baslikMetni = document.getElementById('slideInputBaslik')?.value || '';
             const donemMetni = document.getElementById('slideInputDonem')?.value || '';
 
-            // 2. ŞABLONUN ÜSTÜNE BAŞLIK VE DÖNEMİ MİLİMETRİK YAZ
+            // 3. BAŞLIK VE DÖNEMİ ŞABLONUN KIRMIZI BANT ALANINA YAZ
             if (baslikMetni) {
                 slide.addText(baslikMetni.toUpperCase(), {
                     x: 1.35,
-                    y: 0.08,
-                    w: 6.8,
-                    h: 0.72,
-                    fontSize: 22,
+                    y: 0.10,
+                    w: 6.5,
+                    h: 0.65,
+                    fontSize: 20,
                     fontFace: "Arial Black",
                     color: "FFFFFF",
                     bold: true,
@@ -5358,10 +5367,10 @@ window.kunyeModalDisKlikKapat = function(e) {
             if (donemMetni) {
                 slide.addText(donemMetni.toUpperCase(), {
                     x: 7.2,
-                    y: 0.08,
-                    w: 5.7,
-                    h: 0.72,
-                    fontSize: 16,
+                    y: 0.10,
+                    w: 5.6,
+                    h: 0.65,
+                    fontSize: 15,
                     fontFace: "Arial",
                     color: "FFFFFF",
                     bold: true,
@@ -5370,27 +5379,31 @@ window.kunyeModalDisKlikKapat = function(e) {
                 });
             }
 
-            // 3. TABLOLARI SLAYTIN BEYAZ ALANINA MİLİMETRİK KİLİTLE (ASLA TAŞMAZ)
+            // 4. TABLOLARI HESAPLA VE BEYAZ ALANIN İÇİNE KİLİTLE
             const htmlTables = document.querySelectorAll('#slideTablesWrapper table');
             if (!htmlTables || htmlTables.length === 0) return;
 
-            const totalTableWidth = 12.5; // Toplam genişlik (inç)
-            const availableHeight = 5.8;  // Beyaz alanda kullanılabilir dikey alan
-            let startY = 1.20;
+            // Slaytın beyaz alan koordinatları:
+            const startX = 0.5;          // Sol kenardan 0.5 inç içeride
+            const availableWidth = 12.333; // Slaytın toplam kullanılabilir genişliği (13.333 - 1.0)
+            const availableHeight = 5.6;  // Kırmızı banttan sonra kalan dikey alan
+            let currentY = 1.15;          // Kırmızı bandın hemen altı
 
             htmlTables.forEach((table) => {
                 const totalCols = parseInt(table.getAttribute('data-cols')) || 8;
-                const eachColWidth = totalTableWidth / totalCols;
-                const colWidths = Array(totalCols).fill(eachColWidth);
+                
+                // Her sütunun genişliği: Toplam alan / Sütun sayısı (Asla taşamaz!)
+                const colWidth = availableWidth / totalCols;
+                const colWidthsArray = Array(totalCols).fill(colWidth);
 
                 const pptxRows = [];
                 const trList = table.querySelectorAll('tr');
                 const rowCount = trList.length;
 
-                // Satır ve sütun çokluğuna göre fontu otomatik ölçekle
+                // Satır çokluğuna göre dinamik font boyutu
                 let dynamicFontSize = 7.5;
-                if (rowCount > 10 || totalCols > 10) dynamicFontSize = 6.5;
-                if (rowCount > 15 || totalCols > 15) dynamicFontSize = 5.5;
+                if (rowCount > 8 || totalCols > 8) dynamicFontSize = 6.5;
+                if (rowCount > 12 || totalCols > 12) dynamicFontSize = 5.5;
 
                 trList.forEach(tr => {
                     const rowCells = [];
@@ -5421,7 +5434,7 @@ window.kunyeModalDisKlikKapat = function(e) {
                                 valign: 'middle',
                                 fontSize: isHeader ? (dynamicFontSize + 0.5) : dynamicFontSize,
                                 fontFace: 'Arial',
-                                margin: [0.3, 0.3, 0.3, 0.3],
+                                margin: [0.2, 0.2, 0.2, 0.2], // Hücre içi boşlukları daraltarak taşmayı engeller
                                 border: { pt: 0.75, color: '000000' }
                             }
                         });
@@ -5430,22 +5443,22 @@ window.kunyeModalDisKlikKapat = function(e) {
                     if (rowCells.length > 0) pptxRows.push(rowCells);
                 });
 
-                // Tablo yüksekliğini hesapla ve slayta bas
-                const dynamicRowHeight = Math.min(0.24, availableHeight / (rowCount * htmlTables.length));
+                // Satır yüksekliğini slaytın dikey alanına tam sığacak şekilde oranla
+                const dynamicRowHeight = Math.min(0.24, (availableHeight / (rowCount * htmlTables.length)) - 0.02);
 
+                // TABLOYU SLAYTA EKLE (w parametresi kaldırıldı, sadece colW ile milimetrik kilitlendi)
                 slide.addTable(pptxRows, {
-                    x: 0.41,
-                    y: startY,
-                    w: totalTableWidth,
-                    colW: colWidths,
+                    x: startX,
+                    y: currentY,
+                    colW: colWidthsArray,
                     rowH: dynamicRowHeight,
                     autoPage: false
                 });
 
-                startY += (rowCount * dynamicRowHeight) + 0.35;
+                currentY += (rowCount * dynamicRowHeight) + 0.30;
             });
 
-            // 4. İndir
+            // 5. İNDİR
             const dosyaAdi = `${(baslikMetni || 'Slayt').replace(/\s+/g, '_')}_Brifing_Sunumu.pptx`;
             await pptx.writeFile({ fileName: dosyaAdi });
 
