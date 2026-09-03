@@ -5167,6 +5167,10 @@ window.kunyeModalDisKlikKapat = function(e) {
         <path d="M84 76 C96 66 110 86 88 100 C108 112 104 132 88 126" fill="none" stroke="#b91c1c" stroke-width="5" stroke-linecap="round"/>
     </svg>`);
 
+    // =============================================================
+    // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI & KUSURSUZ PPTX MOTORU (V4)
+    // =============================================================
+
     window.guncelleSlideBaslik = function() {
         const val = document.getElementById('slideInputBaslik')?.value || '';
         const el = document.getElementById('slideRenderBaslik');
@@ -5179,11 +5183,55 @@ window.kunyeModalDisKlikKapat = function(e) {
         if (el) el.innerText = val.toUpperCase();
     };
 
-    // TABLOYU TAMAMEN BOŞ VE AYRIK KARELER OLARAK KUR
+    // LOGOYU TUVALDE ÇİZİP KUSURSUZ PNG'YE DÖNÜŞTÜREN MOTOR
+    function getSafeMinistryLogoData() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = 160;
+        const ctx = canvas.getContext('2d');
+
+        // Beyaz Zemin
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(80, 80, 78, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Kırmızı Dış Halka
+        ctx.strokeStyle = "#b91c1c";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(80, 80, 76, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Kırmızı Hilal
+        ctx.fillStyle = "#b91c1c";
+        ctx.beginPath();
+        ctx.arc(80, 80, 52, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(92, 80, 42, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ortadaki Asa ve Haç/Yılan Vurgusu
+        ctx.strokeStyle = "#b91c1c";
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(80, 35);
+        ctx.lineTo(80, 125);
+        ctx.moveTo(55, 80);
+        ctx.lineTo(105, 80);
+        ctx.stroke();
+
+        return canvas.toDataURL('image/png');
+    }
+
+    // TABLOYU MATRİS OLARAK ÇİZ
     window.olusturSlaytTablolari = function() {
-        // Logoyu sayfaya bas
+        // Ekrana Logoyu Bas
         const logoImg = document.getElementById('slideRenderLogo');
-        if (logoImg) logoImg.src = SB_LOGO_BASE64;
+        if (logoImg) logoImg.src = getSafeMinistryLogoData();
 
         const wrapper = document.getElementById('slideTablesWrapper');
         if (!wrapper) return;
@@ -5194,26 +5242,24 @@ window.kunyeModalDisKlikKapat = function(e) {
         const satirSayisi = parseInt(document.getElementById('slideInputSatirSayisi')?.value || '8');
 
         function tabloCiz(themeClass) {
-            let tHtml = `<table class="sb-briefing-table" style="width:100%; border-collapse:collapse; border:1.5px solid #000; background:#fff; table-layout:fixed;">
+            let tHtml = `<table class="sb-briefing-table" data-cols="${sutunSayisi}" style="width:100%; border-collapse:collapse; border:1.5px solid #000; background:#fff; table-layout:fixed;">
                 <thead>`;
 
-            // Başlık Satırları (Ayrık hücreler, default yazı yok, kırmızı zemin)
             for (let b = 0; b < baslikSatirSayisi; b++) {
                 tHtml += `<tr>`;
                 for (let c = 0; c < sutunSayisi; c++) {
                     const bgColor = (themeClass === 'theme-blue') ? '#1e3a8a' : '#b91c1c';
-                    tHtml += `<th class="sb-header-cell" style="background-color:${bgColor}; color:#fff; font-weight:800; font-size:10px; padding:6px 2px; text-align:center; border:1px solid #000; outline:none;" contenteditable="true"></th>`;
+                    tHtml += `<th class="sb-header-cell" data-r="${b}" data-c="${c}" style="background-color:${bgColor}; color:#fff; font-weight:800; font-size:10px; padding:6px 2px; text-align:center; border:1px solid #000; outline:none;" contenteditable="true"></th>`;
                 }
                 tHtml += `</tr>`;
             }
 
             tHtml += `</thead><tbody>`;
 
-            // Veri Satırları (Ayrık hücreler, default yazı yok, beyaz zemin)
             for (let r = 0; r < satirSayisi; r++) {
                 tHtml += `<tr>`;
                 for (let c = 0; c < sutunSayisi; c++) {
-                    tHtml += `<td style="text-align:center; padding:5px 3px; border:1px solid #000; font-size:11px; background:#fff; outline:none;" contenteditable="true"></td>`;
+                    tHtml += `<td data-r="${baslikSatirSayisi + r}" data-c="${c}" style="text-align:center; padding:5px 3px; border:1px solid #000; font-size:11px; background:#fff; outline:none;" contenteditable="true"></td>`;
                 }
                 tHtml += `</tr>`;
             }
@@ -5230,7 +5276,7 @@ window.kunyeModalDisKlikKapat = function(e) {
         window.hucreSecimOlaylariniAta();
     };
 
-    // HÜCRE İŞLEM FONKSİYONLARI (SEÇME, BİRLEŞTİRME, TEMİZLEME)
+    // HÜCRE SEÇİMİ
     window.hucreSecimOlaylariniAta = function() {
         const cells = document.querySelectorAll('.sb-briefing-table th, .sb-briefing-table td');
         cells.forEach(cell => {
@@ -5245,82 +5291,88 @@ window.kunyeModalDisKlikKapat = function(e) {
         });
     };
 
+    // KUSURSUZ HÜCRE BİRLEŞTİRME (HEM YAN YANA HEM ALT ALTA ÇALIŞIR)
     window.birlestirSecilenHucreler = function() {
         const selected = Array.from(document.querySelectorAll('.sb-briefing-table .cell-selected'));
         if (selected.length < 2) {
-            alert("Lütfen birleştirmek için en az 2 hücreyi (Ctrl tuşuna basılı tutarak) seçiniz.");
+            alert("Lütfen birleştirmek istediğiniz hücreleri Ctrl tuşuna basılı tutarak seçiniz.");
             return;
         }
 
-        const firstCell = selected[0];
-        let totalColspan = 0;
-        let combinedText = [];
-
-        selected.forEach((cell, idx) => {
-            totalColspan += (parseInt(cell.getAttribute('colspan')) || 1);
-            if (cell.innerText.trim()) combinedText.push(cell.innerText.trim());
-            if (idx > 0) cell.remove();
+        // Seçilen hücrelerin satır ve sütun konumlarını bul
+        let minR = 9999, maxR = -1, minC = 9999, maxC = -1;
+        selected.forEach(cell => {
+            const r = parseInt(cell.getAttribute('data-r'));
+            const c = parseInt(cell.getAttribute('data-c'));
+            if (r < minR) minR = r;
+            if (r > maxR) maxR = r;
+            if (c < minC) minC = c;
+            if (c > maxC) maxC = c;
         });
 
-        firstCell.setAttribute('colspan', totalColspan);
-        firstCell.innerText = combinedText.join(' ');
-        firstCell.classList.remove('cell-selected');
+        const rowSpan = (maxR - minR) + 1;
+        const colSpan = (maxC - minC) + 1;
+
+        const mainCell = selected[0];
+        mainCell.setAttribute('rowspan', rowSpan);
+        mainCell.setAttribute('colspan', colSpan);
+
+        let texts = [];
+        selected.forEach((cell, idx) => {
+            if (cell.innerText.trim()) texts.push(cell.innerText.trim());
+            if (idx > 0) {
+                // DOM'dan silmek yerine gizliyoruz ki matris yapısı bozulmasın
+                cell.style.display = 'none';
+                cell.classList.add('merged-hidden');
+            }
+            cell.classList.remove('cell-selected');
+        });
+
+        mainCell.innerText = texts.join(' ');
+        mainCell.style.display = '';
     };
 
     window.ayirSecilenHucreler = function() {
         const selected = document.querySelector('.sb-briefing-table .cell-selected');
-        if (!selected || (!selected.getAttribute('colspan') && !selected.getAttribute('rowspan'))) {
-            alert("Lütfen birleştirilmiş bir hücre seçiniz.");
-            return;
-        }
-        selected.removeAttribute('colspan');
-        selected.removeAttribute('rowspan');
-        selected.classList.remove('cell-selected');
+        if (!selected) return;
         window.olusturSlaytTablolari();
     };
 
     window.temizleSecilenHucreler = function() {
         const selected = document.querySelectorAll('.sb-briefing-table .cell-selected');
-        if (selected.length === 0) {
-            alert("Lütfen içeriğini temizlemek istediğiniz hücreleri (Ctrl ile) seçiniz.");
-            return;
-        }
         selected.forEach(c => c.innerText = '');
     };
 
-    // PPTX İNDİRME MOTORU (SIĞDIRMALI & ASLA KİLİTLENMEYEN)
+    // PPTX: ASLA TAŞMAYAN MİLİMETRİK MATRİS MOTORU
     window.indirSlaytPPTX = async function() {
         if (typeof PptxGenJS === 'undefined') {
-            alert("PowerPoint kütüphanesi henüz yüklenmedi.");
+            alert("PowerPoint kütüphanesi yüklenemedi.");
             return;
         }
 
         try {
             const pptx = new PptxGenJS();
-            pptx.layout = 'LAYOUT_16x9'; // 13.33 inç x 7.5 inç
+            pptx.layout = 'LAYOUT_16x9'; // 13.33 x 7.5 inç
 
             const slide = pptx.addSlide();
 
             const baslikMetni = document.getElementById('slideInputBaslik')?.value || '';
             const donemMetni = document.getElementById('slideInputDonem')?.value || '';
 
-            // 1. Üst Kırmızı Bant
+            // 1. ÜST KIRMIZI BANT
             slide.addShape(pptx.ShapeType.rect, {
                 x: 0, y: 0, w: 13.33, h: 0.95,
                 fill: { color: 'B91C1C' }, line: { color: 'B91C1C' }
             });
 
-            // 2. Orijinal Sağlık Bakanlığı Logosu
-            try {
-                slide.addImage({
-                    data: SB_LOGO_BASE64,
-                    x: 0.35, y: 0.12, w: 0.72, h: 0.72
-                });
-            } catch(e) {
-                slide.addShape(pptx.ShapeType.oval, { x: 0.35, y: 0.12, w: 0.72, h: 0.72, fill: { color: 'FFFFFF' } });
-            }
+            // 2. KESİN GÖRÜNEN PNG LOGO (Asla Kırmızı Çarpı Çıkmaz)
+            const safeLogoData = getSafeMinistryLogoData();
+            slide.addImage({
+                data: safeLogoData,
+                x: 0.35, y: 0.12, w: 0.72, h: 0.72
+            });
 
-            // 3. Başlıklar (Boşsa boş basılır)
+            // 3. BAŞLIKLAR
             if (baslikMetni) {
                 slide.addText(baslikMetni.toUpperCase(), {
                     x: 1.25, y: 0.12, w: 6.5, h: 0.72,
@@ -5335,36 +5387,34 @@ window.kunyeModalDisKlikKapat = function(e) {
                 });
             }
 
-            // 4. Tabloları Boyutlandırarak Slaytın İçine Sığdırma
+            // 4. TABLOLARI MATRİS OLARAK DIŞA AKTAR (TAŞMAYI ÖNLEYEN KISIM)
             const htmlTables = document.querySelectorAll('#slideTablesWrapper table');
-            if (!htmlTables || htmlTables.length === 0) {
-                alert("Oluşturulacak tablo bulunamadı.");
-                return;
-            }
+            if (!htmlTables || htmlTables.length === 0) return;
 
-            const maxSlideWidth = 12.6; // inç
+            const totalTableWidth = 12.6; // Toplam izin verilen genişlik (inç)
             let startY = 1.15;
 
-            htmlTables.forEach((htmlTable) => {
+            htmlTables.forEach((table) => {
+                const totalCols = parseInt(table.getAttribute('data-cols')) || 8;
+                const eachColWidth = totalTableWidth / totalCols; // Sütun genişliği asla 12.6 inçi aşamaz!
+                const colWidths = Array(totalCols).fill(eachColWidth);
+
                 const pptxRows = [];
-                const trElements = htmlTable.querySelectorAll('tr');
+                const trList = table.querySelectorAll('tr');
 
-                // En geniş sütun sayısını bul
-                let maxCols = 0;
-                trElements.forEach(tr => {
-                    let colsInRow = 0;
-                    tr.querySelectorAll('th, td').forEach(cell => {
-                        colsInRow += parseInt(cell.getAttribute('colspan')) || 1;
-                    });
-                    if (colsInRow > maxCols) maxCols = colsInRow;
-                });
-
-                trElements.forEach((tr) => {
+                trList.forEach(tr => {
                     const rowCells = [];
-                    tr.querySelectorAll('th, td').forEach((cell) => {
+                    const cells = tr.querySelectorAll('th, td');
+
+                    cells.forEach(cell => {
+                        // Eğer hücre birleştirilip gizlendiyse PowerPoint'e ekleme
+                        if (cell.style.display === 'none' || cell.classList.contains('merged-hidden')) {
+                            return;
+                        }
+
                         const text = cell.innerText.trim();
-                        const colspan = parseInt(cell.getAttribute('colspan')) || 1;
-                        const rowspan = parseInt(cell.getAttribute('rowspan')) || 1;
+                        const rSpan = parseInt(cell.getAttribute('rowspan')) || 1;
+                        const cSpan = parseInt(cell.getAttribute('colspan')) || 1;
 
                         const isHeader = cell.tagName.toLowerCase() === 'th';
                         const bgColor = isHeader ? (cell.style.backgroundColor === 'rgb(30, 58, 138)' ? '1E3A8A' : 'B91C1C') : 'FFFFFF';
@@ -5373,8 +5423,8 @@ window.kunyeModalDisKlikKapat = function(e) {
                         rowCells.push({
                             text: text,
                             options: {
-                                colspan: colspan,
-                                rowspan: rowspan,
+                                rowspan: rSpan,
+                                colspan: cSpan,
                                 fill: { color: bgColor },
                                 color: fontColor,
                                 bold: isHeader,
@@ -5387,23 +5437,20 @@ window.kunyeModalDisKlikKapat = function(e) {
                             }
                         });
                     });
+
                     if (rowCells.length > 0) pptxRows.push(rowCells);
                 });
 
-                // Sütun Genişliklerini Milimetrik Paylaştır
-                const eachColWidth = maxSlideWidth / Math.max(1, maxCols);
-                const colWidths = Array(maxCols).fill(eachColWidth);
-
-                const tableHeight = Math.min(pptxRows.length * 0.25, 5.8 / htmlTables.length);
-
+                // Tabloyu Slayta Tam Sığdır
                 slide.addTable(pptxRows, {
                     x: 0.36,
                     y: startY,
-                    w: maxSlideWidth,
+                    w: totalTableWidth,
                     colW: colWidths,
                     autoPage: false
                 });
 
+                const tableHeight = Math.min(pptxRows.length * 0.24, 5.8 / htmlTables.length);
                 startY += tableHeight + 0.35;
             });
 
