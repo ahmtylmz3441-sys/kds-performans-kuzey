@@ -15,19 +15,40 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
+        /* ============================================================= */
+        /* ENTERPRISE MEDICAL SLATE - UNIFIED DESIGN SYSTEM               */
+        /* ============================================================= */
         :root { 
-            --sidebar-bg: #0b1329; 
-            --accent: #4f46e5; 
-            --accent-hover: #4338ca;
-            --accent-light: rgba(79, 70, 229, 0.1);
-            --bg: #f8fafc; 
+            --sidebar-bg: #0b1329;
+            --sidebar-active-bg: rgba(99, 102, 241, 0.12);
+            --sidebar-text: #94a3b8;
+            --sidebar-text-active: #ffffff;
+            
+            --bg: #f4f6fb; 
             --card-bg: #ffffff;
-            --text-main: #1e293b;
+            --card-border: #e2e8f0;
+            --card-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+            --card-shadow-hover: 0 12px 28px -4px rgba(15, 23, 42, 0.08);
+
+            --text-main: #0f172a;
             --text-secondary: #64748b;
-            --border-color: #e2e8f0;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
+            --text-muted: #94a3b8;
+
+            --primary: #4f46e5;
+            --primary-light: #eef2ff;
+            --primary-hover: #4338ca;
+
+            --success: #059669;
+            --success-light: #ecfdf5;
+            
+            --warning: #d97706;
+            --warning-light: #fffbeb;
+
+            --danger: #dc2626;
+            --danger-light: #fef2f2;
+            
+            --info: #0284c7;
+            --info-light: #f0f9ff;
         }
         
         body { 
@@ -36,252 +57,480 @@
             color: var(--text-main);
             margin: 0; 
             overflow: hidden; 
+            letter-spacing: -0.01em;
         }
         
         .app-wrapper { display: flex; height: 100vh; }
         
-       /* Sol Menü (Sidebar) Tasarımı */
-.sidebar { 
-    width: 280px; 
-    background: var(--sidebar-bg); 
-    color: white; 
-    flex-shrink: 0; 
-    overflow-y: auto;
-    overflow-x: hidden; /* Genişlik küçülürken yatay taşmaları kesinlikle gizler */
-    border-right: 1px solid rgba(255,255,255,0.05);
-    display: flex;
-    flex-direction: column;
-    transition: width 0.3s ease; /* Sadece genişlik üzerinden yumuşak geçiş yapar */
-}
-
-/* Sidebar gizlendiğinde uygulanacak yeni stil (Negatif margin kaldırıldı) */
-.sidebar.collapsed {
-    width: 0 !important;
-    border-right: none !important; /* Kapanınca sağdaki ince çizgiyi de gizler */
-}
-        .nav-container {
-            padding: 15px 12px;
+        /* ------------------------------------------------------------- */
+        /* 1. SOL MENÜ (SIDEBAR): Kurumsal Derinlik & Zarif Vurgu         */
+        /* ------------------------------------------------------------- */
+        .sidebar { 
+            width: 270px; 
+            background: linear-gradient(180deg, #0b1329 0%, #080d1e 100%); 
+            color: white; 
+            flex-shrink: 0; 
+            overflow-y: auto;
+            overflow-x: hidden;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        .sidebar.collapsed {
+            width: 0 !important;
+            border-right: none !important;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar-brand h5 {
+            font-size: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-container {
+            padding: 16px 12px;
+        }
+
         .nav-item { 
-            padding: 12px 16px; 
-            color: #94a3b8; 
+            padding: 10px 14px; 
+            color: var(--sidebar-text); 
             cursor: pointer; 
-            border-radius: 12px;
-            transition: all 0.25s ease; 
+            border-radius: 10px;
+            transition: all 0.2s ease; 
             display: flex; 
             align-items: center; 
             gap: 12px; 
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             font-weight: 500;
-            font-size: 14px;
+            font-size: 13.5px;
+            position: relative;
         }
+
         .nav-item i {
-            font-size: 18px;
-            transition: all 0.2s;
+            font-size: 17px;
+            color: #64748b;
+            transition: color 0.2s;
         }
+
         .nav-item:hover { 
             background: rgba(255, 255, 255, 0.04); 
-            color: #f1f5f9; 
+            color: #e2e8f0; 
         }
+
+        .nav-item:hover i {
+            color: #94a3b8;
+        }
+
+        /* Aktif Menü: Sert blok mor yerine glow efektli zarif stil */
         .nav-item.active { 
-            background: var(--accent); 
-            color: white; 
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+            background: var(--sidebar-active-bg); 
+            color: #ffffff !important; 
+            font-weight: 600;
         }
+
         .nav-item.active i {
-            color: white;
+            color: #818cf8 !important;
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 6px;
+            bottom: 6px;
+            width: 4px;
+            border-radius: 0 4px 4px 0;
+            background: #6366f1;
+            box-shadow: 0 0 12px #6366f1;
         }
         
-        /* Sağ Panel */
-        .main-content { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        /* ------------------------------------------------------------- */
+        /* 2. SAĞ İÇERİK & ÜST BAR (HEADER)                              */
+        /* ------------------------------------------------------------- */
+        .main-content { 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            background: var(--bg);
+        }
         
-        /* Üst Header */
         .top-header { 
-            background: white; 
-            padding: 20px 32px; 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(12px);
+            padding: 16px 32px; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            border-bottom: 1px solid var(--border-color); 
+            border-bottom: 1px solid var(--card-border); 
+            position: sticky;
+            top: 0;
+            z-index: 90;
         }
+
         .top-header h5 {
+            font-size: 17px;
             font-weight: 700;
-            letter-spacing: -0.5px;
             color: var(--text-main);
+            letter-spacing: -0.3px;
+        }
+
+        #sidebar-toggle-btn {
+            border: 1px solid var(--card-border) !important;
+            background: #ffffff !important;
+            color: var(--text-secondary) !important;
+            padding: 7px 12px !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            transition: all 0.2s ease;
+        }
+
+        #sidebar-toggle-btn:hover {
+            background: #f8fafc !important;
+            color: var(--text-main) !important;
+        }
+
+        .top-header .badge {
+            background: #ffffff !important;
+            color: var(--text-main) !important;
+            border: 1px solid var(--card-border) !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            font-weight: 600;
+        }
+
+        .top-header .btn-outline-primary,
+        .top-header .btn-outline-danger {
+            border-color: var(--card-border) !important;
+            color: var(--text-secondary) !important;
+            background: #ffffff;
+            font-weight: 600;
+            font-size: 12.5px;
+            padding: 6px 14px;
+            transition: all 0.2s;
+        }
+
+        .top-header .btn-outline-primary:hover {
+            background: var(--primary-light) !important;
+            color: var(--primary) !important;
+            border-color: #c7d2fe !important;
+        }
+
+        .top-header .btn-outline-danger:hover {
+            background: var(--danger-light) !important;
+            color: var(--danger) !important;
+            border-color: #fecaca !important;
         }
         
-        /* Filtre Alanı */
+        /* ------------------------------------------------------------- */
+        /* 3. FİLTRE BARI (FILTER BAR)                                   */
+        /* ------------------------------------------------------------- */
         .filter-bar { 
-            background: #fff; 
-            padding: 16px 32px; 
+            background: #ffffff; 
+            padding: 14px 32px; 
             display: none; 
-            gap: 16px; 
-            border-bottom: 1px solid var(--border-color); 
+            gap: 14px; 
+            border-bottom: 1px solid var(--card-border); 
             align-items: flex-end; 
             flex-wrap: wrap; 
-            position: sticky; 
-            top: 0; 
-            z-index: 100; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
         }
-        .filter-group { display: flex; flex-direction: column; min-width: 150px; flex-shrink: 0; }
+
         .filter-group label {
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 700;
             color: var(--text-secondary);
-            margin-bottom: 6px;
+            margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .filter-group select, .filter-group input { 
-            padding: 10px 14px; 
-            border-radius: 10px; 
-            border: 1px solid var(--border-color); 
-            font-size: 13px; 
+
+        .filter-group select, 
+        .filter-group input { 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            border: 1px solid var(--card-border); 
+            font-size: 12.5px; 
             background: #f8fafc; 
-            width: 100%; 
             color: var(--text-main);
             font-weight: 500;
             transition: all 0.2s ease;
         }
-        .filter-group select:focus, .filter-group input:focus {
-            outline: none;
-            border-color: var(--accent);
-            background: white;
+
+        .filter-group select:focus, 
+        .filter-group input:focus {
+            border-color: var(--primary);
+            background: #ffffff;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
+
         .btn-sm-custom { 
-            padding: 11px 24px; 
-            font-size: 13px; 
+            padding: 9px 20px; 
+            font-size: 12.5px; 
             font-weight: 600;
-            border-radius: 10px; 
-            background: var(--accent); 
+            border-radius: 8px; 
+            background: var(--primary); 
             border: none; 
             color: white; 
             cursor: pointer; 
             transition: all 0.2s ease; 
-            white-space: nowrap; 
-            flex-shrink: 0; 
-            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
         }
+
         .btn-sm-custom:hover { 
-            background: var(--accent-hover); 
+            background: var(--primary-hover); 
             transform: translateY(-1px);
-            box-shadow: 0 6px 14px rgba(79, 70, 229, 0.3);
-        }
-        .btn-sm-custom:active {
-            transform: translateY(0);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
         }
         
-        .page-padding { padding: 32px; }
+        .page-padding { padding: 28px 32px; }
         .page { display: none; }
         .page.active { display: block; }
         
-        /* Modern Kart Tasarımı */
+        /* ------------------------------------------------------------- */
+        /* 4. MODERN KARTLAR & TÜM SEKMELERİN RENK DİSİPLİNİ             */
+        /* (Artık turuncu/kırmızı/yeşil üst çizgiler kaldırıldı)          */
+        /* ------------------------------------------------------------- */
         .kds-card { 
             background: var(--card-bg); 
             border-radius: 16px; 
             padding: 24px; 
-            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03); 
-            border: 1px solid var(--border-color);
+            box-shadow: var(--card-shadow); 
+            border: 1px solid var(--card-border) !important;
+            border-top: 1px solid var(--card-border) !important; /* Farklı renk çizgiler sıfırlandı */
             height: 100%; 
             margin-bottom: 24px; 
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+
         .kds-card:hover {
-            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+            box-shadow: var(--card-shadow-hover);
         }
-        .kds-card h6 {
-            font-size: 14px;
+
+        .kds-card h5, .kds-card h6 {
+            color: var(--text-main) !important;
             font-weight: 700;
-            color: var(--text-secondary);
+            letter-spacing: -0.2px;
+        }
+
+        .kds-card h6 {
+            font-size: 13px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 16px;
+            letter-spacing: 0.6px;
+            color: var(--text-secondary) !important;
+            margin-bottom: 14px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
+
+        /* KPI Sayısal Gösterimler */
         .stat-val { 
-            font-size: 2.5rem; 
+            font-size: 2.25rem; 
             font-weight: 800; 
             letter-spacing: -1px;
             color: var(--text-main);
+            line-height: 1.1;
         }
-        
-        /* Yenilenmiş Butonlar */
-        .itiraz-btn { 
-            background: rgba(245, 158, 11, 0.1); 
-            border: 1px solid rgba(245, 158, 11, 0.3); 
-            color: var(--warning); 
-            padding: 6px 16px; 
-            border-radius: 8px; 
-            font-size: 12px; 
-            font-weight: 600;
-            cursor: pointer; 
-            transition: all 0.2s; 
+
+        /* ------------------------------------------------------------- */
+        /* 5. MHRS & E-TABLO: KAPSÜL ANAHTARLAR (SEGMENTED CONTROL)      */
+        /* (Sert mor blok butonlar yerine lüks soft kapsüller)           */
+        /* ------------------------------------------------------------- */
+        ul.nav-pills {
+            background: #e2e8f0 !important;
+            padding: 4px !important;
+            border-radius: 12px !important;
+            border: none !important;
+            gap: 4px;
         }
-        .itiraz-btn:hover { 
-            background: var(--warning);
-            color: white;
-            transform: translateY(-1px);
+
+        .sub-tab-btn { 
+            background: transparent !important; 
+            color: var(--text-secondary) !important; 
+            font-size: 13px !important; 
+            font-weight: 600 !important; 
+            border-radius: 9px !important;
+            border: none !important;
+            padding: 9px 16px !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
-        
-        /* Modernized Badges (Yarı Saydam Soft Tasarım) */
-        .badge-muaf { background: #f1f5f9; color: #475569; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #cbd5e1; }
-        .badge-basarili { background: #ecfdf5; color: #047857; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #a7f3d0; }
-        .badge-kritik { background: #fef2f2; color: #b91c1c; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #fca5a5; }
-        .badge-orta { background: #fffbeb; color: #b45309; padding: 6px 14px; border-radius: 8px; font-size: 11.5px; font-weight: 600; border: 1px solid #fde68a; }
-        .badge-itiraz-var { background: #fffbeb; color: #b45309; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-left: 8px; border: 1px solid #fde68a; }
-        
-        /* Derece Kartları */
+
+        .sub-tab-btn:hover { 
+            color: var(--text-main) !important; 
+        }
+
+        .sub-tab-btn.active { 
+            background: #ffffff !important; 
+            color: var(--text-main) !important; 
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+        }
+
+        /* ------------------------------------------------------------- */
+        /* 6. MHRS 5'Lİ METRİK KARTLARI (Yumuşak & Şık Kartlar)          */
+        /* ------------------------------------------------------------- */
+        #mhrsDashboardContent .bg-white.shadow-sm {
+            background: #ffffff !important;
+            border: 1px solid var(--card-border) !important;
+            box-shadow: var(--card-shadow) !important;
+            border-radius: 14px !important;
+            transition: all 0.2s ease;
+        }
+
+        #mhrsDashboardContent .bg-white.shadow-sm:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--card-shadow-hover) !important;
+            border-color: #cbd5e1 !important;
+        }
+
+        #mhrsDashboardContent h6.small {
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            color: var(--text-secondary) !important;
+            letter-spacing: 0.5px !important;
+            text-transform: uppercase !important;
+            margin-bottom: 6px;
+        }
+
+        #mhrsDashboardContent .fs-4 {
+            font-size: 1.75rem !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.5px;
+            color: var(--text-main) !important; /* Rakam karmaşası kaldırıldı */
+        }
+
+        #mhrsDashboardContent .text-muted.small {
+            font-size: 11.5px !important;
+            color: var(--text-muted) !important;
+            margin-top: 4px;
+        }
+
+        /* ------------------------------------------------------------- */
+        /* 7. SIRALAMA KARTLARI (RANK CARDS & PODYUM ETKİSİ)             */
+        /* ------------------------------------------------------------- */
         .rank-card { 
-            background: #f8fafc; 
+            background: #ffffff; 
             border-radius: 12px; 
-            padding: 14px 18px; 
-            margin-bottom: 10px; 
-            transition: all 0.2s ease; 
+            padding: 12px 16px; 
+            margin-bottom: 8px; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
             display: flex; 
             align-items: center; 
             justify-content: space-between; 
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--card-border);
         }
+
         .rank-card:hover {
-            background: white;
-            border-color: var(--accent);
-            transform: translateX(3px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            background: #ffffff;
+            border-color: #cbd5e1;
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
         }
+
         .rank-number { 
-            width: 32px; 
-            height: 32px; 
-            background: var(--accent-light); 
-            color: var(--accent); 
+            width: 28px; 
+            height: 28px; 
+            background: #f1f5f9; 
+            color: #475569; 
             border-radius: 8px; 
             display: inline-flex; 
             align-items: center; 
             justify-content: center; 
-            font-size: 13px; 
+            font-size: 12px; 
             font-weight: 700; 
             margin-right: 12px; 
         }
-        
-        /* Grafikler */
-        .chart-container { position: relative; height: 400px; margin-top: 20px; }
-        
-        /* Şık Modallar & Cam Efekti */
+
+        /* İlk 3 için Podyum Rozeti */
+        .rank-card:nth-child(1) .rank-number { background: #fef3c7; color: #b45309; }
+        .rank-card:nth-child(2) .rank-number { background: #f1f5f9; color: #475569; }
+        .rank-card:nth-child(3) .rank-number { background: #ffedd5; color: #c2410c; }
+
+        /* Puan Rozetleri */
+        .rank-card .text-primary,
+        .rank-card .text-warning {
+            background: var(--primary-light) !important;
+            color: var(--primary) !important;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11.5px !important;
+            font-weight: 700;
+        }
+
+        /* ------------------------------------------------------------- */
+        /* 8. TABLOLAR & ROZETLER (BADGES)                               */
+        /* ------------------------------------------------------------- */
+        .table {
+            border-color: var(--card-border);
+        }
+
+        .table thead.table-dark {
+            background: #0f172a !important;
+            color: #ffffff;
+        }
+
+        .table thead.table-dark th {
+            font-weight: 600;
+            font-size: 11.5px;
+            letter-spacing: 0.4px;
+            padding: 12px 14px;
+            background: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .table td {
+            padding: 12px 14px;
+            font-size: 12.5px;
+            color: var(--text-main);
+            border-color: #f1f5f9;
+        }
+
+        /* Soft Durum Rozetleri */
+        .badge-muaf { background: #f1f5f9; color: #475569; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #e2e8f0; }
+        .badge-basarili { background: var(--success-light); color: var(--success); padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #a7f3d0; }
+        .badge-kritik { background: var(--danger-light); color: var(--danger); padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #fecaca; }
+        .badge-orta { background: var(--warning-light); color: var(--warning); padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: 1px solid #fde68a; }
+
+        /* Butonlar & İtiraz */
+        .itiraz-btn { 
+            background: #ffffff; 
+            border: 1px solid #cbd5e1; 
+            color: var(--text-secondary); 
+            padding: 5px 12px; 
+            border-radius: 6px; 
+            font-size: 11.5px; 
+            font-weight: 600;
+            cursor: pointer; 
+            transition: all 0.2s; 
+        }
+
+        .itiraz-btn:hover { 
+            background: var(--warning-light);
+            color: var(--warning);
+            border-color: #fde68a;
+        }
+
+        /* ------------------------------------------------------------- */
+        /* 9. MODALLAR & SİNEMATİK KÜNYE                                 */
+        /* ------------------------------------------------------------- */
         .modal-overlay { 
             display: none; 
             position: fixed; 
             top:0; left:0; width:100%; height:100%; 
-            background: rgba(15, 23, 42, 0.4); 
-            backdrop-filter: blur(5px);
+            background: rgba(15, 23, 42, 0.45); 
+            backdrop-filter: blur(8px);
             z-index:1000; 
             align-items:center; 
             justify-content:center; 
-            transition: all 0.3s ease;
         }
         .modal-overlay.active { display: flex; }
+        
         .modal-container { 
             background: white; 
             width: 640px; 
@@ -291,123 +540,30 @@
             border-radius:20px; 
             padding:32px; 
             position: relative; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-            border: 1px solid var(--border-color);
-            transform: scale(0.95);
-            transition: transform 0.3s ease;
+            box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25);
+            border: 1px solid var(--card-border);
         }
-        .modal-overlay.active .modal-container {
-            transform: scale(1);
-        }
-        .modal-close { 
-            position: absolute; 
-            top: 24px; 
-            right: 24px; 
-            background: #f1f5f9; 
-            border: none; 
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            font-size: 20px; 
-            cursor: pointer; 
-            color: var(--text-secondary); 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-        .modal-close:hover {
-            background: #e2e8f0;
-            color: var(--text-main);
-        }
-        
-        .donem-checkbox-group { 
-            display: block; 
-            margin: 20px 0; 
-            padding: 24px; 
-            background: #f8fafc; 
-            border-radius: 14px; 
-            border: 1px dashed var(--border-color); 
-            min-height: 110px; 
-            transition: all 0.3s ease; 
-        }
-        
-        /* Canlı E-Tablo / MHRS Alt Sekme Butonları */
-        .sub-tab-btn { 
-            background: #f8fafc; 
-            color: var(--text-secondary); 
-            font-size: 13px; 
-            font-weight: 600; 
-            cursor: pointer; 
-            transition: all 0.2s ease; 
-            outline: none; 
-            padding: 12px;
-        }
-        .sub-tab-btn:hover { background: #f1f5f9; color: var(--text-main); }
-        .sub-tab-btn.active { background: var(--accent); color: white !important; }
 
-        /* Gelişmiş Şifreli Giriş Ekranı */
-        #login-screen { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100vh; 
-            background: radial-gradient(circle at 10% 20%, rgba(15,23,42,1) 0%, rgba(21,34,64,1) 90%);
-            z-index: 99999; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
+        .kunye-modal-container {
+            width: 1520px !important;
+            max-width: 97% !important;
+            max-height: 94vh !important;
         }
-        .login-card { 
-            background: white; 
-            padding: 44px; 
-            border-radius: 24px; 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3); 
-            width: 100%; 
-            max-width: 440px; 
-            border: 1px solid rgba(255,255,255,0.1);
+
+        .k-metric-card.crimson-theme {
+            background: #ffffff !important;
+            color: var(--text-main) !important;
+            border: 1px solid var(--card-border) !important;
+            box-shadow: var(--card-shadow) !important;
         }
-        .login-card .form-control {
-            padding: 12px 16px;
-            border-radius: 12px;
-            border-color: #cbd5e1;
-            font-size: 14px;
+        .k-metric-card.crimson-theme .k-label { color: var(--text-secondary) !important; }
+        .k-metric-card.crimson-theme .k-val { color: var(--text-main) !important; }
+        .k-metric-card.crimson-theme .k-icon-wrap { 
+            background: var(--primary-light) !important; 
+            color: var(--primary) !important; 
         }
-        .login-card .form-control:focus {
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
-            border-color: var(--accent);
-        }
-        .login-card .input-group-text {
-            background-color: #f8fafc;
-            border-color: #cbd5e1;
-            color: var(--text-secondary);
-            border-radius: 12px 0 0 12px;
-        }
-        
-        /* Tablo Stilleri */
-        .table {
-            border-color: var(--border-color);
-        }
-        .table th {
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.5px;
-            padding: 14px;
-        }
-        .table td {
-            padding: 14px;
-            font-size: 13px;
-        }
-        
-        /* Detay satırları */
-        .gosterge-detay { 
-            padding: 12px 0; 
-            border-bottom: 1px solid var(--border-color); 
-            font-size: 14px;
-        }
-       /* Medikal Halka & Nefes Alan Tipografi Loader */
+
+        /* Loader */
         .page-loader-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -417,331 +573,18 @@
             display: none; 
             align-items: center; 
             justify-content: center; 
-            transition: all 0.3s ease;
         }
-        .page-loader-overlay.active {
-            display: flex;
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .medical-loader-container {
-            position: relative;
-            width: 240px; /* 180px -> 240px Büyütüldü */
-            height: 240px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Dönen İnce Medikal Halka */
+        .page-loader-overlay.active { display: flex; }
         .medical-ring {
-            position: absolute;
-            width: 190px; /* 140px -> 190px Büyütüldü */
+            width: 190px;
             height: 190px;
             border-radius: 50%;
             border: 3px solid rgba(255, 255, 255, 0.06);
-            border-top: 3px solid #4f46e5;
+            border-top: 3px solid #6366f1;
             border-right: 3px solid #10b981;
             animation: spinRing 1.2s linear infinite;
-            filter: drop-shadow(0 0 14px rgba(79, 70, 229, 0.6));
         }
-
-        /* Dışta Dalgalanan Soft Halo */
-        .medical-pulse-halo {
-            position: absolute;
-            width: 160px; /* 120px -> 160px Büyütüldü */
-            height: 160px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(79, 70, 229, 0.25) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 70%);
-            animation: pulseHalo 2s ease-in-out infinite;
-        }
-
-        /* Ortadaki Nefes Alan Kalın Tipografi */
-        .loader-breathing-text {
-            font-size: 15px; /* 12px -> 15px Büyütüldü */
-            font-weight: 800;
-            color: #ffffff;
-            text-transform: uppercase;
-            z-index: 10;
-            pointer-events: none;
-            text-shadow: 0 0 14px rgba(255, 255, 255, 0.7);
-            animation: breathText 2s ease-in-out infinite;
-        }
-
-        /* ANİMASYONLAR */
-        @keyframes spinRing {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes pulseHalo {
-            0%, 100% { transform: scale(0.85); opacity: 0.3; }
-            50% { transform: scale(1.2); opacity: 0.8; }
-        }
-
-        @keyframes breathText {
-            0%, 100% {
-                opacity: 0.25;
-                transform: scale(0.96);
-                letter-spacing: 2px;
-            }
-            50% {
-                opacity: 1;
-                transform: scale(1.04);
-                letter-spacing: 4px;
-            }
-        }
-        /* Sidebar geçiş efekti */
-        .sidebar {
-       transition: width 0.3s ease;
-}
-
-/* Sidebar gizlendiğinde uygulanacak sınıf */
-.sidebar.collapsed {
-    width: 0 !important;
-}
-        /* Menü tetikleme butonu stili */
-        #sidebar-toggle-btn {
-            border: 1px solid #cbd5e1 !important;
-            background: #ffffff !important;
-            color: #1e293b !important;
-            padding: 6px 12px !important;
-            border-radius: 10px !important;
-            cursor: pointer !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            z-index: 1000 !important;
-            transition: all 0.2s ease;
-        }
-
-        #sidebar-toggle-btn:hover {
-            background: var(--bg) !important;
-            color: var(--accent) !important;
-        }
-        /* ============================================================= */
-/* HASTANE KÜNYE & SİNEMATİK İNFOGRAFİK POPUP STİLLERİ           */
-/* ============================================================= */
-.kunye-modal-container {
-    width: 1520px !important;
-    max-width: 97% !important;
-    max-height: 94vh !important;
-    background: #ffffff !important;
-    padding: 26px 34px !important;
-    border-radius: 24px !important;
-    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35) !important;
-    border: 1px solid rgba(226, 232, 240, 0.8) !important;
-}
-/* Sinematik Harita & Street View Katman Stilleri */
-.kunye-map-stage {
-    position: relative;
-    height: 270px;
-    border-radius: 16px;
-    overflow: hidden;
-    border: 1px solid #cbd5e1;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
-}
-.kunye-map-stage #kunyeMap {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0; left: 0;
-    z-index: 2;
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), filter 0.8s ease, transform 0.8s ease;
-}
-.kunye-map-stage #kunyeStreetFrame {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0; left: 0;
-    border: none;
-    z-index: 1;
-    opacity: 0;
-    transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.kunye-map-stage.street-active #kunyeMap {
-    opacity: 0;
-    filter: blur(8px) brightness(1.2);
-    pointer-events: none;
-    transform: scale(1.04);
-}
-.kunye-map-stage.street-active #kunyeStreetFrame {
-    opacity: 1;
-    z-index: 3;
-    pointer-events: auto;
-}
-.kunye-view-toggle {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 10;
-    display: flex;
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(8px);
-    border-radius: 10px;
-    padding: 3px;
-    border: 1px solid rgba(255,255,255,0.2);
-}
-.kunye-view-toggle button {
-    border: none;
-    background: transparent;
-    color: #94a3b8;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 7px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.kunye-view-toggle button.active {
-    background: #ffffff;
-    color: #0f172a;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-}
-.kunye-hospital-card {
-    background: #ffffff;
-    border-radius: 18px;
-    border: 1px solid #e2e8f0;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-    position: relative;
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
-}
-.kunye-hospital-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
-    border-color: #cbd5e1;
-}
-.kunye-hospital-card .card-img-wrapper {
-    height: 180px;
-    width: 100%;
-    position: relative;
-    background: linear-gradient(135deg, #1e293b, #0f172a);
-    overflow: hidden;
-}
-.kunye-hospital-card .card-img-wrapper img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s ease;
-}
-.kunye-hospital-card:hover .card-img-wrapper img { transform: scale(1.06); }
-.kunye-role-badge {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    background: rgba(15, 23, 42, 0.85);
-    color: #38bdf8;
-    backdrop-filter: blur(6px);
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    border: 1px solid rgba(255,255,255,0.15);
-}
-.kunye-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid #f1f5f9;
-    padding-bottom: 18px;
-    margin-bottom: 22px;
-}
-.kunye-ministry-brand { display: flex; align-items: center; gap: 16px; }
-.kunye-title-block h3 { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0; }
-.kunye-pill-tag {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    padding: 6px 14px;
-    border-radius: 12px;
-    font-size: 12.5px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-#kunyeMap {
-    width: 100%;
-    height: 250px;
-    border-radius: 16px;
-    border: 1px solid #cbd5e1;
-    z-index: 1;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.08);
-}
-.leaflet-radar-marker {
-    position: relative;
-    width: 22px;
-    height: 22px;
-    background: #ef4444;
-    border: 3px solid #ffffff;
-    border-radius: 50%;
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
-}
-.leaflet-radar-marker::after {
-    content: '';
-    position: absolute;
-    top: -11px;
-    left: -11px;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: rgba(239, 68, 68, 0.4);
-    animation: radarPulse 1.8s ease-out infinite;
-}
-@keyframes radarPulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.2); opacity: 0; } }
-
-.k-metric-card {
-    background: #ffffff;
-    border-radius: 14px;
-    padding: 14px 16px;
-    border: 1px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
-    transition: transform 0.2s;
-}
-.k-metric-card:hover { transform: translateY(-2px); border-color: #cbd5e1; }
-.k-metric-card.crimson-theme {
-    background: linear-gradient(135deg, #b91c1c, #991b1b);
-    color: #ffffff;
-    border: none;
-    box-shadow: 0 6px 18px rgba(185, 28, 28, 0.25);
-}
-.k-metric-card.crimson-theme .k-label { color: rgba(255, 255, 255, 0.85); }
-.k-metric-card.crimson-theme .k-val { color: #ffffff; }
-.k-metric-card.crimson-theme .k-icon-wrap { background: rgba(255, 255, 255, 0.15); color: #ffffff; }
-
-.k-icon-wrap {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    background: #f1f5f9;
-    color: #475569;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-}
-.k-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; line-height: 1.2; margin-bottom: 2px; }
-.k-val { font-size: 19px; font-weight: 800; color: var(--text-main); line-height: 1.1; }
-.service-tag {
-    background: #f8fafc;
-    color: #1e293b;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 5px 11px;
-    font-size: 11.5px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-.service-tag i { color: #10b981; font-size: 13px; }
+        @keyframes spinRing { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
