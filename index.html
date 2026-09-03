@@ -811,6 +811,97 @@
                     </div>
                 </div>
             </section>
+            <!-- SUNUM & BRİFİNG SLAYT SİHİRBAZI SAYFASI -->
+<section id="sunum-olusturucu" class="page">
+    <div class="row g-4">
+        <!-- SOL PANEL: Kontrol ve Ayar Alanı -->
+        <div class="col-xl-3 col-lg-4">
+            <div class="kds-card p-3">
+                <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">
+                    <i class="bi bi-sliders text-danger"></i> Slayt Parametreleri
+                </h6>
+                
+                <div class="mb-2">
+                    <label class="form-label small fw-bold text-secondary mb-1">Üst Bant Başlığı</label>
+                    <input type="text" id="slideInputBaslik" class="form-control form-control-sm" value="MESAİ DIŞI" oninput="window.guncelleSlideBaslik()">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Dönem / Zaman Aralığı</label>
+                    <input type="text" id="slideInputDonem" class="form-control form-control-sm" value="HAZİRAN – TEMMUZ 2026" oninput="window.guncelleSlideDonem()">
+                </div>
+
+                <h6 class="fw-bold mb-2 text-secondary border-bottom pb-2 pt-2">
+                    <i class="bi bi-table text-primary"></i> Tablo Düzeni
+                </h6>
+
+                <div class="mb-2">
+                    <label class="form-label small fw-bold text-secondary mb-1">Slayttaki Tablo Sayısı</label>
+                    <select id="slideInputTabloSayisi" class="form-select form-select-sm" onchange="window.slideTabloSayisiDegisti()">
+                        <option value="1">1 Tablo (Geniş / Çok Satırlı)</option>
+                        <option value="2" selected>2 Tablo (Resimdeki Gibi Alt Alta)</option>
+                    </select>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-secondary mb-1">1. Tablo Satır</label>
+                        <input type="number" id="slideT1Satir" class="form-control form-control-sm" value="3" min="1" max="15">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-secondary mb-1">2. Tablo Satır</label>
+                        <input type="number" id="slideT2Satir" class="form-control form-control-sm" value="2" min="1" max="15">
+                    </div>
+                </div>
+
+                <button class="btn btn-sm btn-outline-primary w-100 mb-3 fw-bold" onclick="window.olusturSlaytTablolari()">
+                    <i class="bi bi-arrow-repeat"></i> Tabloları Yeniden Kur
+                </button>
+
+                <div class="alert alert-light border p-2 small mb-3 text-muted" style="font-size:11px;">
+                    <i class="bi bi-info-circle-fill text-primary"></i> <b>İpucu:</b> Sağdaki slayt tuvalindeki hücrelere doğrudan tıklayarak verileri ve başlıkları klavyenizle düzenleyebilirsiniz (Excel gibi).
+                </div>
+
+                <button class="btn btn-danger w-100 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-2" onclick="window.indirSlaytPPTX()">
+                    <i class="bi bi-file-earmark-ppt-fill fs-5"></i> 
+                    <span>PowerPoint Olarak İndir (.pptx)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SAĞ PANEL: 16:9 Canlı Slayt Önizleme Tuvali -->
+        <div class="col-xl-9 col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small fw-bold text-secondary"><i class="bi bi-aspect-ratio text-danger"></i> 16:9 Standart Brifing Slaytı (Canlı Önizleme)</span>
+                <span class="badge bg-light text-secondary border px-2 py-1 small">Sağlık Bakanlığı Şablonu</span>
+            </div>
+
+            <!-- Dış Çerçeve -->
+            <div class="slide-canvas-viewport shadow rounded border bg-light p-3">
+                <!-- Slaytın Kendisi (16:9 Sabit Oran) -->
+                <div id="captureSlideArea" class="slide-canvas-container">
+                    
+                    <!-- 1. ÜST KIRMIZI KURUMSAL BANT -->
+                    <div class="slide-top-banner">
+                        <div class="slide-banner-left">
+                            <div class="slide-logo-circle">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/TC_Sa%C4%9Fl%C4%B1k_Bakanl%C4%B1%C4%9F%C4%B1_logo.svg/1024px-TC_Sa%C4%9Fl%C4%B1k_Bakanl%C4%B1%C4%9F%C4%B1_logo.svg.png" alt="Sağlık Bakanlığı Logo" onerror="this.src='https://via.placeholder.com/60?text=TC'">
+                            </div>
+                            <h2 id="slideRenderBaslik" class="slide-main-title">MESAİ DIŞI</h2>
+                        </div>
+                        <div id="slideRenderDonem" class="slide-period-title">HAZİRAN – TEMMUZ 2026</div>
+                    </div>
+
+                    <!-- 2. TABLOLAR ALANI (İÇERİK TUVALİ) -->
+                    <div id="slideTablesWrapper" class="slide-tables-body">
+                        <!-- Tablolar Dinamik Olarak Buraya İnşa Edilir -->
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
             <section id="e-tablo" class="page">
                 <div class="kds-card" style="border-top-color: #10b981;">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
@@ -4430,6 +4521,7 @@ function getMhrsRowMetrics(item, type) {
             if(sayfa === 'e-tablo') await initETabloDashboard();
             if(sayfa === 'mhrs') await initMhrsDashboard();
             if(sayfa === 'kullanici-yonetimi') await kullanicilariYukle();
+            if(sayfa === 'sunum-olusturucu') window.olusturSlaytTablolari();
         } catch (err) {
             console.error("Yükleme hatası:", err);
         } finally {
