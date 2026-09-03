@@ -951,18 +951,21 @@
             </div>
 
             <div class="slide-canvas-viewport shadow rounded border bg-light p-3" style="overflow:auto; max-height:85vh;">
-                <div id="captureSlideArea" class="slide-canvas-container" style="background-image: url('https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od'); background-size: 100% 100%; background-repeat: no-repeat; width: 960px; height: 720px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative; display: flex; flex-direction: column;">
-                    
-                    <!-- ORTALANMIŞ VE LOGOYA YAKINLAŞTIRILMIŞ ÜST BAŞLIK BANTI -->
-                    <div style="height: 62px; display: flex; align-items: center; justify-content: space-between; padding-left: 95px; padding-right: 32px; padding-top: 14px; flex-shrink: 0;">
-                        <h2 id="slideRenderBaslik" style="font-size: 20px; font-weight: 900; margin: 0; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);"></h2>
-                        <div id="slideRenderDonem" style="font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);"></div>
-                    </div>
+                <!-- SAĞ PANEL: Canlı Slayt Tuvali (Milimetrik Hizalı) -->
+<div id="captureSlideArea" class="slide-canvas-container" style="background-image: url('https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od'); background-size: 100% 100%; background-repeat: no-repeat; width: 960px; height: 720px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative; display: flex; flex-direction: column; overflow: hidden;">
+    
+    <!-- KIRMIZI ŞERİT METİNLERİ (BEYAZ TAVANDAN 26px AŞAĞI İNDİRİLDİ, TAM ORTADA) -->
+    <div style="height: 72px; display: flex; align-items: center; justify-content: space-between; padding-left: 100px; padding-right: 32px; padding-top: 26px; flex-shrink: 0; box-sizing: border-box;">
+        <h2 id="slideRenderBaslik" style="font-size: 20px; font-weight: 900; margin: 0; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.6); line-height: 1;"></h2>
+        <div id="slideRenderDonem" style="font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.6); line-height: 1;"></div>
+    </div>
 
-                    <!-- SÜRÜKLENEBİLİR VE KONUMU AYARLANABİLİR TABLO ALANI -->
-                    <div id="slideTablesWrapper" style="padding: 0 32px; margin-top: 60px; display: flex; flex-direction: column; gap: 16px; cursor: move;" title="Tabloyu sürükleyerek aşağı/yukarı kaydırabilirsiniz"></div>
+    <!-- SÜRÜKLENEBİLİR TABLO KAPSAYICISI -->
+    <div id="slideTablesWrapper" style="padding: 0 32px; margin-top: 50px; display: flex; flex-direction: column; gap: 14px; position: relative;">
+        <!-- Tablolar Buraya Gelecek -->
+    </div>
 
-                </div>
+</div>
             </div>
         </div>
     </div>
@@ -5201,10 +5204,10 @@ window.kunyeModalDisKlikKapat = function(e) {
         await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
     })();
     // =============================================================
-    // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI & GELİŞMİŞ SÜRÜKLEME MOTORU
+    // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI & AKICI TAŞIMA MOTORU (V7)
     // =============================================================
     const RESMI_SLAYT_SABLON_URL = "https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od";
-    let slideCurrentTopInches = 1.8; // Varsayılan üst mesafe (İnç)
+    let slideCurrentTopInches = 1.6; // Varsayılan dikey konum
 
     window.guncelleSlideBaslik = function() {
         const val = document.getElementById('slideInputBaslik')?.value || '';
@@ -5218,7 +5221,7 @@ window.kunyeModalDisKlikKapat = function(e) {
         if (el) el.innerText = val.toUpperCase();
     };
 
-    // DİKEY BOŞLUK AYARLAYICI (SOL PANEL VE SÜRÜKLEME İÇİN)
+    // SOL PANELDEKİ SLIDER VEYA SÜRÜKLEME İLE TABLO BOŞLUĞUNU GÜNCELLE
     window.slideTabloKonumAyarla = function(inchVal) {
         slideCurrentTopInches = parseFloat(inchVal);
         const label = document.getElementById('labelTopPos');
@@ -5226,8 +5229,8 @@ window.kunyeModalDisKlikKapat = function(e) {
 
         const wrapper = document.getElementById('slideTablesWrapper');
         if (wrapper) {
-            // 1 inç ekranda yaklaşık 80px'e denk gelir
-            const pxVal = Math.round((slideCurrentTopInches - 1.0) * 80);
+            // İnç değerini piksele çevir (1 inç ~ 65px pay)
+            const pxVal = Math.round((slideCurrentTopInches - 1.0) * 65);
             wrapper.style.marginTop = `${Math.max(10, pxVal)}px`;
         }
     };
@@ -5248,7 +5251,7 @@ window.kunyeModalDisKlikKapat = function(e) {
         }
     };
 
-    // TABLOYU BOŞ VE DÜZ MATRİS OLARAK OLUŞTUR
+    // TABLOYU VE TAŞIMA KOLUNU ÇİZ
     window.olusturSlaytTablolari = function() {
         const wrapper = document.getElementById('slideTablesWrapper');
         if (!wrapper) return;
@@ -5258,82 +5261,94 @@ window.kunyeModalDisKlikKapat = function(e) {
         const baslikSatirSayisi = parseInt(document.getElementById('slideInputBaslikSatirSayisi')?.value || '2');
         const satirSayisi = parseInt(document.getElementById('slideInputSatirSayisi')?.value || '8');
 
+        // Akıcı sürükleme için üst tutamaç barı
+        let tHtml = `
+            <div id="tableDragHandle" style="width:100%; background:rgba(203, 213, 225, 0.6); border:1px dashed #94a3b8; border-radius:6px; padding:3px; text-align:center; font-size:10px; font-weight:700; color:#475569; cursor:ns-resize; user-select:none; margin-bottom:4px;" title="Tabloyu yukarı/aşağı taşımak için buradan tutup sürükleyin">
+                <i class="bi bi-arrows-move me-1"></i> TABLOYU YUKARI / AŞAĞI TAŞIMAK İÇİN BURADAN TUTUP SÜRÜKLEYİN
+            </div>
+        `;
+
         function tabloCiz(themeClass) {
-            let tHtml = `<table class="sb-briefing-table" data-cols="${sutunSayisi}" style="width:100%; border-collapse:collapse; border:1.5px solid #000; background:#fff; table-layout:fixed;">
+            let tableStr = `<table class="sb-briefing-table" data-cols="${sutunSayisi}" style="width:100%; border-collapse:collapse; border:1.5px solid #000; background:#fff; table-layout:fixed;">
                 <thead>`;
 
             for (let b = 0; b < baslikSatirSayisi; b++) {
-                tHtml += `<tr>`;
+                tableStr += `<tr>`;
                 for (let c = 0; c < sutunSayisi; c++) {
                     const bgColor = (themeClass === 'theme-blue') ? '#1e3a8a' : '#b91c1c';
-                    tHtml += `<th class="sb-header-cell" data-r="${b}" data-c="${c}" style="background-color:${bgColor}; color:#fff; font-weight:bold; font-size:10px; padding:6px 2px; text-align:center; border:1px solid #000; outline:none;" contenteditable="true"></th>`;
+                    tableStr += `<th class="sb-header-cell" data-r="${b}" data-c="${c}" style="background-color:${bgColor}; color:#fff; font-weight:bold; font-size:10px; padding:6px 2px; text-align:center; border:1px solid #000; outline:none;" contenteditable="true"></th>`;
                 }
-                tHtml += `</tr>`;
+                tableStr += `</tr>`;
             }
 
-            tHtml += `</thead><tbody>`;
+            tableStr += `</thead><tbody>`;
 
             for (let r = 0; r < satirSayisi; r++) {
-                tHtml += `<tr>`;
+                tableStr += `<tr>`;
                 for (let c = 0; c < sutunSayisi; c++) {
-                    tHtml += `<td data-r="${baslikSatirSayisi + r}" data-c="${c}" style="text-align:center; padding:5px 3px; border:1px solid #000; font-size:11px; color:#000; background:#fff; outline:none;" contenteditable="true"></td>`;
+                    tableStr += `<td data-r="${baslikSatirSayisi + r}" data-c="${c}" style="text-align:center; padding:5px 3px; border:1px solid #000; font-size:11px; color:#000; background:#fff; outline:none;" contenteditable="true"></td>`;
                 }
-                tHtml += `</tr>`;
+                tableStr += `</tr>`;
             }
 
-            tHtml += `</tbody></table>`;
-            return tHtml;
+            tableStr += `</tbody></table>`;
+            return tableStr;
         }
 
-        let mainHtml = tabloCiz("");
-        if (tabloSayisi >= 2) mainHtml += tabloCiz("theme-blue");
-        if (tabloSayisi >= 3) mainHtml += tabloCiz("");
+        tHtml += tabloCiz("");
+        if (tabloSayisi >= 2) tHtml += tabloCiz("theme-blue");
+        if (tabloSayisi >= 3) tHtml += tabloCiz("");
 
-        wrapper.innerHTML = mainHtml;
+        wrapper.innerHTML = tHtml;
         window.hucreSecimOlaylariniAta();
-        window.tabloSuruklemeOlaylariniAta();
+        window.tabloTutamaciIleSuruklemeyiBaslat();
     };
 
-    // FAREYLE TABLOYU YUKARI-AŞAĞI SÜRÜKLEME (DRAG & DROP)
-    window.tabloSuruklemeOlaylariniAta = function() {
+    // TABLOYU TUTAMAÇ İLE RAHATÇA AŞAĞI-YUKARI SÜRÜKLEME
+    window.tabloTutamaciIleSuruklemeyiBaslat = function() {
+        const handle = document.getElementById('tableDragHandle');
         const wrapper = document.getElementById('slideTablesWrapper');
-        if (!wrapper) return;
+        if (!handle || !wrapper) return;
 
         let isDragging = false;
         let startY = 0;
-        let initialMargin = 60;
+        let startMargin = 50;
 
-        wrapper.onmousedown = function(e) {
-            // Eğer hücre içine yazı yazılıyorsa sürüklemeyi başlatma
-            if (e.target.isContentEditable) return;
-            
+        handle.onmousedown = function(e) {
             isDragging = true;
             startY = e.clientY;
-            initialMargin = parseInt(window.getComputedStyle(wrapper).marginTop) || 60;
+            startMargin = parseInt(window.getComputedStyle(wrapper).marginTop) || 50;
             document.body.style.userSelect = 'none';
+            handle.style.background = '#bfdbfe';
+            handle.style.color = '#1e3a8a';
         };
 
-        window.onmousemove = function(e) {
+        window.addEventListener('mousemove', function(e) {
             if (!isDragging) return;
             const deltaY = e.clientY - startY;
-            const newMargin = Math.max(10, Math.min(220, initialMargin + deltaY));
+            const newMargin = Math.max(10, Math.min(260, startMargin + deltaY));
             wrapper.style.marginTop = `${newMargin}px`;
 
-            // Slider ve inç değerini eşitle
-            const computedInch = 1.0 + (newMargin / 80);
+            // İnç ve Slider senkronu
+            const computedInch = 1.0 + (newMargin / 65);
             slideCurrentTopInches = parseFloat(computedInch.toFixed(1));
+            
             const rangeInput = document.getElementById('slideInputTopPos');
             const label = document.getElementById('labelTopPos');
             if (rangeInput) rangeInput.value = slideCurrentTopInches;
             if (label) label.innerText = `${slideCurrentTopInches} inç`;
-        };
+        });
 
-        window.onmouseup = function() {
+        window.addEventListener('mouseup', function() {
             if (isDragging) {
                 isDragging = false;
                 document.body.style.userSelect = '';
+                if (handle) {
+                    handle.style.background = 'rgba(203, 213, 225, 0.6)';
+                    handle.style.color = '#475569';
+                }
             }
-        };
+        });
     };
 
     // SHIFT İLE ARALIK VE CTRL İLE SEÇİM
@@ -5445,7 +5460,7 @@ window.kunyeModalDisKlikKapat = function(e) {
         selected.forEach(c => c.innerText = '');
     };
 
-    // MİLİMETRİK POWERPOINT (.PPTX) İNDİRME MOTORU (AYARLANAN YÜKSEKLİKLE İNER)
+    // POWERPOINT (.PPTX) İNDİRME MOTORU (AYARLANAN YÜKSEKLİKLE İNER)
     window.indirSlaytPPTX = async function() {
         if (typeof PptxGenJS === 'undefined') {
             alert("PowerPoint kütüphanesi hazır değil.");
@@ -5483,14 +5498,14 @@ window.kunyeModalDisKlikKapat = function(e) {
             const baslikMetni = document.getElementById('slideInputBaslik')?.value || '';
             const donemMetni = document.getElementById('slideInputDonem')?.value || '';
 
-            // 2. ORTALANMIŞ VE LOGOYA YAKINLAŞTIRILMIŞ METİNLER
+            // 2. DİKEY HİZALANMIŞ ÜST METİNLER (TAM KIRMIZI ŞERİDİN ORTASINDA)
             if (baslikMetni) {
                 slide.addText(baslikMetni.toUpperCase(), {
                     x: (format === '4_3' ? 1.25 : 1.45),
-                    y: 0.15,
+                    y: 0.22, // Tavan boşluğu artırıldı
                     w: (slideW - 5.5),
-                    h: 0.65,
-                    fontSize: (format === '4_3' ? 17 : 20),
+                    h: 0.55,
+                    fontSize: (format === '4_3' ? 16 : 19),
                     fontFace: "Arial Black",
                     color: "FFFFFF",
                     bold: true,
@@ -5501,9 +5516,9 @@ window.kunyeModalDisKlikKapat = function(e) {
             if (donemMetni) {
                 slide.addText(donemMetni.toUpperCase(), {
                     x: (slideW - 4.8),
-                    y: 0.15,
+                    y: 0.22,
                     w: 4.4,
-                    h: 0.65,
+                    h: 0.55,
                     fontSize: (format === '4_3' ? 13 : 15),
                     fontFace: "Arial",
                     color: "FFFFFF",
@@ -5513,11 +5528,11 @@ window.kunyeModalDisKlikKapat = function(e) {
                 });
             }
 
-            // 3. TABLOLARI SAYFAYA KİLİTLE (KULLANICININ BELİRLEDİĞİ YÜKSEKLİKTEN BAŞLAR)
+            // 3. TABLOLARI SAYFAYA KİLİTLE (SÜRÜKLEDİĞİNİZ YÜKSEKLİKTEN BAŞLAR)
             const htmlTables = document.querySelectorAll('#slideTablesWrapper table');
             if (!htmlTables || htmlTables.length === 0) return;
 
-            let startY = slideCurrentTopInches; // Kullanıcının ayarladığı inç değeriyle başlar!
+            let startY = slideCurrentTopInches;
 
             htmlTables.forEach((table) => {
                 const pptxRows = [];
@@ -5581,7 +5596,7 @@ window.kunyeModalDisKlikKapat = function(e) {
                     if (rowCells.length > 0) pptxRows.push(rowCells);
                 });
 
-                const remainingHeight = (slideH - startY - 0.5);
+                const remainingHeight = (slideH - startY - 0.4);
                 const dynamicRowHeight = Math.min(0.24, remainingHeight / (rowCount * htmlTables.length));
 
                 slide.addTable(pptxRows, {
