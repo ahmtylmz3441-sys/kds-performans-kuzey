@@ -820,9 +820,9 @@
          <!-- SUNUM & BRİFİNG SLAYT SİHİRBAZI SAYFASI -->
 <section id="sunum-olusturucu" class="page">
     <div class="row g-4">
-        <!-- SOL PANEL: Ferahlatılmış Kontrol ve Renk Stüdyosu -->
+        <!-- SOL PANEL: Ferahlatılmış Kontrol ve Konumlandırma Stüdyosu -->
         <div class="col-xl-3 col-lg-4">
-            <div class="kds-card p-4" style="display: flex; flex-direction: column; gap: 18px;">
+            <div class="kds-card p-4" style="display: flex; flex-direction: column; gap: 16px;">
                 
                 <!-- BÖLÜM 1: ÜST BİLGİLER -->
                 <div>
@@ -830,15 +830,15 @@
                         <i class="bi bi-sliders text-danger"></i> Slayt ve Başlık Bilgileri
                     </h6>
                     
-                    <div class="mb-3">
+                    <div class="mb-2">
                         <label class="form-label small fw-bold text-secondary mb-1">Slayt Formatı / Oranı</label>
                         <select id="slideInputFormat" class="form-select form-select-sm" onchange="window.slideFormatDegisti()">
-                            <option value="16_9" selected>16:9 Geniş Ekran (Modern)</option>
-                            <option value="4_3">4:3 Standart Ekran (Klasik)</option>
+                            <option value="16_9">16:9 Geniş Ekran (Modern)</option>
+                            <option value="4_3" selected>4:3 Standart Ekran (Klasik)</option>
                         </select>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-2">
                         <label class="form-label small fw-bold text-secondary mb-1">Üst Bant Başlığı</label>
                         <input type="text" id="slideInputBaslik" class="form-control form-control-sm" placeholder="Başlık giriniz..." oninput="window.guncelleSlideBaslik()">
                     </div>
@@ -849,10 +849,10 @@
                     </div>
                 </div>
 
-                <!-- BÖLÜM 2: TABLO MATRİSİ -->
+                <!-- BÖLÜM 2: TABLO MATRİSİ & KONUM AYARI -->
                 <div>
                     <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">
-                        <i class="bi bi-table text-primary"></i> Tablo Matrisi
+                        <i class="bi bi-table text-primary"></i> Tablo Matrisi & Konumu
                     </h6>
 
                     <div class="row g-2 mb-2">
@@ -866,7 +866,7 @@
                         </div>
                     </div>
 
-                    <div class="row g-2">
+                    <div class="row g-2 mb-2">
                         <div class="col-6">
                             <label class="form-label small fw-bold text-secondary mb-1">Başlık Satırı</label>
                             <input type="number" id="slideInputBaslikSatirSayisi" class="form-control form-control-sm" value="2" min="1" max="15" onchange="window.olusturSlaytTablolari()">
@@ -876,14 +876,22 @@
                             <input type="number" id="slideInputSatirSayisi" class="form-control form-control-sm" value="8" min="1" max="30" onchange="window.olusturSlaytTablolari()">
                         </div>
                     </div>
+
+                    <!-- TABLO DİKEY KONUM AYARI (AŞAĞI/YUKARI OKLARLA) -->
+                    <div>
+                        <label class="form-label small fw-bold text-secondary mb-1 d-flex justify-content-between">
+                            <span>Tablo Üst Boşluğu (İnç)</span>
+                            <span id="labelTopPos" class="text-primary fw-bold">1.8 inç</span>
+                        </label>
+                        <input type="range" id="slideInputTopPos" class="form-range" min="1.3" max="3.0" step="0.1" value="1.8" oninput="window.slideTabloKonumAyarla(this.value)">
+                    </div>
                 </div>
 
-                <!-- BÖLÜM 3: HÜCRE VE GELİŞMİŞ RENK PALETİ ARAÇLARI -->
+                <!-- BÖLÜM 3: HÜCRE & YAZI STÜDYOSU -->
                 <div class="p-3 border rounded bg-light">
                     <span class="small fw-bold text-dark d-block mb-2"><i class="bi bi-palette-fill text-danger"></i> Hücre & Yazı Stüdyosu</span>
                     
-                    <!-- Birleştir / Ayır Butonları -->
-                    <div class="d-flex gap-2 mb-3">
+                    <div class="d-flex gap-2 mb-2">
                         <button class="btn btn-sm btn-outline-dark w-100 fw-bold py-1" style="font-size:11.5px;" onclick="window.birlestirSecilenHucreler()">
                             <i class="bi bi-intersect"></i> Birleştir
                         </button>
@@ -892,27 +900,24 @@
                         </button>
                     </div>
 
-                    <!-- Kalınlık & Renk Paleti -->
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <button class="btn btn-sm btn-outline-dark fw-bold px-3 py-1" style="font-size:11.5px;" onclick="window.seciliYaziKalinYap()">
                             <i class="bi bi-type-bold"></i> B
                         </button>
 
-                        <!-- Sınırsız Renk Seçici (Color Picker) -->
                         <div class="d-flex align-items-center gap-1 w-100 border bg-white rounded px-2 py-1">
                             <input type="color" id="slideColorPicker" value="#000000" style="width:26px; height:24px; border:none; padding:0; cursor:pointer; background:none;" onchange="window.seciliYaziRenkDegistir(this.value)">
                             <span class="small text-secondary" style="font-size:11px; font-weight:600;">Yazı Rengi</span>
                         </div>
                     </div>
 
-                    <!-- Kurumsal Hızlı Renk Paleti Rozetleri -->
-                    <div class="d-flex gap-1 mb-3 align-items-center justify-content-between pt-1">
-                        <span class="text-muted" style="font-size:10px; font-weight:700;">HIZLI RENK:</span>
+                    <div class="d-flex gap-1 mb-2 align-items-center justify-content-between pt-1">
+                        <span class="text-muted" style="font-size:10px; font-weight:700;">HIZLI:</span>
                         <div style="width:18px; height:18px; background:#000000; border-radius:4px; cursor:pointer; border:1px solid #ccc;" title="Siyah" onclick="window.seciliYaziRenkDegistir('#000000')"></div>
                         <div style="width:18px; height:18px; background:#ffffff; border-radius:4px; cursor:pointer; border:1px solid #999;" title="Beyaz" onclick="window.seciliYaziRenkDegistir('#ffffff')"></div>
                         <div style="width:18px; height:18px; background:#b91c1c; border-radius:4px; cursor:pointer;" title="Kırmızı" onclick="window.seciliYaziRenkDegistir('#b91c1c')"></div>
                         <div style="width:18px; height:18px; background:#1e3a8a; border-radius:4px; cursor:pointer;" title="Lacivert" onclick="window.seciliYaziRenkDegistir('#1e3a8a')"></div>
-                        <div style="width:18px; height:18px; background:#047857; border-radius:4px; cursor:pointer;" title="Zümrüt Yeşili" onclick="window.seciliYaziRenkDegistir('#047857')"></div>
+                        <div style="width:18px; height:18px; background:#047857; border-radius:4px; cursor:pointer;" title="Zümrüt" onclick="window.seciliYaziRenkDegistir('#047857')"></div>
                         <div style="width:18px; height:18px; background:#d97706; border-radius:4px; cursor:pointer;" title="Kehribar" onclick="window.seciliYaziRenkDegistir('#d97706')"></div>
                     </div>
 
@@ -936,26 +941,26 @@
             </div>
         </div>
 
-        <!-- SAĞ PANEL: 16:9 / 4:3 Uyumlu Canlı Slayt Tuvali -->
+        <!-- SAĞ PANEL: 16:9 / 4:3 Canlı Slayt Tuvali -->
         <div class="col-xl-9 col-lg-8">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <span id="slideCanvasRatioLabel" class="small fw-bold text-secondary">
-                    <i class="bi bi-aspect-ratio text-danger"></i> 16:9 Standart Brifing Slaytı (Canlı Önizleme)
+                    <i class="bi bi-aspect-ratio text-danger"></i> 4:3 Standart Slayt (Canlı Önizleme)
                 </span>
+                <span class="badge bg-light text-muted border px-2 py-1 small"><i class="bi bi-arrows-move me-1"></i> Tabloyu aşağı-yukarı sürükleyebilirsiniz</span>
             </div>
 
             <div class="slide-canvas-viewport shadow rounded border bg-light p-3" style="overflow:auto; max-height:85vh;">
-                <!-- DİNAMİK EN/BOY SLAYT TUVALİ (YUKARI YAPIŞMA VE LOGO ÜSTÜNE BİNME GİDERİLDİ) -->
-                <div id="captureSlideArea" class="slide-canvas-container" style="background-image: url('https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od'); background-size: 100% 100%; background-repeat: no-repeat; width: 1120px; height: 630px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative; display: flex; flex-direction: column; transition: width 0.3s, height 0.3s;">
+                <div id="captureSlideArea" class="slide-canvas-container" style="background-image: url('https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od'); background-size: 100% 100%; background-repeat: no-repeat; width: 960px; height: 720px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative; display: flex; flex-direction: column;">
                     
-                    <!-- DİKEY HİZALANMIŞ ÜST BAŞLIK BANTI (LOGO İÇİN 140px PAY BIRAKILDI) -->
-                    <div style="height: 68px; display: flex; align-items: center; justify-content: space-between; padding-left: 140px; padding-right: 32px; padding-top: 8px; flex-shrink: 0;">
-                        <h2 id="slideRenderBaslik" style="font-size: 21px; font-weight: 900; margin: 0; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.4); line-height: 1.2;"></h2>
-                        <div id="slideRenderDonem" style="font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.4); line-height: 1.2;"></div>
+                    <!-- ORTALANMIŞ VE LOGOYA YAKINLAŞTIRILMIŞ ÜST BAŞLIK BANTI -->
+                    <div style="height: 62px; display: flex; align-items: center; justify-content: space-between; padding-left: 95px; padding-right: 32px; padding-top: 14px; flex-shrink: 0;">
+                        <h2 id="slideRenderBaslik" style="font-size: 20px; font-weight: 900; margin: 0; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);"></h2>
+                        <div id="slideRenderDonem" style="font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);"></div>
                     </div>
 
-                    <!-- TABLOLAR ALANI (BEYAZ ALANA TAM KİLİTLİ) -->
-                    <div id="slideTablesWrapper" style="padding: 16px 28px; flex-grow: 1; display: flex; flex-direction: column; gap: 16px; overflow: hidden;"></div>
+                    <!-- SÜRÜKLENEBİLİR VE KONUMU AYARLANABİLİR TABLO ALANI -->
+                    <div id="slideTablesWrapper" style="padding: 0 32px; margin-top: 60px; display: flex; flex-direction: column; gap: 16px; cursor: move;" title="Tabloyu sürükleyerek aşağı/yukarı kaydırabilirsiniz"></div>
 
                 </div>
             </div>
@@ -5196,9 +5201,10 @@ window.kunyeModalDisKlikKapat = function(e) {
         await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
     })();
     // =============================================================
-    // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI (16:9 & 4:3 UYUMLU, RENK PALETLİ)
+    // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI & GELİŞMİŞ SÜRÜKLEME MOTORU
     // =============================================================
     const RESMI_SLAYT_SABLON_URL = "https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od";
+    let slideCurrentTopInches = 1.8; // Varsayılan üst mesafe (İnç)
 
     window.guncelleSlideBaslik = function() {
         const val = document.getElementById('slideInputBaslik')?.value || '';
@@ -5212,9 +5218,22 @@ window.kunyeModalDisKlikKapat = function(e) {
         if (el) el.innerText = val.toUpperCase();
     };
 
-    // SLAYT FORMAT DEĞİŞİMİ (16:9 vs 4:3 TUVAL BOYUTLANDIRICI)
+    // DİKEY BOŞLUK AYARLAYICI (SOL PANEL VE SÜRÜKLEME İÇİN)
+    window.slideTabloKonumAyarla = function(inchVal) {
+        slideCurrentTopInches = parseFloat(inchVal);
+        const label = document.getElementById('labelTopPos');
+        if (label) label.innerText = `${slideCurrentTopInches.toFixed(1)} inç`;
+
+        const wrapper = document.getElementById('slideTablesWrapper');
+        if (wrapper) {
+            // 1 inç ekranda yaklaşık 80px'e denk gelir
+            const pxVal = Math.round((slideCurrentTopInches - 1.0) * 80);
+            wrapper.style.marginTop = `${Math.max(10, pxVal)}px`;
+        }
+    };
+
     window.slideFormatDegisti = function() {
-        const format = document.getElementById('slideInputFormat')?.value || '16_9';
+        const format = document.getElementById('slideInputFormat')?.value || '4_3';
         const tuval = document.getElementById('captureSlideArea');
         const label = document.getElementById('slideCanvasRatioLabel');
 
@@ -5272,9 +5291,52 @@ window.kunyeModalDisKlikKapat = function(e) {
 
         wrapper.innerHTML = mainHtml;
         window.hucreSecimOlaylariniAta();
+        window.tabloSuruklemeOlaylariniAta();
     };
 
-    // SHIFT İLE ARALIK VE CTRL İLE ÇOKLU SEÇİM
+    // FAREYLE TABLOYU YUKARI-AŞAĞI SÜRÜKLEME (DRAG & DROP)
+    window.tabloSuruklemeOlaylariniAta = function() {
+        const wrapper = document.getElementById('slideTablesWrapper');
+        if (!wrapper) return;
+
+        let isDragging = false;
+        let startY = 0;
+        let initialMargin = 60;
+
+        wrapper.onmousedown = function(e) {
+            // Eğer hücre içine yazı yazılıyorsa sürüklemeyi başlatma
+            if (e.target.isContentEditable) return;
+            
+            isDragging = true;
+            startY = e.clientY;
+            initialMargin = parseInt(window.getComputedStyle(wrapper).marginTop) || 60;
+            document.body.style.userSelect = 'none';
+        };
+
+        window.onmousemove = function(e) {
+            if (!isDragging) return;
+            const deltaY = e.clientY - startY;
+            const newMargin = Math.max(10, Math.min(220, initialMargin + deltaY));
+            wrapper.style.marginTop = `${newMargin}px`;
+
+            // Slider ve inç değerini eşitle
+            const computedInch = 1.0 + (newMargin / 80);
+            slideCurrentTopInches = parseFloat(computedInch.toFixed(1));
+            const rangeInput = document.getElementById('slideInputTopPos');
+            const label = document.getElementById('labelTopPos');
+            if (rangeInput) rangeInput.value = slideCurrentTopInches;
+            if (label) label.innerText = `${slideCurrentTopInches} inç`;
+        };
+
+        window.onmouseup = function() {
+            if (isDragging) {
+                isDragging = false;
+                document.body.style.userSelect = '';
+            }
+        };
+    };
+
+    // SHIFT İLE ARALIK VE CTRL İLE SEÇİM
     let sonTiklananHucre = null;
 
     window.hucreSecimOlaylariniAta = function() {
@@ -5309,7 +5371,7 @@ window.kunyeModalDisKlikKapat = function(e) {
         });
     };
 
-    // BİÇİMLENDİRME: KALIN (BOLD) & SINIRSIZ RENK PALETİ
+    // BİÇİMLENDİRME: KALIN (BOLD) & RENK
     window.seciliYaziKalinYap = function() {
         const selected = document.querySelectorAll('.sb-briefing-table .cell-selected');
         if (selected.length === 0) {
@@ -5339,7 +5401,7 @@ window.kunyeModalDisKlikKapat = function(e) {
     window.birlestirSecilenHucreler = function() {
         const selected = Array.from(document.querySelectorAll('.sb-briefing-table .cell-selected'));
         if (selected.length < 2) {
-            alert("Lütfen birleştirmek için en az 2 hücre seçiniz (Shift ile aralık seçebilirsiniz).");
+            alert("Lütfen birleştirmek için en az 2 hücre seçiniz.");
             return;
         }
 
@@ -5383,37 +5445,36 @@ window.kunyeModalDisKlikKapat = function(e) {
         selected.forEach(c => c.innerText = '');
     };
 
-    // MİLİMETRİK VE KESİN TAŞMAYAN POWERPOINT (.PPTX) İNDİRME MOTORU
+    // MİLİMETRİK POWERPOINT (.PPTX) İNDİRME MOTORU (AYARLANAN YÜKSEKLİKLE İNER)
     window.indirSlaytPPTX = async function() {
         if (typeof PptxGenJS === 'undefined') {
-            alert("PowerPoint kütüphanesi henüz yüklenmedi.");
+            alert("PowerPoint kütüphanesi hazır değil.");
             return;
         }
 
         try {
             const pptx = new PptxGenJS();
-            const format = document.getElementById('slideInputFormat')?.value || '16_9';
+            const format = document.getElementById('slideInputFormat')?.value || '4_3';
 
-            // SLAYT BOYUTUNU BELİRLE (16:9 vs 4:3)
-            let slideW = 13.333;
+            let slideW = 10.0;
             let slideH = 7.5;
-            let targetTableWidth = 12.3;
-            let startX = 0.51;
+            let targetTableWidth = 9.2;
+            let startX = 0.40;
 
-            if (format === '4_3') {
-                pptx.layout = 'LAYOUT_4x3'; // 10.0 inç x 7.5 inç
-                slideW = 10.0;
-                slideH = 7.5;
-                targetTableWidth = 9.2; // 4:3 için daraltılmış tablo
-                startX = 0.40;
-            } else {
+            if (format === '16_9') {
                 pptx.defineLayout({ name: 'CUSTOM_16_9', width: 13.333, height: 7.5 });
                 pptx.layout = 'CUSTOM_16_9';
+                slideW = 13.333;
+                slideH = 7.5;
+                targetTableWidth = 12.3;
+                startX = 0.51;
+            } else {
+                pptx.layout = 'LAYOUT_4x3';
             }
 
             const slide = pptx.addSlide();
 
-            // 1. TAM EKRAN RESMİ ŞABLON (4:3 veya 16:9 boyuna tam oturur)
+            // 1. TAM EKRAN ŞABLON
             slide.addImage({
                 path: RESMI_SLAYT_SABLON_URL,
                 x: 0, y: 0, w: slideW, h: slideH
@@ -5422,28 +5483,41 @@ window.kunyeModalDisKlikKapat = function(e) {
             const baslikMetni = document.getElementById('slideInputBaslik')?.value || '';
             const donemMetni = document.getElementById('slideInputDonem')?.value || '';
 
-            // 2. ORTALANMIŞ ÜST METİNLER (LOGOYA BİNMEYECEK ŞEKİLDE AYARLI)
+            // 2. ORTALANMIŞ VE LOGOYA YAKINLAŞTIRILMIŞ METİNLER
             if (baslikMetni) {
                 slide.addText(baslikMetni.toUpperCase(), {
-                    x: 1.55, y: 0.16, w: (slideW - 6.5), h: 0.65,
+                    x: (format === '4_3' ? 1.25 : 1.45),
+                    y: 0.15,
+                    w: (slideW - 5.5),
+                    h: 0.65,
                     fontSize: (format === '4_3' ? 17 : 20),
-                    fontFace: "Arial Black", color: "FFFFFF", bold: true, valign: "middle"
+                    fontFace: "Arial Black",
+                    color: "FFFFFF",
+                    bold: true,
+                    valign: "middle"
                 });
             }
 
             if (donemMetni) {
                 slide.addText(donemMetni.toUpperCase(), {
-                    x: (slideW - 5.2), y: 0.16, w: 4.8, h: 0.65,
+                    x: (slideW - 4.8),
+                    y: 0.15,
+                    w: 4.4,
+                    h: 0.65,
                     fontSize: (format === '4_3' ? 13 : 15),
-                    fontFace: "Arial", color: "FFFFFF", bold: true, align: "right", valign: "middle"
+                    fontFace: "Arial",
+                    color: "FFFFFF",
+                    bold: true,
+                    align: "right",
+                    valign: "middle"
                 });
             }
 
-            // 3. TABLOLARI SAYFAYA KİLİTLE (KESİN TAŞMAZ)
+            // 3. TABLOLARI SAYFAYA KİLİTLE (KULLANICININ BELİRLEDİĞİ YÜKSEKLİKTEN BAŞLAR)
             const htmlTables = document.querySelectorAll('#slideTablesWrapper table');
             if (!htmlTables || htmlTables.length === 0) return;
 
-            let startY = 1.30;
+            let startY = slideCurrentTopInches; // Kullanıcının ayarladığı inç değeriyle başlar!
 
             htmlTables.forEach((table) => {
                 const pptxRows = [];
@@ -5470,7 +5544,6 @@ window.kunyeModalDisKlikKapat = function(e) {
                         const isHeader = cell.tagName.toLowerCase() === 'th';
                         let bgColor = isHeader ? (cell.style.backgroundColor === 'rgb(30, 58, 138)' ? '1E3A8A' : 'B91C1C') : 'FFFFFF';
                         
-                        // Dinamik Yazı Rengi Kontrolü
                         let fontColor = '000000';
                         if (cell.style.color && cell.style.color !== '') {
                             const cVal = cell.style.color;
@@ -5508,7 +5581,8 @@ window.kunyeModalDisKlikKapat = function(e) {
                     if (rowCells.length > 0) pptxRows.push(rowCells);
                 });
 
-                const dynamicRowHeight = Math.min(0.24, 5.4 / (rowCount * htmlTables.length));
+                const remainingHeight = (slideH - startY - 0.5);
+                const dynamicRowHeight = Math.min(0.24, remainingHeight / (rowCount * htmlTables.length));
 
                 slide.addTable(pptxRows, {
                     x: startX,
