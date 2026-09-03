@@ -811,14 +811,14 @@
                     </div>
                 </div>
             </section>
-            <!-- SUNUM & BRİFİNG SLAYT SİHİRBAZI SAYFASI -->
+           <!-- SUNUM & BRİFİNG SLAYT SİHİRBAZI SAYFASI -->
 <section id="sunum-olusturucu" class="page">
     <div class="row g-4">
-        <!-- SOL PANEL: Kontrol ve Ayar Alanı -->
+        <!-- SOL PANEL: Gelişmiş Parametreler -->
         <div class="col-xl-3 col-lg-4">
             <div class="kds-card p-3">
                 <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">
-                    <i class="bi bi-sliders text-danger"></i> Slayt Parametreleri
+                    <i class="bi bi-sliders text-danger"></i> Slayt Üst Bilgileri
                 </h6>
                 
                 <div class="mb-2">
@@ -832,35 +832,53 @@
                 </div>
 
                 <h6 class="fw-bold mb-2 text-secondary border-bottom pb-2 pt-2">
-                    <i class="bi bi-table text-primary"></i> Tablo Düzeni
+                    <i class="bi bi-table text-primary"></i> Tablo ve Sütun Yapısı
                 </h6>
 
                 <div class="mb-2">
                     <label class="form-label small fw-bold text-secondary mb-1">Slayttaki Tablo Sayısı</label>
-                    <select id="slideInputTabloSayisi" class="form-select form-select-sm" onchange="window.slideTabloSayisiDegisti()">
-                        <option value="1">1 Tablo (Geniş / Çok Satırlı)</option>
-                        <option value="2" selected>2 Tablo (Resimdeki Gibi Alt Alta)</option>
+                    <select id="slideInputTabloSayisi" class="form-select form-select-sm" onchange="window.olusturSlaytTablolari()">
+                        <option value="1">1 Tablo (Tek Kurum / Çok Satır)</option>
+                        <option value="2" selected>2 Tablo (Alt Alta İki Kurum)</option>
                     </select>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label small fw-bold text-secondary mb-1">Başlık Formatı</label>
+                    <select id="slideInputBaslikDerinlik" class="form-select form-select-sm" onchange="window.olusturSlaytTablolari()">
+                        <option value="2" selected>2 Satırlı Hiyerarşik Başlık (Resimdeki Gibi)</option>
+                        <option value="1">1 Satırlı Düz Başlık</option>
+                    </select>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-secondary mb-1">Dönem Grubu</label>
+                        <select id="slideInputDonemGrup" class="form-select form-select-sm" onchange="window.olusturSlaytTablolari()">
+                            <option value="1">1 Dönem</option>
+                            <option value="2" selected>2 Dönem</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-secondary mb-1">Grup Başı Sütun</label>
+                        <input type="number" id="slideInputSutunSayisi" class="form-control form-control-sm" value="6" min="1" max="10" onchange="window.olusturSlaytTablolari()">
+                    </div>
                 </div>
 
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label small fw-bold text-secondary mb-1">1. Tablo Satır</label>
-                        <input type="number" id="slideT1Satir" class="form-control form-control-sm" value="3" min="1" max="15">
+                        <input type="number" id="slideT1Satir" class="form-control form-control-sm" value="3" min="1" max="15" onchange="window.olusturSlaytTablolari()">
                     </div>
-                    <div class="col-6">
+                    <div class="col-6" id="slideT2SatirKapsayici">
                         <label class="form-label small fw-bold text-secondary mb-1">2. Tablo Satır</label>
-                        <input type="number" id="slideT2Satir" class="form-control form-control-sm" value="2" min="1" max="15">
+                        <input type="number" id="slideT2Satir" class="form-control form-control-sm" value="2" min="1" max="15" onchange="window.olusturSlaytTablolari()">
                     </div>
                 </div>
 
                 <button class="btn btn-sm btn-outline-primary w-100 mb-3 fw-bold" onclick="window.olusturSlaytTablolari()">
-                    <i class="bi bi-arrow-repeat"></i> Tabloları Yeniden Kur
+                    <i class="bi bi-arrow-repeat"></i> Tabloyu Yenile
                 </button>
-
-                <div class="alert alert-light border p-2 small mb-3 text-muted" style="font-size:11px;">
-                    <i class="bi bi-info-circle-fill text-primary"></i> <b>İpucu:</b> Sağdaki slayt tuvalindeki hücrelere doğrudan tıklayarak verileri ve başlıkları klavyenizle düzenleyebilirsiniz (Excel gibi).
-                </div>
 
                 <button class="btn btn-danger w-100 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-2" onclick="window.indirSlaytPPTX()">
                     <i class="bi bi-file-earmark-ppt-fill fs-5"></i> 
@@ -876,26 +894,27 @@
                 <span class="badge bg-light text-secondary border px-2 py-1 small">Sağlık Bakanlığı Şablonu</span>
             </div>
 
-            <!-- Dış Çerçeve -->
             <div class="slide-canvas-viewport shadow rounded border bg-light p-3">
-                <!-- Slaytın Kendisi (16:9 Sabit Oran) -->
                 <div id="captureSlideArea" class="slide-canvas-container">
                     
-                    <!-- 1. ÜST KIRMIZI KURUMSAL BANT -->
+                    <!-- 1. ÜST KIRMIZI KURUMSAL BANT (Yerel SVG Logolu - Dönme Sorununu Çözer) -->
                     <div class="slide-top-banner">
                         <div class="slide-banner-left">
                             <div class="slide-logo-circle">
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/TC_Sa%C4%9Fl%C4%B1k_Bakanl%C4%B1%C4%9F%C4%B1_logo.svg/1024px-TC_Sa%C4%9Fl%C4%B1k_Bakanl%C4%B1%C4%9F%C4%B1_logo.svg.png" alt="Sağlık Bakanlığı Logo" onerror="this.src='https://via.placeholder.com/60?text=TC'">
+                                <!-- Vektörel Sağlık Hilali SVG -->
+                                <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="50" cy="50" r="48" stroke="#b91c1c" stroke-width="4" fill="#ffffff"/>
+                                    <path d="M50 20 C33.4 20 20 33.4 20 50 C20 66.6 33.4 80 50 80 C60.2 80 69.2 74.9 74.6 67.1 C61.8 70.8 47.9 63.8 44.2 51 C41.2 40.7 46.5 29.8 56.4 24.8 C54.3 24.3 52.2 24 50 20 Z" fill="#b91c1c"/>
+                                    <path d="M50 35 L50 65 M35 50 L65 50" stroke="#b91c1c" stroke-width="6" stroke-linecap="round"/>
+                                </svg>
                             </div>
                             <h2 id="slideRenderBaslik" class="slide-main-title">MESAİ DIŞI</h2>
                         </div>
                         <div id="slideRenderDonem" class="slide-period-title">HAZİRAN – TEMMUZ 2026</div>
                     </div>
 
-                    <!-- 2. TABLOLAR ALANI (İÇERİK TUVALİ) -->
-                    <div id="slideTablesWrapper" class="slide-tables-body">
-                        <!-- Tablolar Dinamik Olarak Buraya İnşa Edilir -->
-                    </div>
+                    <!-- 2. TABLOLAR ALANI -->
+                    <div id="slideTablesWrapper" class="slide-tables-body"></div>
 
                 </div>
             </div>
@@ -5164,131 +5183,103 @@ window.kunyeModalDisKlikKapat = function(e) {
         if (!wrapper) return;
 
         const tabloAdet = parseInt(document.getElementById('slideInputTabloSayisi')?.value || '2');
-        const t1SatirAdet = parseInt(document.getElementById('slideT1Satir')?.value || '3');
-        const t2SatirAdet = parseInt(document.getElementById('slideT2Satir')?.value || '2');
+        const baslikDerinlik = parseInt(document.getElementById('slideInputBaslikDerinlik')?.value || '2');
+        const donemGrup = parseInt(document.getElementById('slideInputDonemGrup')?.value || '2');
+        const sutunSayisi = parseInt(document.getElementById('slideInputSutunSayisi')?.value || '6');
+
+        const t1Satir = parseInt(document.getElementById('slideT1Satir')?.value || '3');
+        const t2Satir = parseInt(document.getElementById('slideT2Satir')?.value || '2');
+
+        const t2Kapsayici = document.getElementById('slideT2SatirKapsayici');
+        if (t2Kapsayici) t2Kapsayici.style.display = (tabloAdet === 2) ? 'block' : 'none';
 
         const donemMetni = document.getElementById('slideInputDonem')?.value || 'HAZİRAN – TEMMUZ 2026';
-        const aylar = donemMetni.split('–').map(s => s.trim());
-        const ay1 = aylar[0] || '2026 HAZİRAN';
-        const ay2 = aylar[1] || '2026 TEMMUZ';
+        const aylar = donemMetni.includes('–') ? donemMetni.split('–').map(s => s.trim()) : donemMetni.split('-');
+        const ay1 = aylar[0] || '2026 DÖNEM 1';
+        const ay2 = aylar[1] || '2026 DÖNEM 2';
 
-        let html = '';
-
-        // 1. TABLO (Resim 1'deki Koşuyolu Tablosu)
-        html += `
-            <table class="sb-briefing-table">
-                <thead>
-                    <tr>
-                        <th colspan="13" class="sb-table-top-header" contenteditable="true">KARTAL KOŞUYOLU YÜKSEK İHTİSAS EAH</th>
-                    </tr>
-                    <tr>
-                        <th rowspan="2" class="sb-header-cell" style="width: 140px;" contenteditable="true">KLİNİK ADI</th>
-                        <th colspan="6" class="sb-header-cell" contenteditable="true">${ay1}</th>
-                        <th colspan="6" class="sb-header-cell" contenteditable="true">${ay2}</th>
-                    </tr>
-                    <tr>
-                        <th class="sb-header-cell" contenteditable="true">POLİKLİNİK YAPILAN ODA SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">CETVEL AÇILAN HEKİM SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">AÇILAN KAPASİTE SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">ALINAN RANDEVU SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">GERÇEKLEŞEN RANDEVU SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">AYAKTAN MUAYENE SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">POLİKLİNİK YAPILAN ODA SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">CETVEL AÇILAN HEKİM SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">AÇILAN KAPASİTE SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">ALINAN RANDEVU SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">GERÇEKLEŞEN RANDEVU SAYISI</th>
-                        <th class="sb-header-cell" contenteditable="true">AYAKTAN MUAYENE SAYISI</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        const ornekVerilerT1 = [
-            { klinik: "İç Hastalıkları (Dahiliye)", d: ["2", "2", "432", "432", "384", "57", "2", "2", "432", "398", "398", "56"] },
-            { klinik: "Kalp ve Damar Cerrahisi", d: ["1", "1", "216", "215", "198", "26", "1", "1", "252", "225", "225", "40"] },
-            { klinik: "Kardiyoloji", d: ["5", "6", "1.602", "1.601", "1.435", "104", "6", "8", "1.530", "1.405", "1.403", "135"] }
+        const varsayilanMetrikler = [
+            "POLİKLİNİK YAPILAN ODA SAYISI",
+            "CETVEL AÇILAN HEKİM SAYISI",
+            "AÇILAN KAPASİTE SAYISI",
+            "ALINAN RANDEVU SAYISI",
+            "GERÇEKLEŞEN RANDEVU SAYISI",
+            "AYAKTAN MUAYENE SAYISI",
+            "TOPLAM MUAYENE SAYISI",
+            "DOLULUK ORANI (%)",
+            "HEKİM BAŞINA DÜŞEN",
+            "RANDEVU SADAKATİ"
         ];
 
-        for (let i = 0; i < t1SatirAdet; i++) {
-            const dataRow = ornekVerilerT1[i] || { klinik: `Klinik ${i+1}`, d: ["0","0","0","0","0","0","0","0","0","0","0","0"] };
-            html += `<tr>
-                <td class="sb-clinic-col" contenteditable="true">${dataRow.klinik}</td>
-                ${dataRow.d.map(val => `<td contenteditable="true">${val}</td>`).join('')}
-            </tr>`;
-        }
+        const toplamSutun = 1 + (donemGrup * sutunSayisi); // 1 Kolon Klinik Adı + Gruplar
 
-        html += `</tbody></table>`;
-
-        // 2. TABLO (Varsa - Resim 1'deki Siyami Ersek Tablosu)
-        if (tabloAdet === 2) {
-            html += `
-                <table class="sb-briefing-table">
-                    <thead>
-                        <tr>
-                            <th colspan="13" class="sb-table-top-header theme-blue" contenteditable="true">DR. SİYAMİ ERSEK GKDC EAH</th>
-                        </tr>
-                        <tr>
-                            <th rowspan="2" class="sb-header-cell" style="width: 140px;" contenteditable="true">KLİNİK ADI</th>
-                            <th colspan="6" class="sb-header-cell" contenteditable="true">${ay1}</th>
-                            <th colspan="6" class="sb-header-cell" contenteditable="true">${ay2}</th>
-                        </tr>
-                        <tr>
-                            <th class="sb-header-cell" contenteditable="true">POLİKLİNİK YAPILAN ODA SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">CETVEL AÇILAN HEKİM SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">AÇILAN KAPASİTE SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">ALINAN RANDEVU SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">GERÇEKLEŞEN RANDEVU SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">AYAKTAN MUAYENE SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">POLİKLİNİK YAPILAN ODA SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">CETVEL AÇILAN HEKİM SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">AÇILAN KAPASİTE SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">ALINAN RANDEVU SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">GERÇEKLEŞEN RANDEVU SAYISI</th>
-                            <th class="sb-header-cell" contenteditable="true">AYAKTAN MUAYENE SAYISI</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            const ornekVerilerT2 = [
-                { klinik: "Kardiyoloji", d: ["6", "44", "3.810", "3.806", "3.484", "254", "6", "42", "3.870", "3.869", "3.556", "315"] },
-                { klinik: "Çocuk Kardiyoloji", ozel: true }
-            ];
-
-            for (let i = 0; i < t2SatirAdet; i++) {
-                const dataRow = ornekVerilerT2[i];
-                if (dataRow && dataRow.ozel) {
-                    html += `<tr>
-                        <td class="sb-clinic-col" contenteditable="true">${dataRow.klinik}</td>
-                        <td colspan="6" style="text-align:left; padding-left:12px;" contenteditable="true">Hizmete Temmuz ayından itibaren başlanmıştır.</td>
-                        <td contenteditable="true">1</td>
-                        <td contenteditable="true">2</td>
-                        <td contenteditable="true">216</td>
-                        <td contenteditable="true">215</td>
-                        <td contenteditable="true">206</td>
-                        <td contenteditable="true">16</td>
+        function buildTableHtml(kurumAdi, themeClass, satirSayisi) {
+            let tHtml = `<table class="sb-briefing-table" style="width:100%; border-collapse:collapse; margin-bottom:12px; border:2px solid #b91c1c;">
+                <thead>
+                    <tr>
+                        <th colspan="${toplamSutun}" class="sb-table-top-header ${themeClass}" style="background-color:${themeClass==='theme-blue'?'#1e3a8a':'#b91c1c'}; color:#fff; font-weight:900; font-size:13px; padding:7px; text-align:center; border:1px solid #000;" contenteditable="true">${kurumAdi}</th>
                     </tr>`;
-                } else if (dataRow) {
-                    html += `<tr>
-                        <td class="sb-clinic-col" contenteditable="true">${dataRow.klinik}</td>
-                        ${dataRow.d.map(val => `<td contenteditable="true">${val}</td>`).join('')}
-                    </tr>`;
-                } else {
-                    html += `<tr>
-                        <td class="sb-clinic-col" contenteditable="true">Klinik ${i+1}</td>
-                        ${Array(12).fill(0).map(() => `<td contenteditable="true">0</td>`).join('')}
-                    </tr>`;
+
+            if (baslikDerinlik === 2) {
+                // 2 Satırlı Hiyerarşik Başlık
+                tHtml += `<tr>
+                    <th rowspan="2" class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:800; font-size:10px; width:150px; text-align:center; border:1px solid #000;" contenteditable="true">KLİNİK ADI</th>
+                    <th colspan="${sutunSayisi}" class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:800; font-size:11px; text-align:center; border:1px solid #000;" contenteditable="true">${ay1}</th>`;
+                
+                if (donemGrup === 2) {
+                    tHtml += `<th colspan="${sutunSayisi}" class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:800; font-size:11px; text-align:center; border:1px solid #000;" contenteditable="true">${ay2}</th>`;
                 }
+                tHtml += `</tr><tr>`;
+
+                for (let g = 0; g < donemGrup; g++) {
+                    for (let s = 0; s < sutunSayisi; s++) {
+                        const mAd = varsayilanMetrikler[s] || `METRİK ${s+1}`;
+                        tHtml += `<th class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:700; font-size:8.5px; padding:5px 2px; text-align:center; border:1px solid #000;" contenteditable="true">${mAd}</th>`;
+                    }
+                }
+                tHtml += `</tr>`;
+            } else {
+                // 1 Satırlı Düz Başlık
+                tHtml += `<tr>
+                    <th class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:800; font-size:10px; width:150px; text-align:center; border:1px solid #000;" contenteditable="true">KLİNİK ADI</th>`;
+                for (let g = 0; g < donemGrup; g++) {
+                    for (let s = 0; s < sutunSayisi; s++) {
+                        const prefix = donemGrup > 1 ? `(D${g+1}) ` : '';
+                        const mAd = varsayilanMetrikler[s] || `METRİK ${s+1}`;
+                        tHtml += `<th class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:700; font-size:8.5px; padding:6px 2px; text-align:center; border:1px solid #000;" contenteditable="true">${prefix}${mAd}</th>`;
+                    }
+                }
+                tHtml += `</tr>`;
             }
 
-            html += `</tbody></table>`;
+            tHtml += `</thead><tbody>`;
+
+            const ornekKlinikler = ["İç Hastalıkları (Dahiliye)", "Kalp ve Damar Cerrahisi", "Kardiyoloji", "Göz Hastalıkları", "Çocuk Sağlığı"];
+            for (let r = 0; r < satirSayisi; r++) {
+                const kAd = ornekKlinikler[r] || `Klinik ${r+1}`;
+                tHtml += `<tr>
+                    <td class="sb-clinic-col" style="font-weight:700; text-align:left; padding:5px 8px; border:1px solid #000; font-size:11px;" contenteditable="true">${kAd}</td>`;
+                for (let c = 0; c < (donemGrup * sutunSayisi); c++) {
+                    tHtml += `<td style="text-align:center; padding:5px 4px; border:1px solid #000; font-size:11px;" contenteditable="true">0</td>`;
+                }
+                tHtml += `</tr>`;
+            }
+
+            tHtml += `</tbody></table>`;
+            return tHtml;
         }
 
-        wrapper.innerHTML = html;
+        let mainHtml = buildTableHtml("KARTAL KOŞUYOLU YÜKSEK İHTİSAS EAH", "", t1Satir);
+        if (tabloAdet === 2) {
+            mainHtml += buildTableHtml("DR. SİYAMİ ERSEK GKDC EAH", "theme-blue", t2Satir);
+        }
+
+        wrapper.innerHTML = mainHtml;
     };
 
-    // GERÇEK DÜZENLENEBİLİR POWERPOINT (.PPTX) OLUŞTURMA FONKSİYONU
+    // =============================================================
+    // DÜZELTİLMİŞ MİLİMETRİK POWERPOINT (.PPTX) MOTORU
+    // =============================================================
     window.indirSlaytPPTX = async function() {
         if (typeof PptxGenJS === 'undefined') {
             alert("PowerPoint kütüphanesi yüklenemedi. Lütfen internet bağlantınızı kontrol edip sayfayı yenileyin.");
@@ -5296,41 +5287,50 @@ window.kunyeModalDisKlikKapat = function(e) {
         }
 
         const pptx = new PptxGenJS();
-        pptx.layout = 'LAYOUT_16x9';
+        pptx.layout = 'LAYOUT_16x9'; // Standart 16:9 (Genişlik: 13.33 inç, Yükseklik: 7.5 inç)
 
         const slide = pptx.addSlide();
 
         const baslikMetni = document.getElementById('slideInputBaslik')?.value || 'MESAİ DIŞI';
         const donemMetni = document.getElementById('slideInputDonem')?.value || 'HAZİRAN – TEMMUZ 2026';
 
-        // 1. Üst Kırmızı Kurumsal Şerit
+        // 1. ÜST KIRMIZI BANT (Tüm genişliği kaplar)
         slide.addShape(pptx.ShapeType.rect, {
             x: 0,
             y: 0,
-            w: '100%',
+            w: 13.33,
             h: 0.95,
-            fill: { color: 'B91C1C' }
+            fill: { color: 'B91C1C' },
+            line: { color: 'B91C1C' }
         });
 
-        // 2. Sağlık Bakanlığı Logosu
-        try {
-            slide.addImage({
-                path: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/TC_Sa%C4%9Fl%C4%B1k_Bakanl%C4%B1%C4%9F%C4%B1_logo.svg/1024px-TC_Sa%C4%9Fl%C4%B1k_Bakanl%C4%B1%C4%9F%C4%B1_logo.svg.png",
-                x: 0.4,
-                y: 0.12,
-                w: 0.72,
-                h: 0.72
-            });
-        } catch (e) {
-            console.warn("Logo eklenemedi:", e);
-        }
+        // 2. SAĞLIK HİLALİ LOGOSU (Vektörel Şekil Olarak Çizilir - Asla Bozulmaz / Kırmızı Çarpı Vermez)
+        slide.addShape(pptx.ShapeType.oval, {
+            x: 0.35,
+            y: 0.12,
+            w: 0.72,
+            h: 0.72,
+            fill: { color: 'FFFFFF' },
+            line: { color: 'FFFFFF' }
+        });
+        slide.addText("+", {
+            x: 0.35,
+            y: 0.12,
+            w: 0.72,
+            h: 0.72,
+            fontSize: 32,
+            fontFace: "Arial Black",
+            color: "B91C1C",
+            align: "center",
+            valign: "middle"
+        });
 
-        // 3. Başlık ve Dönem Yazıları
+        // 3. ANA BAŞLIK (SOLDA)
         slide.addText(baslikMetni.toUpperCase(), {
             x: 1.25,
-            y: 0.15,
-            w: 6.0,
-            h: 0.65,
+            y: 0.12,
+            w: 6.5,
+            h: 0.72,
             fontSize: 22,
             fontFace: "Arial Black",
             color: "FFFFFF",
@@ -5338,12 +5338,13 @@ window.kunyeModalDisKlikKapat = function(e) {
             valign: "middle"
         });
 
+        // 4. DÖNEM YAZISI (SAĞDA - Slayttan Taşması Kesin Engellendi)
         slide.addText(donemMetni.toUpperCase(), {
-            x: 7.5,
-            y: 0.15,
-            w: 5.4,
-            h: 0.65,
-            fontSize: 18,
+            x: 7.8,
+            y: 0.12,
+            w: 5.1,
+            h: 0.72,
+            fontSize: 16,
             fontFace: "Arial",
             color: "FFFFFF",
             bold: true,
@@ -5351,14 +5352,14 @@ window.kunyeModalDisKlikKapat = function(e) {
             valign: "middle"
         });
 
-        // 4. Tabloları Okuyup PowerPoint Tablosuna Çevirme
+        // 5. TABLOLARIN HESAPLANMASI VE SLAYTA MİLİMETRİK SIĞDIRILMASI
         const htmlTables = document.querySelectorAll('#slideTablesWrapper table');
         if (!htmlTables || htmlTables.length === 0) {
             alert("Oluşturulacak tablo bulunamadı.");
             return;
         }
 
-        let startY = 1.15;
+        let startY = 1.15; // Tablonun başlayacağı üst mesafe
 
         htmlTables.forEach((htmlTable) => {
             const pptxRows = [];
@@ -5377,22 +5378,25 @@ window.kunyeModalDisKlikKapat = function(e) {
                     let fontColor = '000000';
                     let isBold = false;
                     let align = 'center';
-                    let fontSize = 7.5;
+                    let fontSize = 7;
 
                     if (cell.classList.contains('sb-table-top-header')) {
+                        // En Üst Kurum Başlığı
                         bgColor = cell.classList.contains('theme-blue') ? '1E3A8A' : 'B91C1C';
                         fontColor = 'FFFFFF';
                         isBold = true;
                         fontSize = 10;
                     } else if (cell.classList.contains('sb-header-cell')) {
+                        // Kırmızı Kolon Başlıkları
                         bgColor = 'B91C1C';
                         fontColor = 'FFFFFF';
                         isBold = true;
-                        fontSize = 6.5;
+                        fontSize = 6;
                     } else if (cell.classList.contains('sb-clinic-col')) {
+                        // Sol Klinik İsimleri
                         align = 'left';
                         isBold = true;
-                        fontSize = 8;
+                        fontSize = 7.5;
                     }
 
                     rowCells.push({
@@ -5407,7 +5411,8 @@ window.kunyeModalDisKlikKapat = function(e) {
                             valign: 'middle',
                             fontSize: fontSize,
                             fontFace: 'Arial',
-                            border: { pt: 1, color: '000000' }
+                            margin: [0.5, 0.5, 0.5, 0.5], // Hücre içi boşluğu daraltarak taşmayı engeller
+                            border: { pt: 0.75, color: '000000' }
                         }
                     });
                 });
@@ -5417,19 +5422,24 @@ window.kunyeModalDisKlikKapat = function(e) {
                 }
             });
 
-            const tableHeight = (pptxRows.length * 0.26);
+            // 16:9 EKRANA TAM SIĞDIRMA (Toplam 12.6 inç genişlik)
+            // 1. Kolon (Klinik): 1.8 inç, Diğer 12 Kolon: her biri 0.90 inç = Toplam 12.6 inç
+            const colWidths = [1.8, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9];
 
             slide.addTable(pptxRows, {
-                x: 0.4,
+                x: 0.36,
                 y: startY,
-                w: 12.5,
-                margin: [1, 2, 1, 2]
+                w: 12.6,
+                colW: colWidths,
+                autoPage: false
             });
 
+            // Satır sayısına göre bir sonraki tablo mesafesini hesapla
+            const tableHeight = (pptxRows.length * 0.24);
             startY += tableHeight + 0.35;
         });
 
-        // 5. Dosyayı İndir
+        // 6. PowerPoint Dosyasını İndir
         const dosyaAdi = `${baslikMetni.replace(/\s+/g, '_')}_Brifing_Sunumu.pptx`;
         pptx.writeFile({ fileName: dosyaAdi });
     };
