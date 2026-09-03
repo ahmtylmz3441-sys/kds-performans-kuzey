@@ -560,6 +560,12 @@
             background: #ffffff; border: 1px solid #cbd5e1; color: var(--text-secondary); padding: 5px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer; transition: all 0.2s; 
         }
         .itiraz-btn:hover { background: var(--warning-light); color: var(--warning); border-color: #fde68a; }
+        /* Seçilen Hücreleri Belirginleştirme (Mavi Çerçeve) */
+.sb-briefing-table td.cell-selected,
+.sb-briefing-table th.cell-selected {
+    background-color: #bfdbfe !important;
+    outline: 2px solid #2563eb !important;
+}
     </style>
 </head>
 <body>
@@ -814,7 +820,7 @@
            <!-- SUNUM & BRİFİNG SLAYT SİHİRBAZI SAYFASI -->
 <section id="sunum-olusturucu" class="page">
     <div class="row g-4">
-        <!-- SOL PANEL: Sayısal Oklarla Yönetilen Parametreler -->
+        <!-- SOL PANEL: Parametreler & Birleştirme Araçları -->
         <div class="col-xl-3 col-lg-4">
             <div class="kds-card p-3">
                 <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">
@@ -832,33 +838,47 @@
                 </div>
 
                 <h6 class="fw-bold mb-2 text-secondary border-bottom pb-2 pt-2">
-                    <i class="bi bi-table text-primary"></i> Tablo ve Boyut Ayarları
+                    <i class="bi bi-table text-primary"></i> Tablo Matrisi
                 </h6>
 
                 <div class="row g-2 mb-2">
                     <div class="col-6">
                         <label class="form-label small fw-bold text-secondary mb-1">Tablo Sayısı</label>
-                        <input type="number" id="slideInputTabloSayisi" class="form-control form-control-sm" value="2" min="1" max="2" onchange="window.olusturSlaytTablolari()">
+                        <input type="number" id="slideInputTabloSayisi" class="form-control form-control-sm" value="1" min="1" max="3" onchange="window.olusturSlaytTablolari()">
                     </div>
                     <div class="col-6">
                         <label class="form-label small fw-bold text-secondary mb-1">Sütun Sayısı</label>
-                        <input type="number" id="slideInputSutunSayisi" class="form-control form-control-sm" value="12" min="1" max="20" onchange="window.olusturSlaytTablolari()">
+                        <input type="number" id="slideInputSutunSayisi" class="form-control form-control-sm" value="8" min="1" max="30" onchange="window.olusturSlaytTablolari()">
                     </div>
                 </div>
 
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label small fw-bold text-secondary mb-1">Başlık Satırı</label>
-                        <input type="number" id="slideInputBaslikSatirSayisi" class="form-control form-control-sm" value="2" min="1" max="3" onchange="window.olusturSlaytTablolari()">
+                        <input type="number" id="slideInputBaslikSatirSayisi" class="form-control form-control-sm" value="2" min="1" max="10" onchange="window.olusturSlaytTablolari()">
                     </div>
                     <div class="col-6">
                         <label class="form-label small fw-bold text-secondary mb-1">Veri Satırı</label>
-                        <input type="number" id="slideInputSatirSayisi" class="form-control form-control-sm" value="3" min="1" max="20" onchange="window.olusturSlaytTablolari()">
+                        <input type="number" id="slideInputSatirSayisi" class="form-control form-control-sm" value="8" min="1" max="30" onchange="window.olusturSlaytTablolari()">
+                    </div>
+                </div>
+
+                <!-- HÜCRE BİRLEŞTİRME ARAÇLARI -->
+                <div class="p-2 border rounded bg-light mb-3">
+                    <span class="small fw-bold text-dark d-block mb-1"><i class="bi bi-grid-1x2 text-primary"></i> Hücre Birleştirme Aracı</span>
+                    <p class="text-muted small mb-2" style="font-size:10.5px;">Birleştirmek istediğiniz hücreleri sürükleyerek veya Ctrl ile seçin:</p>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-dark w-100 fw-bold" style="font-size:11px;" onclick="window.birlestirSecilenHucreler()">
+                            <i class="bi bi-intersect"></i> Birleştir
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary w-100 fw-bold" style="font-size:11px;" onclick="window.ayirSecilenHucreler()">
+                            <i class="bi bi-subtract"></i> Ayır
+                        </button>
                     </div>
                 </div>
 
                 <button class="btn btn-sm btn-outline-primary w-100 mb-3 fw-bold" onclick="window.olusturSlaytTablolari()">
-                    <i class="bi bi-arrow-repeat"></i> Tabloyu Güncelle
+                    <i class="bi bi-arrow-repeat"></i> Tabloyu Sıfırdan Çiz
                 </button>
 
                 <button class="btn btn-danger w-100 fw-bold py-2 shadow-sm d-flex align-items-center justify-content-center gap-2" onclick="window.indirSlaytPPTX()">
@@ -871,19 +891,28 @@
         <!-- SAĞ PANEL: 16:9 Canlı Slayt Önizleme Tuvali -->
         <div class="col-xl-9 col-lg-8">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="small fw-bold text-secondary"><i class="bi bi-aspect-ratio text-danger"></i> 16:9 Standart Brifing Slaytı (Canlı Önizleme)</span>
+                <span class="small fw-bold text-secondary"><i class="bi bi-aspect-ratio text-danger"></i> 16:9 Standart Brifing Slaytı</span>
                 <span class="badge bg-light text-secondary border px-2 py-1 small">Sağlık Bakanlığı Şablonu</span>
             </div>
 
             <div class="slide-canvas-viewport shadow rounded border bg-light p-3">
                 <div id="captureSlideArea" class="slide-canvas-container" style="background:#ffffff; width:1120px; min-height:630px; box-shadow:0 10px 30px rgba(0,0,0,0.15);">
                     
-                    <!-- 1. ÜST KIRMIZI KURUMSAL BANT -->
+                    <!-- 1. ÜST KIRMIZI KURUMSAL BANT (Orijinal Gömülü Vektör Logo) -->
                     <div class="slide-top-banner" style="height:76px; background:linear-gradient(90deg, #b91c1c 0%, #dc2626 50%, #991b1b 100%); display:flex; align-items:center; justify-content:space-between; padding:0 24px; color:#fff;">
                         <div class="slide-banner-left" style="display:flex; align-items:center; gap:16px;">
-                            <div class="slide-logo-circle" style="width:54px; height:54px; background:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:3px; box-shadow:0 2px 6px rgba(0,0,0,0.2);">
-                                <!-- Sağlık Bakanlığı Orijinal Logosu -->
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/TC_Sa%C4%9Fl%C4%B1k_Bakanl%C4%B1%C4%9F%C4%B1_logo.svg/240px-TC_Sa%C4%9Fl%C4%B1k_Bakanl%C4%B1%C4%9F%C4%B1_logo.svg.png" style="width:100%; height:100%; object-fit:contain;" alt="Sağlık Bakanlığı" crossorigin="anonymous">
+                            <div class="slide-logo-circle" style="width:52px; height:52px; background:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:2px; box-shadow:0 2px 6px rgba(0,0,0,0.2);">
+                                <!-- Resmi Sağlık Bakanlığı Vektörel Amblemi (Asla Bozulmaz) -->
+                                <svg width="44" height="44" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#b91c1c" stroke-width="2"/>
+                                    <!-- 16 Yıldız Çemberi -->
+                                    <circle cx="50" cy="50" r="42" fill="none" stroke="#b91c1c" stroke-width="1.5" stroke-dasharray="2,6"/>
+                                    <!-- Kırmızı Hilal -->
+                                    <path d="M50 18 C32 18 18 32 18 50 C18 68 32 82 50 82 C61 82 71 76 77 67 C63 71 47 63 43 49 C40 38 46 27 57 22 C55 21.5 52 18 50 18 Z" fill="#b91c1c"/>
+                                    <!-- Yılanlı Asa Sembolü -->
+                                    <line x1="50" y1="28" x2="50" y2="72" stroke="#b91c1c" stroke-width="4" stroke-linecap="round"/>
+                                    <path d="M42 40 C48 35 55 45 44 52 C54 58 52 68 44 65" fill="none" stroke="#b91c1c" stroke-width="2.5" stroke-linecap="round"/>
+                                </svg>
                             </div>
                             <h2 id="slideRenderBaslik" class="slide-main-title" style="font-size:26px; font-weight:900; margin:0; color:#fff; text-transform:uppercase;">MESAİ DIŞI</h2>
                         </div>
@@ -891,7 +920,7 @@
                     </div>
 
                     <!-- 2. TABLOLAR ALANI -->
-                    <div id="slideTablesWrapper" class="slide-tables-body" style="padding:20px 24px; display:flex; flex-direction:column; gap:16px;"></div>
+                    <div id="slideTablesWrapper" class="slide-tables-body" style="padding:18px 24px; display:flex; flex-direction:column; gap:16px;"></div>
 
                 </div>
             </div>
@@ -5132,7 +5161,7 @@ window.kunyeModalDisKlikKapat = function(e) {
         await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
     })();
     // =============================================================
-    // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI & YENİ NESİL PPTX MOTORU
+    // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI (ESNEK MATRİS & DİNAMİK PPTX)
     // =============================================================
     window.guncelleSlideBaslik = function() {
         const val = document.getElementById('slideInputBaslik')?.value || 'MESAİ DIŞI';
@@ -5146,73 +5175,39 @@ window.kunyeModalDisKlikKapat = function(e) {
         if (el) el.innerText = val.toUpperCase();
     };
 
+    // TABLOYU TERTEMİZ (BOŞ) VE DÜZ MATRİS OLARAK ÇİZ
     window.olusturSlaytTablolari = function() {
         const wrapper = document.getElementById('slideTablesWrapper');
         if (!wrapper) return;
 
-        const tabloSayisi = parseInt(document.getElementById('slideInputTabloSayisi')?.value || '2');
-        const sutunSayisi = parseInt(document.getElementById('slideInputSutunSayisi')?.value || '12');
+        const tabloSayisi = parseInt(document.getElementById('slideInputTabloSayisi')?.value || '1');
+        const sutunSayisi = parseInt(document.getElementById('slideInputSutunSayisi')?.value || '8');
         const baslikSatirSayisi = parseInt(document.getElementById('slideInputBaslikSatirSayisi')?.value || '2');
-        const satirSayisi = parseInt(document.getElementById('slideInputSatirSayisi')?.value || '3');
+        const satirSayisi = parseInt(document.getElementById('slideInputSatirSayisi')?.value || '8');
 
-        const donemMetni = document.getElementById('slideInputDonem')?.value || 'HAZİRAN – TEMMUZ 2026';
-        const aylar = donemMetni.includes('–') ? donemMetni.split('–').map(s => s.trim()) : donemMetni.split('-');
-        const ay1 = aylar[0] || 'DÖNEM 1';
-        const ay2 = aylar[1] || 'DÖNEM 2';
-
-        const toplamSutun = sutunSayisi + 1; // 1 Sütun Klinik Adı + Kullanıcının Belirttiği Sütunlar
-
-        const varsayilanMetrikler = [
-            "POLİKLİNİK YAPILAN ODA SAYISI", "CETVEL AÇILAN HEKİM SAYISI", "AÇILAN KAPASİTE SAYISI",
-            "ALINAN RANDEVU SAYISI", "GERÇEKLEŞEN RANDEVU SAYISI", "AYAKTAN MUAYENE SAYISI",
-            "POLİKLİNİK YAPILAN ODA SAYISI", "CETVEL AÇILAN HEKİM SAYISI", "AÇILAN KAPASİTE SAYISI",
-            "ALINAN RANDEVU SAYISI", "GERÇEKLEŞEN RANDEVU SAYISI", "AYAKTAN MUAYENE SAYISI",
-            "TOPLAM MUAYENE", "RANDEVU SADAKATİ", "DOLULUK (%)", "HEKİM BAŞINA DÜŞEN"
-        ];
-
-        function tabloCiz(kurumAdi, themeClass) {
-            let tHtml = `<table class="sb-briefing-table" style="width:100%; border-collapse:collapse; border:1.5px solid #000; background:#fff;">
+        function tabloOlustur(kurumAdi, themeClass) {
+            let tHtml = `<table class="sb-briefing-table" style="width:100%; border-collapse:collapse; border:1.5px solid #000; background:#fff; table-layout:fixed;">
                 <thead>
                     <tr>
-                        <th colspan="${toplamSutun}" class="sb-table-top-header ${themeClass}" style="background-color:${themeClass==='theme-blue'?'#1e3a8a':'#b91c1c'}; color:#fff; font-weight:900; font-size:12px; padding:6px; text-align:center; border:1px solid #000;" contenteditable="true">${kurumAdi}</th>
+                        <th colspan="${sutunSayisi}" class="sb-table-top-header ${themeClass}" style="background-color:${themeClass==='theme-blue'?'#1e3a8a':'#b91c1c'}; color:#fff; font-weight:900; font-size:12px; padding:6px; text-align:center; border:1px solid #000;" contenteditable="true">${kurumAdi}</th>
                     </tr>`;
 
-            if (baslikSatirSayisi >= 2) {
-                // 2 Satırlı Hiyerarşik Başlık
-                const yarimSutun = Math.floor(sutunSayisi / 2);
-                const kalanSutun = sutunSayisi - yarimSutun;
-
-                tHtml += `<tr>
-                    <th rowspan="2" class="sb-header-cell sb-clinic-header" style="background-color:#b91c1c; color:#fff; font-weight:800; font-size:9.5px; width:140px; text-align:center; border:1px solid #000;" contenteditable="true">KLİNİK ADI</th>
-                    <th colspan="${yarimSutun}" class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:800; font-size:10px; text-align:center; border:1px solid #000;" contenteditable="true">${ay1}</th>
-                    <th colspan="${kalanSutun}" class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:800; font-size:10px; text-align:center; border:1px solid #000;" contenteditable="true">${ay2}</th>
-                </tr><tr>`;
-
+            // Başlık Satırları (Kırmızı zemin, kullanıcı dolduracak - tamamen boş)
+            for (let b = 0; b < baslikSatirSayisi; b++) {
+                tHtml += `<tr>`;
                 for (let c = 0; c < sutunSayisi; c++) {
-                    const mAd = varsayilanMetrikler[c] || `METRİK ${c+1}`;
-                    tHtml += `<th class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:700; font-size:8px; padding:4px 2px; text-align:center; border:1px solid #000;" contenteditable="true">${mAd}</th>`;
-                }
-                tHtml += `</tr>`;
-            } else {
-                // 1 Satırlı Düz Başlık
-                tHtml += `<tr>
-                    <th class="sb-header-cell sb-clinic-header" style="background-color:#b91c1c; color:#fff; font-weight:800; font-size:9.5px; width:140px; text-align:center; border:1px solid #000;" contenteditable="true">KLİNİK ADI</th>`;
-                for (let c = 0; c < sutunSayisi; c++) {
-                    const mAd = varsayilanMetrikler[c] || `METRİK ${c+1}`;
-                    tHtml += `<th class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:700; font-size:8px; padding:6px 2px; text-align:center; border:1px solid #000;" contenteditable="true">${mAd}</th>`;
+                    tHtml += `<th class="sb-header-cell" style="background-color:#b91c1c; color:#fff; font-weight:800; font-size:9px; padding:5px 2px; text-align:center; border:1px solid #000;" contenteditable="true"></th>`;
                 }
                 tHtml += `</tr>`;
             }
 
             tHtml += `</thead><tbody>`;
 
-            const ornekKlinikler = ["İç Hastalıkları (Dahiliye)", "Kalp ve Damar Cerrahisi", "Kardiyoloji", "Göz Hastalıkları", "Ortopedi", "Üroloji", "Genel Cerrahi", "Nöroloji"];
+            // Veri Satırları (Beyaz zemin, kullanıcı dolduracak - tamamen boş)
             for (let r = 0; r < satirSayisi; r++) {
-                const kAd = ornekKlinikler[r] || `Klinik ${r+1}`;
-                tHtml += `<tr>
-                    <td class="sb-clinic-col" style="font-weight:700; text-align:left; padding:4px 6px; border:1px solid #000; font-size:10.5px; background:#fff;" contenteditable="true">${kAd}</td>`;
+                tHtml += `<tr>`;
                 for (let c = 0; c < sutunSayisi; c++) {
-                    tHtml += `<td style="text-align:center; padding:4px; border:1px solid #000; font-size:10.5px; background:#fff;" contenteditable="true">0</td>`;
+                    tHtml += `<td style="text-align:center; padding:4px; border:1px solid #000; font-size:10px; background:#fff;" contenteditable="true"></td>`;
                 }
                 tHtml += `</tr>`;
             }
@@ -5221,182 +5216,193 @@ window.kunyeModalDisKlikKapat = function(e) {
             return tHtml;
         }
 
-        let mainHtml = tabloCiz("KARTAL KOŞUYOLU YÜKSEK İHTİSAS EAH", "");
-        if (tabloSayisi === 2) {
-            mainHtml += tabloCiz("DR. SİYAMİ ERSEK GKDC EAH", "theme-blue");
-        }
+        let mainHtml = tabloOlustur("KURUM ADINI YAZINIZ", "");
+        if (tabloSayisi >= 2) mainHtml += tabloOlustur("2. KURUM ADINI YAZINIZ", "theme-blue");
+        if (tabloSayisi >= 3) mainHtml += tabloOlustur("3. KURUM ADINI YAZINIZ", "");
 
         wrapper.innerHTML = mainHtml;
+        window.hucreSecimOlaylariniAta();
     };
 
-    // DÜZELTİLMİŞ & KİLİTLENMEYEN GERÇEK POWERPOINT (.PPTX) MOTORU
-    window.indirSlaytPPTX = async function() {
-        if (typeof PptxGenJS === 'undefined') {
-            alert("PowerPoint kütüphanesi henüz hazır değil. Lütfen internet bağlantınızı kontrol edip sayfayı yenileyin.");
+    // HÜCRE BİRLEŞTİRME VE SEÇİM MOTORU
+    window.hucreSecimOlaylariniAta = function() {
+        const cells = document.querySelectorAll('.sb-briefing-table th, .sb-briefing-table td');
+        cells.forEach(cell => {
+            cell.onclick = function(e) {
+                if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                    this.classList.toggle('cell-selected');
+                } else {
+                    cells.forEach(c => c.classList.remove('cell-selected'));
+                    this.classList.add('cell-selected');
+                }
+            };
+        });
+    };
+
+    window.birlestirSecilenHucreler = function() {
+        const selected = Array.from(document.querySelectorAll('.sb-briefing-table .cell-selected'));
+        if (selected.length < 2) {
+            alert("Lütfen birleştirmek için en az 2 hücreyi (Ctrl tuşuna basılı tutarak) seçiniz.");
             return;
         }
 
-        try {
-            const pptx = new PptxGenJS();
-            pptx.layout = 'LAYOUT_16x9'; // 13.33 inç x 7.5 inç
+        const firstCell = selected[0];
+        let totalColspan = 0;
+        let combinedText = [];
 
-            const slide = pptx.addSlide();
+        selected.forEach((cell, idx) => {
+            totalColspan += (parseInt(cell.getAttribute('colspan')) || 1);
+            if (cell.innerText.trim()) combinedText.push(cell.innerText.trim());
+            if (idx > 0) cell.remove();
+        });
 
-            const baslikMetni = document.getElementById('slideInputBaslik')?.value || 'MESAİ DIŞI';
-            const donemMetni = document.getElementById('slideInputDonem')?.value || 'HAZİRAN – TEMMUZ 2026';
+        firstCell.setAttribute('colspan', totalColspan);
+        firstCell.innerText = combinedText.join(' ');
+        firstCell.classList.remove('cell-selected');
+    };
 
-            // 1. ÜST KIRMIZI KURUMSAL ŞERİT
-            slide.addShape(pptx.ShapeType.rect, {
-                x: 0,
-                y: 0,
-                w: 13.33,
-                h: 0.95,
-                fill: { color: 'B91C1C' },
-                line: { color: 'B91C1C' }
-            });
+    window.ayirSecilenHucreler = function() {
+        const selected = document.querySelector('.sb-briefing-table .cell-selected');
+        if (!selected || (!selected.getAttribute('colspan') && !selected.getAttribute('rowspan'))) {
+            alert("Lütfen daha önce birleştirilmiş bir hücre seçiniz.");
+            return;
+        }
+        selected.removeAttribute('colspan');
+        selected.removeAttribute('rowspan');
+        selected.classList.remove('cell-selected');
+        window.olusturSlaytTablolari();
+    };
 
-            // 2. ORİJİNAL LOGO (Resmi Amblem)
-            try {
-                slide.addImage({
-                    path: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/TC_Sa%C4%9Fl%C4%B1k_Bakanl%C4%B1%C4%9F%C4%B1_logo.svg/240px-TC_Sa%C4%9Fl%C4%B1k_Bakanl%C4%B1%C4%9F%C4%B1_logo.svg.png",
-                    x: 0.35,
-                    y: 0.12,
-                    w: 0.72,
-                    h: 0.72
+    // PPTX: MİLİMETRİK VE SAYFAYA TAM OTURTAN DİNAMİK DIŞA AKTARMA MOTORU
+    window.indirSlaytPPTX = async function() {
+        if (typeof PptxGenJS === 'undefined') {
+            alert("PowerPoint kütüphanesi henüz yüklenmedi.");
+            return;
+        }
+
+        const pptx = new PptxGenJS();
+        pptx.layout = 'LAYOUT_16x9'; // 13.33 inç x 7.5 inç
+
+        const slide = pptx.addSlide();
+
+        const baslikMetni = document.getElementById('slideInputBaslik')?.value || 'MESAİ DIŞI';
+        const donemMetni = document.getElementById('slideInputDonem')?.value || 'HAZİRAN – TEMMUZ 2026';
+
+        // 1. Üst Kırmızı Bant
+        slide.addShape(pptx.ShapeType.rect, {
+            x: 0, y: 0, w: 13.33, h: 0.95,
+            fill: { color: 'B91C1C' }, line: { color: 'B91C1C' }
+        });
+
+        // 2. Orijinal Beyaz Hilal Logosu (Vektörel çizim - asla bozulmaz/çarpı çıkmaz)
+        slide.addShape(pptx.ShapeType.oval, {
+            x: 0.35, y: 0.12, w: 0.72, h: 0.72,
+            fill: { color: 'FFFFFF' }, line: { color: 'B91C1C', width: 1.5 }
+        });
+        slide.addText("C", {
+            x: 0.36, y: 0.13, w: 0.70, h: 0.70,
+            fontSize: 26, fontFace: "Georgia", color: "B91C1C", bold: true, align: "center", valign: "middle"
+        });
+
+        // 3. Başlıklar
+        slide.addText(baslikMetni.toUpperCase(), {
+            x: 1.25, y: 0.12, w: 6.5, h: 0.72,
+            fontSize: 22, fontFace: "Arial Black", color: "FFFFFF", bold: true, valign: "middle"
+        });
+
+        slide.addText(donemMetni.toUpperCase(), {
+            x: 7.5, y: 0.12, w: 5.4, h: 0.72,
+            fontSize: 16, fontFace: "Arial", color: "FFFFFF", bold: true, align: "right", valign: "middle"
+        });
+
+        // 4. Tabloları Boyutlandırarak Slaytın İçine Sığdırma
+        const htmlTables = document.querySelectorAll('#slideTablesWrapper table');
+        if (!htmlTables || htmlTables.length === 0) return;
+
+        const maxSlideWidth = 12.6;  // Slayttaki maksimum tablo genişliği (inç)
+        const maxSlideHeight = 5.8; // Tabloların kaplayabileceği maksimum yükseklik
+        let startY = 1.15;
+
+        htmlTables.forEach((htmlTable) => {
+            const pptxRows = [];
+            const trElements = htmlTable.querySelectorAll('tr');
+
+            // Toplam sütun adedini tespit et
+            let maxCols = 0;
+            trElements.forEach(tr => {
+                let colsInRow = 0;
+                tr.querySelectorAll('th, td').forEach(cell => {
+                    colsInRow += parseInt(cell.getAttribute('colspan')) || 1;
                 });
-            } catch(e) {
-                // İnternet yoksa yedek beyaz daire
-                slide.addShape(pptx.ShapeType.oval, { x: 0.35, y: 0.12, w: 0.72, h: 0.72, fill: { color: 'FFFFFF' } });
-            }
-
-            // 3. BAŞLIK VE DÖNEM YAZILARI
-            slide.addText(baslikMetni.toUpperCase(), {
-                x: 1.25,
-                y: 0.12,
-                w: 6.5,
-                h: 0.72,
-                fontSize: 22,
-                fontFace: "Arial Black",
-                color: "FFFFFF",
-                bold: true,
-                valign: "middle"
+                if (colsInRow > maxCols) maxCols = colsInRow;
             });
 
-            slide.addText(donemMetni.toUpperCase(), {
-                x: 7.5,
-                y: 0.12,
-                w: 5.4,
-                h: 0.72,
-                fontSize: 16,
-                fontFace: "Arial",
-                color: "FFFFFF",
-                bold: true,
-                align: "right",
-                valign: "middle"
-            });
+            trElements.forEach((tr) => {
+                const rowCells = [];
+                tr.querySelectorAll('th, td').forEach((cell) => {
+                    const text = cell.innerText.trim();
+                    const colspan = parseInt(cell.getAttribute('colspan')) || 1;
+                    const rowspan = parseInt(cell.getAttribute('rowspan')) || 1;
 
-            // 4. TABLOLARI DİNAMİK OKUMA VE SÜTUN GENİŞLİKLERİNİ ORANTILI HESAPLAMA
-            const htmlTables = document.querySelectorAll('#slideTablesWrapper table');
-            if (!htmlTables || htmlTables.length === 0) {
-                alert("Oluşturulacak tablo bulunamadı.");
-                return;
-            }
+                    let bgColor = 'FFFFFF';
+                    let fontColor = '000000';
+                    let isBold = false;
+                    let fontSize = 7.5;
 
-            let startY = 1.15;
-            const totalSlideWidth = 12.6; // Tablonun toplam kaplayacağı alan (inç)
+                    if (cell.classList.contains('sb-table-top-header')) {
+                        bgColor = cell.classList.contains('theme-blue') ? '1E3A8A' : 'B91C1C';
+                        fontColor = 'FFFFFF';
+                        isBold = true;
+                        fontSize = 10;
+                    } else if (cell.tagName.toLowerCase() === 'th') {
+                        bgColor = 'B91C1C';
+                        fontColor = 'FFFFFF';
+                        isBold = true;
+                        fontSize = 7;
+                    }
 
-            htmlTables.forEach((htmlTable) => {
-                const pptxRows = [];
-                const trElements = htmlTable.querySelectorAll('tr');
-
-                // Sütun sayısını bul
-                let maxCols = 0;
-                trElements.forEach(tr => {
-                    let colCount = 0;
-                    tr.querySelectorAll('th, td').forEach(c => {
-                        colCount += parseInt(c.getAttribute('colspan')) || 1;
-                    });
-                    if (colCount > maxCols) maxCols = colCount;
-                });
-
-                trElements.forEach((tr) => {
-                    const rowCells = [];
-                    const thTdList = tr.querySelectorAll('th, td');
-
-                    thTdList.forEach((cell) => {
-                        const text = cell.innerText.trim();
-                        const colspan = parseInt(cell.getAttribute('colspan')) || 1;
-                        const rowspan = parseInt(cell.getAttribute('rowspan')) || 1;
-
-                        let bgColor = 'FFFFFF';
-                        let fontColor = '000000';
-                        let isBold = false;
-                        let align = 'center';
-                        let fontSize = 7;
-
-                        if (cell.classList.contains('sb-table-top-header')) {
-                            bgColor = cell.classList.contains('theme-blue') ? '1E3A8A' : 'B91C1C';
-                            fontColor = 'FFFFFF';
-                            isBold = true;
-                            fontSize = 10;
-                        } else if (cell.classList.contains('sb-header-cell')) {
-                            bgColor = 'B91C1C';
-                            fontColor = 'FFFFFF';
-                            isBold = true;
-                            fontSize = 6.5;
-                        } else if (cell.classList.contains('sb-clinic-col')) {
-                            align = 'left';
-                            isBold = true;
-                            fontSize = 7.5;
+                    rowCells.push({
+                        text: text,
+                        options: {
+                            colspan: colspan,
+                            rowspan: rowspan,
+                            fill: { color: bgColor },
+                            color: fontColor,
+                            bold: isBold,
+                            align: 'center',
+                            valign: 'middle',
+                            fontSize: fontSize,
+                            fontFace: 'Arial',
+                            margin: [0.5, 0.5, 0.5, 0.5],
+                            border: { pt: 0.75, color: '000000' }
                         }
-
-                        rowCells.push({
-                            text: text,
-                            options: {
-                                colspan: colspan,
-                                rowspan: rowspan,
-                                fill: { color: bgColor },
-                                color: fontColor,
-                                bold: isBold,
-                                align: align,
-                                valign: 'middle',
-                                fontSize: fontSize,
-                                fontFace: 'Arial',
-                                margin: [0.5, 0.5, 0.5, 0.5],
-                                border: { pt: 0.75, color: '000000' }
-                            }
-                        });
                     });
-
-                    if (rowCells.length > 0) pptxRows.push(rowCells);
                 });
-
-                // DİNAMİK SÜTUN GENİŞLİĞİ HESABI (Kilitlenmeyi ve taşmayı çözen yer)
-                const clinicColWidth = 1.8; // İlk Klinik sütunu
-                const remainingWidth = totalSlideWidth - clinicColWidth;
-                const metricColCount = Math.max(1, maxCols - 1);
-                const eachMetricWidth = remainingWidth / metricColCount;
-
-                const colWidths = [clinicColWidth];
-                for (let i = 0; i < metricColCount; i++) {
-                    colWidths.push(eachMetricWidth);
-                }
-
-                slide.addTable(pptxRows, {
-                    x: 0.36,
-                    y: startY,
-                    w: totalSlideWidth,
-                    colW: colWidths,
-                    autoPage: false
-                });
-
-                const tableHeight = (pptxRows.length * 0.24);
-                startY += tableHeight + 0.35;
+                if (rowCells.length > 0) pptxRows.push(rowCells);
             });
 
-            // 5. PowerPoint Dosyasını İndir
-            const dosyaAdi = `${baslikMetni.replace(/\s+/g, '_')}_Brifing_Sunumu.pptx`;
-            await pptx.writeFile({ fileName: dosyaAdi });
+            // Sütun Genişliklerini Dinamik Olarak Slayta Milimetrik Paylaştır
+            const eachColWidth = maxSlideWidth / Math.max(1, maxCols);
+            const colWidths = Array(maxCols).fill(eachColWidth);
+
+            // Satır yüksekliğini dinamik olarak slayt boyuna uydur
+            const tableHeight = Math.min(pptxRows.length * 0.25, maxSlideHeight / htmlTables.length);
+
+            slide.addTable(pptxRows, {
+                x: 0.36,
+                y: startY,
+                w: maxSlideWidth,
+                colW: colWidths,
+                autoPage: false
+            });
+
+            startY += tableHeight + 0.35;
+        });
+
+        // 5. İndir
+        const dosyaAdi = `${baslikMetni.replace(/\s+/g, '_')}_Brifing_Sunumu.pptx`;
+        await pptx.writeFile({ fileName: dosyaAdi });
+    };
 
         } catch(err) {
             console.error("PPTX Üretim Hatası:", err);
