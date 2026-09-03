@@ -899,23 +899,18 @@
             </div>
 
             <div class="slide-canvas-viewport shadow rounded border bg-light p-3">
-                <div id="captureSlideArea" class="slide-canvas-container" style="background:#ffffff; width:1120px; min-height:630px; box-shadow:0 10px 30px rgba(0,0,0,0.15);">
-                    
-                    <!-- 1. ÜST KIRMIZI KURUMSAL BANT (Base64 Gömülü Resmi Logo) -->
-                    <div class="slide-top-banner" style="height:76px; background:linear-gradient(90deg, #b91c1c 0%, #dc2626 50%, #991b1b 100%); display:flex; align-items:center; justify-content:space-between; padding:0 24px; color:#fff;">
-                        <div class="slide-banner-left" style="display:flex; align-items:center; gap:16px;">
-                            <<div style="width:60px; height:60px; display:flex; align-items:center; justify-content:center;">
-    <img id="slideRenderLogo" src="" style="width:100%; height:100%; object-fit:contain;" alt="T.C. Sağlık Bakanlığı">
+                <!-- SAĞ PANEL: 16:9 Canlı Slayt Önizleme Tuvali -->
+<div id="captureSlideArea" class="slide-canvas-container" style="background-image: url('https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od'); background-size: 100% 100%; background-repeat: no-repeat; width: 1120px; height: 630px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative; display: flex; flex-direction: column;">
+    
+    <!-- ŞABLON ÜZERİNE OTURAN ŞEFFAF BAŞLIK VE DÖNEM KATMANI -->
+    <div style="height: 64px; display: flex; align-items: center; justify-content: space-between; padding-left: 110px; padding-right: 32px; flex-shrink: 0;">
+        <h2 id="slideRenderBaslik" style="font-size: 24px; font-weight: 900; margin: 0; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);"></h2>
+        <div id="slideRenderDonem" style="font-size: 18px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
+    </div>
+
+    <!-- TABLOLAR ALANI (ŞABLONUN BEYAZ ALANINA OTURUR) -->
+    <div id="slideTablesWrapper" style="padding: 24px 32px; flex-grow: 1; display: flex; flex-direction: column; gap: 16px; overflow: hidden;"></div>
 </div>
-                            <h2 id="slideRenderBaslik" class="slide-main-title" style="font-size:24px; font-weight:900; margin:0; color:#fff; text-transform:uppercase;"></h2>
-                        </div>
-                        <div id="slideRenderDonem" class="slide-period-title" style="font-size:18px; font-weight:800; color:#fff;"></div>
-                    </div>
-
-                    <!-- 2. TABLOLAR ALANI -->
-                    <div id="slideTablesWrapper" class="slide-tables-body" style="padding:18px 24px; display:flex; flex-direction:column; gap:16px;"></div>
-
-                </div>
             </div>
         </div>
     </div>
@@ -5322,10 +5317,14 @@ window.kunyeModalDisKlikKapat = function(e) {
         selected.forEach(c => c.innerText = '');
     };
 
-    // POWERPOINT (.PPTX) MOTORU (ORİJİNAL LOGOLU & TAŞMAZ)
+    // =============================================================
+    // ORİJİNAL ŞABLONLU & ASLA TAŞMAYAN MİLİMETRİK POWERPOINT MOTORU
+    // =============================================================
+    const RESMI_SLAYT_SABLON_URL = "https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od";
+
     window.indirSlaytPPTX = async function() {
         if (typeof PptxGenJS === 'undefined') {
-            alert("PowerPoint kütüphanesi hazır değil.");
+            alert("PowerPoint kütüphanesi henüz yüklenmedi.");
             return;
         }
 
@@ -5335,49 +5334,49 @@ window.kunyeModalDisKlikKapat = function(e) {
 
             const slide = pptx.addSlide();
 
+            // 1. ORİJİNAL ARKA PLAN ŞABLONUNU TAM SAYFA YERLEŞTİR (LOGO & KIRMIZI ŞERİT BİREBİR GELİR)
+            slide.background = { path: RESMI_SLAYT_SABLON_URL };
+
             const baslikMetni = document.getElementById('slideInputBaslik')?.value || '';
             const donemMetni = document.getElementById('slideInputDonem')?.value || '';
 
-            // 1. Üst Kırmızı Bant
-            slide.addShape(pptx.ShapeType.rect, {
-                x: 0, y: 0, w: 13.33, h: 1.0,
-                fill: { color: 'B91C1C' },
-                line: { color: 'B91C1C' }
-            });
-
-            // 2. ORİJİNAL İSTANBUL İL SAĞLIK MÜDÜRLÜĞÜ LOGOSU (TEMİZ & BEYAZ KARESIZ)
-            try {
-                slide.addImage({
-                    path: RESMI_LOGO_URL,
-                    x: 0.15,
-                    y: 0.05,
-                    w: 0.90,
-                    h: 0.90
-                });
-            } catch(e) {
-                console.warn("Logo ekleme uyarısı:", e);
-            }
-            // 3. Başlıklar
+            // 2. ŞABLONUN ÜSTÜNE BAŞLIK VE DÖNEMİ MİLİMETRİK YAZ
             if (baslikMetni) {
                 slide.addText(baslikMetni.toUpperCase(), {
-                    x: 1.30, y: 0.12, w: 6.5, h: 0.76,
-                    fontSize: 22, fontFace: "Arial Black", color: "FFFFFF", bold: true, valign: "middle"
+                    x: 1.35,
+                    y: 0.08,
+                    w: 6.8,
+                    h: 0.72,
+                    fontSize: 22,
+                    fontFace: "Arial Black",
+                    color: "FFFFFF",
+                    bold: true,
+                    valign: "middle"
                 });
             }
 
             if (donemMetni) {
                 slide.addText(donemMetni.toUpperCase(), {
-                    x: 7.2, y: 0.12, w: 5.7, h: 0.76,
-                    fontSize: 16, fontFace: "Arial", color: "FFFFFF", bold: true, align: "right", valign: "middle"
+                    x: 7.2,
+                    y: 0.08,
+                    w: 5.7,
+                    h: 0.72,
+                    fontSize: 16,
+                    fontFace: "Arial",
+                    color: "FFFFFF",
+                    bold: true,
+                    align: "right",
+                    valign: "middle"
                 });
             }
 
-            // 4. TABLOLARIN SLAYTA KİLİTLENMESİ (TAŞMAYI ÖNLEYEN MATEMATİK)
+            // 3. TABLOLARI SLAYTIN BEYAZ ALANINA MİLİMETRİK KİLİTLE (ASLA TAŞMAZ)
             const htmlTables = document.querySelectorAll('#slideTablesWrapper table');
             if (!htmlTables || htmlTables.length === 0) return;
 
-            const totalTableWidth = 12.5; // inç cinsinden maksimum genişlik
-            let startY = 1.25;
+            const totalTableWidth = 12.5; // Toplam genişlik (inç)
+            const availableHeight = 5.8;  // Beyaz alanda kullanılabilir dikey alan
+            let startY = 1.20;
 
             htmlTables.forEach((table) => {
                 const totalCols = parseInt(table.getAttribute('data-cols')) || 8;
@@ -5388,7 +5387,7 @@ window.kunyeModalDisKlikKapat = function(e) {
                 const trList = table.querySelectorAll('tr');
                 const rowCount = trList.length;
 
-                // Satır sayısına göre orantılı font boyutu
+                // Satır ve sütun çokluğuna göre fontu otomatik ölçekle
                 let dynamicFontSize = 7.5;
                 if (rowCount > 10 || totalCols > 10) dynamicFontSize = 6.5;
                 if (rowCount > 15 || totalCols > 15) dynamicFontSize = 5.5;
@@ -5431,8 +5430,8 @@ window.kunyeModalDisKlikKapat = function(e) {
                     if (rowCells.length > 0) pptxRows.push(rowCells);
                 });
 
-                // Tabloyu Tek Slayta Kilitler (Asla yeni slayta bölmez)
-                const dynamicRowHeight = Math.min(0.24, 5.6 / (rowCount * htmlTables.length));
+                // Tablo yüksekliğini hesapla ve slayta bas
+                const dynamicRowHeight = Math.min(0.24, availableHeight / (rowCount * htmlTables.length));
 
                 slide.addTable(pptxRows, {
                     x: 0.41,
@@ -5446,7 +5445,7 @@ window.kunyeModalDisKlikKapat = function(e) {
                 startY += (rowCount * dynamicRowHeight) + 0.35;
             });
 
-            // 5. İndir
+            // 4. İndir
             const dosyaAdi = `${(baslikMetni || 'Slayt').replace(/\s+/g, '_')}_Brifing_Sunumu.pptx`;
             await pptx.writeFile({ fileName: dosyaAdi });
 
