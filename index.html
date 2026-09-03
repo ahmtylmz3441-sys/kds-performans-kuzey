@@ -5403,12 +5403,6 @@ window.kunyeModalDisKlikKapat = function(e) {
         const dosyaAdi = `${baslikMetni.replace(/\s+/g, '_')}_Brifing_Sunumu.pptx`;
         await pptx.writeFile({ fileName: dosyaAdi });
     };
-
-        } catch(err) {
-            console.error("PPTX Üretim Hatası:", err);
-            alert("PowerPoint dosyası oluşturulurken bir hata meydana geldi: " + err.message);
-        }
-    };
 </script>
 </body>
 </html>
