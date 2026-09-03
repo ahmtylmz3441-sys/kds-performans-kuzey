@@ -5164,176 +5164,7 @@ window.kunyeModalDisKlikKapat = function(e) {
         await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
     })();
     // =============================================================
-    // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI & YENİ NESİL PPTX MOTORU
-    // =============================================================
-
-    // RESMİ SAĞLIK BAKANLIĞI LOGOSU (Kalıcı Vektör Base64 - Kırmızı Çarpı Vermez)
-    const SB_LOGO_BASE64 = "data:image/svg+xml;utf8," + encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-        <circle cx="100" cy="100" r="96" fill="#ffffff" stroke="#b91c1c" stroke-width="4"/>
-        <circle cx="100" cy="100" r="84" fill="none" stroke="#b91c1c" stroke-width="2" stroke-dasharray="4 6"/>
-        <path d="M100 30 C61.3 30 30 61.3 30 100 C30 138.7 61.3 170 100 170 C122.5 170 142.6 159.4 155.3 143 C127.2 150.8 96.6 135.5 88.5 107.5 C81.8 84.7 93.6 60.8 115.3 49.8 C110.3 48.7 105.2 48 100 30 Z" fill="#b91c1c"/>
-        <line x1="100" y1="46" x2="100" y2="154" stroke="#b91c1c" stroke-width="8" stroke-linecap="round"/>
-        <path d="M84 76 C96 66 110 86 88 100 C108 112 104 132 88 126" fill="none" stroke="#b91c1c" stroke-width="5" stroke-linecap="round"/>
-    </svg>`);
-
-    // =============================================================
-    // İSTANBUL İL SAĞLIK MÜDÜRLÜĞÜ SLAYT SİHİRBAZI & DRIVE ENTEGRASYONU
-    // =============================================================
-
-    // SİZİN GOOGLE DRIVE'DAKİ ORİJİNAL LOGONUZUN DOĞRUDAN RESİM AKIŞI
-    const RESMI_LOGO_URL = "https://lh3.googleusercontent.com/d/1Lj-113M9R0RzwBK2A4asneizGFH2xpR1";
-
-    window.guncelleSlideBaslik = function() {
-        const val = document.getElementById('slideInputBaslik')?.value || '';
-        const el = document.getElementById('slideRenderBaslik');
-        if (el) el.innerText = val.toUpperCase();
-    };
-
-    window.guncelleSlideDonem = function() {
-        const val = document.getElementById('slideInputDonem')?.value || '';
-        const el = document.getElementById('slideRenderDonem');
-        if (el) el.innerText = val.toUpperCase();
-    };
-
-    // TABLOYU ÇİZME MOTORU
-    window.olusturSlaytTablolari = function() {
-        // Önizlemede Logonuzu Göster
-        const logoImg = document.getElementById('slideRenderLogo');
-        if (logoImg) {
-            logoImg.src = RESMI_LOGO_URL;
-        }
-
-        const wrapper = document.getElementById('slideTablesWrapper');
-        if (!wrapper) return;
-
-        const tabloSayisi = parseInt(document.getElementById('slideInputTabloSayisi')?.value || '1');
-        const sutunSayisi = parseInt(document.getElementById('slideInputSutunSayisi')?.value || '8');
-        const baslikSatirSayisi = parseInt(document.getElementById('slideInputBaslikSatirSayisi')?.value || '2');
-        const satirSayisi = parseInt(document.getElementById('slideInputSatirSayisi')?.value || '8');
-
-        function tabloCiz(themeClass) {
-            let tHtml = `<table class="sb-briefing-table" data-cols="${sutunSayisi}" style="width:100%; border-collapse:collapse; border:1.5px solid #000; background:#fff; table-layout:fixed;">
-                <thead>`;
-
-            // Başlık Satırları (Ayrık, boş hücreler)
-            for (let b = 0; b < baslikSatirSayisi; b++) {
-                tHtml += `<tr>`;
-                for (let c = 0; c < sutunSayisi; c++) {
-                    const bgColor = (themeClass === 'theme-blue') ? '#1e3a8a' : '#b91c1c';
-                    tHtml += `<th class="sb-header-cell" data-r="${b}" data-c="${c}" style="background-color:${bgColor}; color:#fff; font-weight:800; font-size:10px; padding:6px 2px; text-align:center; border:1px solid #000; outline:none;" contenteditable="true"></th>`;
-                }
-                tHtml += `</tr>`;
-            }
-
-            tHtml += `</thead><tbody>`;
-
-            // Veri Satırları (Ayrık, boş hücreler)
-            for (let r = 0; r < satirSayisi; r++) {
-                tHtml += `<tr>`;
-                for (let c = 0; c < sutunSayisi; c++) {
-                    tHtml += `<td data-r="${baslikSatirSayisi + r}" data-c="${c}" style="text-align:center; padding:5px 3px; border:1px solid #000; font-size:11px; background:#fff; outline:none;" contenteditable="true"></td>`;
-                }
-                tHtml += `</tr>`;
-            }
-
-            tHtml += `</tbody></table>`;
-            return tHtml;
-        }
-
-        let mainHtml = tabloCiz("");
-        if (tabloSayisi >= 2) mainHtml += tabloCiz("theme-blue");
-        if (tabloSayisi >= 3) mainHtml += tabloCiz("");
-
-        wrapper.innerHTML = mainHtml;
-        window.hucreSecimOlaylariniAta();
-    };
-
-    // SHIFT İLE ARALIK SEÇİMİ (1. ile 4. hücreyi seçince arayı otomatik seçer)
-    let sonTiklananHucre = null;
-
-    window.hucreSecimOlaylariniAta = function() {
-        const cells = document.querySelectorAll('.sb-briefing-table th, .sb-briefing-table td');
-        cells.forEach(cell => {
-            cell.onclick = function(e) {
-                if (e.shiftKey && sonTiklananHucre) {
-                    const r1 = parseInt(sonTiklananHucre.getAttribute('data-r'));
-                    const c1 = parseInt(sonTiklananHucre.getAttribute('data-c'));
-                    const r2 = parseInt(this.getAttribute('data-r'));
-                    const c2 = parseInt(this.getAttribute('data-c'));
-
-                    const minR = Math.min(r1, r2), maxR = Math.max(r1, r2);
-                    const minC = Math.min(c1, c2), maxC = Math.max(c1, c2);
-
-                    cells.forEach(c => {
-                        const r = parseInt(c.getAttribute('data-r'));
-                        const col = parseInt(c.getAttribute('data-c'));
-                        if (r >= minR && r <= maxR && col >= minC && col <= maxC) {
-                            c.classList.add('cell-selected');
-                        }
-                    });
-                } else if (e.ctrlKey || e.metaKey) {
-                    this.classList.toggle('cell-selected');
-                    sonTiklananHucre = this;
-                } else {
-                    cells.forEach(c => c.classList.remove('cell-selected'));
-                    this.classList.add('cell-selected');
-                    sonTiklananHucre = this;
-                }
-            };
-        });
-    };
-
-    // HÜCRELERİ BİRLEŞTİR
-    window.birlestirSecilenHucreler = function() {
-        const selected = Array.from(document.querySelectorAll('.sb-briefing-table .cell-selected'));
-        if (selected.length < 2) {
-            alert("Lütfen birleştirmek için en az 2 hücre seçiniz (Shift ile aralık seçebilirsiniz).");
-            return;
-        }
-
-        let minR = 9999, maxR = -1, minC = 9999, maxC = -1;
-        selected.forEach(cell => {
-            const r = parseInt(cell.getAttribute('data-r'));
-            const c = parseInt(cell.getAttribute('data-c'));
-            if (r < minR) minR = r;
-            if (r > maxR) maxR = r;
-            if (c < minC) minC = c;
-            if (c > maxC) maxC = c;
-        });
-
-        const rowSpan = (maxR - minR) + 1;
-        const colSpan = (maxC - minC) + 1;
-
-        const mainCell = selected[0];
-        mainCell.setAttribute('rowspan', rowSpan);
-        mainCell.setAttribute('colspan', colSpan);
-
-        let texts = [];
-        selected.forEach((cell, idx) => {
-            if (cell.innerText.trim()) texts.push(cell.innerText.trim());
-            if (idx > 0) {
-                cell.style.display = 'none';
-                cell.classList.add('merged-hidden');
-            }
-            cell.classList.remove('cell-selected');
-        });
-
-        mainCell.innerText = texts.join(' ');
-        mainCell.style.display = '';
-    };
-
-    window.ayirSecilenHucreler = function() {
-        window.olusturSlaytTablolari();
-    };
-
-    window.temizleSecilenHucreler = function() {
-        const selected = document.querySelectorAll('.sb-briefing-table .cell-selected');
-        selected.forEach(c => c.innerText = '');
-    };
-
-   // =============================================================
-    // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI & KUSURSUZ PPTX MOTORU (V6)
+    // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI & KUSURSUZ PPTX MOTORU (TEK BLOK)
     // =============================================================
     const RESMI_SLAYT_SABLON_URL = "https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od";
 
@@ -5545,7 +5376,7 @@ window.kunyeModalDisKlikKapat = function(e) {
             const htmlTables = document.querySelectorAll('#slideTablesWrapper table');
             if (!htmlTables || htmlTables.length === 0) return;
 
-            const targetTableWidth = 12.2; // inç (Sağdan ve soldan 0.56 inç pay bırakır)
+            const targetTableWidth = 12.2; // inç
             let startY = 1.30;             // Kırmızı çizginin hemen altı
 
             htmlTables.forEach((table) => {
@@ -5553,7 +5384,6 @@ window.kunyeModalDisKlikKapat = function(e) {
                 const trList = table.querySelectorAll('tr');
                 const rowCount = trList.length;
 
-                // Satır sayısına göre font boyutu
                 let fontSize = 8;
                 if (rowCount > 8) fontSize = 7;
                 if (rowCount > 12) fontSize = 6;
@@ -5574,7 +5404,6 @@ window.kunyeModalDisKlikKapat = function(e) {
                         const isHeader = cell.tagName.toLowerCase() === 'th';
                         let bgColor = isHeader ? (cell.style.backgroundColor === 'rgb(30, 58, 138)' ? '1E3A8A' : 'B91C1C') : 'FFFFFF';
                         
-                        // Kullanıcının seçtiği renk ve kalınlığı al
                         let fontColor = '000000';
                         if (cell.style.color && cell.style.color !== '') {
                             const rgb = cell.style.color;
@@ -5609,7 +5438,6 @@ window.kunyeModalDisKlikKapat = function(e) {
                     if (rowCells.length > 0) pptxRows.push(rowCells);
                 });
 
-                // Tablo Yüksekliğini Koru
                 const dynamicRowHeight = Math.min(0.24, 5.4 / (rowCount * htmlTables.length));
 
                 slide.addTable(pptxRows, {
