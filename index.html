@@ -904,9 +904,9 @@
                     <!-- 1. ÜST KIRMIZI KURUMSAL BANT (Base64 Gömülü Resmi Logo) -->
                     <div class="slide-top-banner" style="height:76px; background:linear-gradient(90deg, #b91c1c 0%, #dc2626 50%, #991b1b 100%); display:flex; align-items:center; justify-content:space-between; padding:0 24px; color:#fff;">
                         <div class="slide-banner-left" style="display:flex; align-items:center; gap:16px;">
-                            <div class="slide-logo-circle" style="width:54px; height:54px; background:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:3px; box-shadow:0 2px 6px rgba(0,0,0,0.2);">
-                                <img id="slideRenderLogo" src="" style="width:100%; height:100%; object-fit:contain;" alt="T.C. Sağlık Bakanlığı">
-                            </div>
+                            <<div style="width:60px; height:60px; display:flex; align-items:center; justify-content:center;">
+    <img id="slideRenderLogo" src="" style="width:100%; height:100%; object-fit:contain;" alt="T.C. Sağlık Bakanlığı">
+</div>
                             <h2 id="slideRenderBaslik" class="slide-main-title" style="font-size:24px; font-weight:900; margin:0; color:#fff; text-transform:uppercase;"></h2>
                         </div>
                         <div id="slideRenderDonem" class="slide-period-title" style="font-size:18px; font-weight:800; color:#fff;"></div>
@@ -5345,16 +5345,18 @@ window.kunyeModalDisKlikKapat = function(e) {
                 line: { color: 'B91C1C' }
             });
 
-            // 2. ORİJİNAL GOOGLE DRIVE AMBLEMİ (Bakanlık + İstanbul Logosu)
+            // 2. ORİJİNAL İSTANBUL İL SAĞLIK MÜDÜRLÜĞÜ LOGOSU (TEMİZ & BEYAZ KARESIZ)
             try {
                 slide.addImage({
                     path: RESMI_LOGO_URL,
-                    x: 0.25, y: 0.05, w: 0.90, h: 0.90
+                    x: 0.15,
+                    y: 0.05,
+                    w: 0.90,
+                    h: 0.90
                 });
             } catch(e) {
                 console.warn("Logo ekleme uyarısı:", e);
             }
-
             // 3. Başlıklar
             if (baslikMetni) {
                 slide.addText(baslikMetni.toUpperCase(), {
