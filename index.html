@@ -947,12 +947,29 @@
                             <span class="fw-bold text-dark"><i class="bi bi-grid-3x3-gap-fill text-primary"></i> Slayt Muayene Masası</span>
                             <span class="badge bg-danger ms-2" id="toplamSlaytSayaci">0 Slayt</span>
                         </div>
-                        <button class="btn btn-danger fw-bold px-3 py-2 shadow-sm d-flex align-items-center gap-2" id="birlestirIndirBtn" onclick="window.birlestirVeIndirPPTX()" disabled>
-                            <i class="bi bi-file-earmark-ppt-fill fs-5"></i>
-                            <span>Tüm Sunumları Birleştir & İndir (.pptx)</span>
-                        </button>
+                        
+                        <!-- YENİ EKLENEN AKILLI KONTROLLER VE BUTON -->
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="chkOtomatikAjanda" checked style="cursor: pointer;">
+                                <label class="form-check-label small fw-bold text-secondary" for="chkOtomatikAjanda" style="user-select:none;">
+                                    📑 Başa "İçindekiler" Ekle
+                                </label>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="small fw-bold text-secondary" style="font-size: 11px;">TEMA:</span>
+                                <select id="selectKurumsalRenk" class="form-select form-select-sm py-1" style="font-size:11px; width:130px; border-radius:8px;">
+                                    <option value="B91C1C">Bakanlık Kırmızı</option>
+                                    <option value="1E3A8A">Kurumsal Lacivert</option>
+                                    <option value="047857">Zümrüt Yeşili</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-danger fw-bold px-3 py-2 shadow-sm d-flex align-items-center gap-2" id="birlestirIndirBtn" onclick="window.birlestirVeIndirPPTX()" disabled>
+                                <i class="bi bi-file-earmark-ppt-fill fs-5"></i>
+                                <span>Tüm Sunumları Birleştir & İndir (.pptx)</span>
+                            </button>
+                        </div>
                     </div>
-
                     <div class="slide-inspect-grid" id="slideInspectGrid">
                         <div class="text-center text-muted py-5 w-100" style="grid-column: 1 / -1;">
                             <i class="bi bi-arrow-left-circle fs-2 text-secondary d-block mb-2"></i>
@@ -1216,12 +1233,12 @@
 </div>
 
 <script>
-    // =============================================================
-// PPTX BİRLEŞTİRİCİ & SLAYT MUAYENE MOTORU (GITHUB PAGES UYUMLU)
-// =============================================================
-let tumAyiklananSlaytlar = []; // Yüklenen tüm sunumların slayt havuzu
+    // =========================================================================
+// AKILLI SLAYT DİZGİ, TAŞMA ÖNLEME & KONSOLİDASYON MOTORU (V2 - SMART)
+// =========================================================================
+let tumAyiklananSlaytlar = [];
 
-// Sekme Geçişi
+// Sekme Değiştirici
 window.switchSlideSubTab = function(tab) {
     const modBirlestir = document.getElementById('slideBirlestirModul');
     const modTasarla = document.getElementById('slideTasarlaModul');
@@ -1242,7 +1259,7 @@ window.switchSlideSubTab = function(tab) {
     }
 };
 
-// Sürükle Bırak Olayları
+// Sürükle-Bırak Alanı
 const dropzone = document.getElementById('pptxDropzone');
 if (dropzone) {
     ['dragenter', 'dragover'].forEach(name => {
@@ -1257,7 +1274,7 @@ if (dropzone) {
     });
 }
 
-// PPTX Dosyalarını Bellekte Açma ve Ayıklama Motoru
+// Dosya Seçim & Yükleme
 window.handlePptxFiles = async function(files) {
     if (!files || files.length === 0) return;
     const loader = document.getElementById('page-loader');
@@ -1267,10 +1284,10 @@ window.handlePptxFiles = async function(files) {
         if (!file.name.toLowerCase().endsWith('.pptx')) continue;
         try {
             const zip = await JSZip.loadAsync(file);
-            await parsePptxZip(zip, file.name);
+            await akilliPptxAyikla(zip, file.name);
         } catch (err) {
-            console.error("Dosya çözülemedi:", file.name, err);
-            alert(`"${file.name}" dosyası PowerPoint arşivi olarak açılamadı.`);
+            console.error("PPTX okunamadı:", file.name, err);
+            alert(`"${file.name}" dosyası PowerPoint arşivi olarak çözümlenemedi.`);
         }
     }
 
@@ -1278,10 +1295,9 @@ window.handlePptxFiles = async function(files) {
     window.renderSlaytMuayeneMasasi();
 };
 
-// PPTX XML İçeriğini Tarama (Başlık, Tablo, Metin Çözücü)
-async function parsePptxZip(zip, dosyaAdi) {
+// 1. ADIM: GELİŞMİŞ XML & KOORDİNAT AYIKLAMA (Slayt Tipini Otomatik Teşhis Eder)
+async function akilliPptxAyikla(zip, dosyaAdi) {
     const slideFiles = Object.keys(zip.files).filter(k => k.match(/^ppt\/slides\/slide\d+\.xml$/));
-    // Slaytları doğal sıralamayla diz (slide1, slide2... slide10)
     slideFiles.sort((a, b) => {
         const numA = parseInt(a.match(/slide(\d+)\.xml/)[1]);
         const numB = parseInt(b.match(/slide(\d+)\.xml/)[1]);
@@ -1294,20 +1310,28 @@ async function parsePptxZip(zip, dosyaAdi) {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlText, "application/xml");
 
-        // 1. Başlık bul
+        // Başlık ve Altyazı tespiti
         let baslik = "";
+        let altBaslik = "";
         const titleShapes = xmlDoc.querySelectorAll('p\\:sp, sp');
+
         titleShapes.forEach(sp => {
             const ph = sp.querySelector('p\\:ph, ph');
             const type = ph ? ph.getAttribute('type') : '';
-            if (type === 'title' || type === 'ctrTitle' || !baslik) {
-                const tTags = sp.querySelectorAll('a\\:t, t');
-                let tStr = Array.from(tTags).map(t => t.textContent).join(' ').trim();
-                if (tStr && !baslik) baslik = tStr;
+            const tTags = sp.querySelectorAll('a\\:t, t');
+            const metin = Array.from(tTags).map(t => t.textContent).join(' ').trim();
+
+            if (metin) {
+                if (type === 'title' || type === 'ctrTitle' || (!baslik && metin.length < 90)) {
+                    if (!baslik) baslik = metin;
+                    else if (!altBaslik) altBaslik = metin;
+                } else if (type === 'subTitle' && !altBaslik) {
+                    altBaslik = metin;
+                }
             }
         });
 
-        // 2. Tablo var mı kontrol et
+        // Tablo tespiti ve matris okuma
         const tables = [];
         const tblNodes = xmlDoc.querySelectorAll('a\\:tbl, tbl');
         tblNodes.forEach(tbl => {
@@ -1317,30 +1341,44 @@ async function parsePptxZip(zip, dosyaAdi) {
                 const rowCells = [];
                 const tcNodes = tr.querySelectorAll('a\\:tc, tc');
                 tcNodes.forEach(tc => {
-                    const texts = Array.from(tc.querySelectorAll('a\\:t, t')).map(x => x.textContent).join('');
-                    rowCells.push(texts.trim());
+                    const texts = Array.from(tc.querySelectorAll('a\\:t, t')).map(x => x.textContent).join(' ');
+                    const cleanText = texts.replace(/\s+/g, ' ').trim();
+                    const gridSpan = parseInt(tc.getAttribute('gridSpan') || '1');
+                    const rowSpan = parseInt(tc.getAttribute('rowSpan') || '1');
+                    rowCells.push({ text: cleanText, colSpan: gridSpan, rowSpan: rowSpan });
                 });
                 if (rowCells.length) rows.push(rowCells);
             });
             if (rows.length) tables.push(rows);
         });
 
-        // 3. Genel metinler
-        const allTexts = Array.from(xmlDoc.querySelectorAll('a\\:t, t')).map(x => x.textContent.trim()).filter(Boolean);
+        // Tüm metinler
+        const allTexts = Array.from(xmlDoc.querySelectorAll('a\\:t, t'))
+            .map(x => x.textContent.trim())
+            .filter(t => t && t !== baslik && t !== altBaslik);
+
+        // SLAYT TİPİ TEŞHİSİ: KAPAK MI? TABLO MU? METİN Mİ?
+        let slideType = 'METIN';
+        if (tables.length > 0) {
+            slideType = 'TABLO';
+        } else if (i === 0 || (!tables.length && allTexts.length <= 3 && baslik.length > 0)) {
+            slideType = 'KAPAK';
+        }
 
         tumAyiklananSlaytlar.push({
             id: 'slide_' + Math.random().toString(36).substr(2, 9),
             dosyaAdi: dosyaAdi,
             sayfaNo: (i + 1),
-            baslik: baslik || `Slayt ${i + 1}`,
+            tip: slideType,
+            baslik: baslik || (slideType === 'KAPAK' ? 'BÖLÜM SUNUMU' : `Slayt ${i + 1}`),
+            altBaslik: altBaslik || (slideType === 'KAPAK' ? dosyaAdi.replace('.pptx', '') : ''),
             tablolar: tables,
-            metinler: allTexts,
-            xmlContent: xmlText
+            metinler: allTexts
         });
     }
 }
 
-// Slayt Kartlarını Ekrana Çizme ve Tel Kafes Önizleme
+// 2. ADIM: MUAYENE MASASI GÖRÜNÜMÜ & CANLI KARTLAR
 window.renderSlaytMuayeneMasasi = function() {
     const grid = document.getElementById('slideInspectGrid');
     const sayac = document.getElementById('toplamSlaytSayaci');
@@ -1352,7 +1390,6 @@ window.renderSlaytMuayeneMasasi = function() {
     sayac.innerText = `${tumAyiklananSlaytlar.length} Slayt`;
     indirBtn.disabled = tumAyiklananSlaytlar.length === 0;
 
-    // Dosya özeti
     const dosyalar = [...new Set(tumAyiklananSlaytlar.map(s => s.dosyaAdi))];
     if (dosyalar.length === 0) {
         dosyaListesi.innerHTML = '<li class="list-group-item text-muted text-center py-3">Henüz dosya yüklenmedi.</li>';
@@ -1368,24 +1405,30 @@ window.renderSlaytMuayeneMasasi = function() {
         </li>`;
     }).join('');
 
-    // Kartları Çiz
-    grid.innerHTML = tumAyiklananSlaytlar.map((s, idx) => `
+    grid.innerHTML = tumAyiklananSlaytlar.map((s, idx) => {
+        let rozet = '';
+        if (s.tip === 'KAPAK') rozet = '<span class="badge bg-danger">Kapak / Bölüm Ayracı</span>';
+        else if (s.tip === 'TABLO') rozet = `<span class="badge bg-primary">${s.tablolar[0].length} Satır Tablo (Auto-Fit)</span>`;
+        else rozet = '<span class="badge bg-secondary">Metin / Bilgi</span>';
+
+        return `
         <div class="slide-inspect-card">
-            <!-- Minyatür Tel Kafes Önizleme -->
-            <canvas id="canvas_${s.id}" class="slide-canvas-preview" width="320" height="180"></canvas>
+            <canvas id="canvas_${s.id}" class="slide-canvas-preview" width="320" height="240"></canvas>
             
             <div class="p-2 d-flex flex-column flex-grow-1">
                 <div class="d-flex justify-content-between align-items-start mb-1">
                     <span class="badge bg-dark" style="font-size:10px;">#${idx + 1}</span>
-                    <span class="badge bg-light text-dark border small text-truncate" style="max-width:160px;">${s.dosyaAdi}</span>
+                    ${rozet}
                 </div>
-                <h6 class="fw-bold text-dark text-truncate mb-2" style="font-size:12px;" title="${s.baslik}">${s.baslik}</h6>
+                <!-- Doğrudan Kart Üzerinden Düzenlenebilir Başlık -->
+                <input type="text" class="form-control form-control-sm fw-bold border-0 bg-light p-1 mb-1" 
+                       value="${s.baslik}" title="Başlığı buradan düzeltebilirsiniz"
+                       onchange="window.guncelleKartBaslik('${s.id}', this.value)" style="font-size:11.5px;">
                 
-                <div class="small text-muted mb-2" style="font-size:11px;">
-                    ${s.tablolar.length ? `<span class="text-success fw-bold"><i class="bi bi-table"></i> ${s.tablolar.length} Tablo</span>` : '<span class="text-secondary"><i class="bi bi-card-text"></i> Metin Slaytı</span>'}
+                <div class="small text-muted mb-2 text-truncate" style="font-size:10.5px;">
+                    <i class="bi bi-file-earmark"></i> ${s.dosyaAdi} (s.${s.sayfaNo})
                 </div>
 
-                <!-- Kontrol Butonları -->
                 <div class="d-flex gap-1 mt-auto pt-2 border-top">
                     <button class="btn btn-xs btn-outline-primary w-100 py-1" onclick="window.inceleSlayt('${s.id}')" title="İncele"><i class="bi bi-eye"></i></button>
                     <button class="btn btn-xs btn-outline-secondary py-1" onclick="window.tasiSlayt(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} title="Öne Al"><i class="bi bi-arrow-left"></i></button>
@@ -1394,69 +1437,96 @@ window.renderSlaytMuayeneMasasi = function() {
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 
-    // Her canvas için tel kafes taslağı oluştur
     setTimeout(() => {
-        tumAyiklananSlaytlar.forEach(s => window.cizTelKafes(s));
+        tumAyiklananSlaytlar.forEach(s => window.cizAkilliMinyatur(s));
     }, 50);
 };
 
-// HTML Canvas Üzerine Slaydın Şekil-Şemalini Çizen Motor
-window.cizTelKafes = function(s) {
+// 3. ADIM: GERÇEKÇİ TEL KAFES / ŞEKİL ŞEMAL MİNYATÜRÜ
+window.cizAkilliMinyatur = function(s) {
     const canvas = document.getElementById(`canvas_${s.id}`);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const w = canvas.width, h = canvas.height;
 
-    // Arka Plan
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, w, h);
 
-    // Sağlık Bakanlığı Kırmızı Üst Bandı Temsili
-    ctx.fillStyle = "#b91c1c";
-    ctx.fillRect(0, 0, w, 22);
+    if (s.tip === 'KAPAK') {
+        // Kapak Taslağı (Ortalanmış Şık Görünüm)
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(0, 0, w, h);
 
-    // Başlık Şeridi Yazısı
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 9px 'Plus Jakarta Sans', sans-serif";
-    ctx.fillText((s.baslik || 'SLAYT BAŞLIĞI').substring(0, 35).toUpperCase(), 10, 15);
+        ctx.fillStyle = "#b91c1c";
+        ctx.fillRect(0, h * 0.42, w, 4);
 
-    // Eğer Tablo Varsa Tablo Kafesi Çiz
-    if (s.tablolar && s.tablolar.length > 0) {
-        ctx.strokeStyle = "#cbd5e1";
-        ctx.fillStyle = "#f8fafc";
-        ctx.lineWidth = 1;
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 13px 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(s.baslik.substring(0, 32).toUpperCase(), w / 2, h * 0.38);
 
-        const tableX = 14, tableY = 36, tableW = w - 28, tableH = h - 50;
-        ctx.fillRect(tableX, tableY, tableW, tableH);
-        ctx.strokeRect(tableX, tableY, tableW, tableH);
-
-        // Tablo Sütun Çizgileri
-        for (let col = 1; col < 6; col++) {
-            ctx.beginPath();
-            ctx.moveTo(tableX + (col * (tableW / 6)), tableY);
-            ctx.lineTo(tableX + (col * (tableW / 6)), tableY + tableH);
-            ctx.stroke();
-        }
-        // Tablo Satır Çizgileri
-        for (let row = 1; row < 5; row++) {
-            ctx.beginPath();
-            ctx.moveTo(tableX, tableY + (row * (tableH / 5)));
-            ctx.lineTo(tableX + tableW, tableY + (row * (tableH / 5)));
-            ctx.stroke();
-        }
-    } else {
-        // Metin blokları temsili (Hafif gri çizgiler)
         ctx.fillStyle = "#94a3b8";
-        ctx.fillRect(15, 45, w - 30, 8);
-        ctx.fillRect(15, 60, w - 60, 6);
-        ctx.fillRect(15, 75, w - 45, 6);
-        ctx.fillRect(15, 90, w - 80, 6);
+        ctx.font = "10px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText((s.altBaslik || s.dosyaAdi).substring(0, 35), w / 2, h * 0.55);
+    } else {
+        // Tablo / Veri Taslağı (Üst Kırmızı Bant)
+        ctx.fillStyle = "#b91c1c";
+        ctx.fillRect(0, 0, w, 28);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 10px 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(s.baslik.substring(0, 38).toUpperCase(), 12, 18);
+
+        if (s.tip === 'TABLO' && s.tablolar.length) {
+            const tbl = s.tablolar[0];
+            const rowsCount = Math.min(tbl.length, 12);
+            const colsCount = Math.min(tbl[0]?.length || 5, 8);
+
+            const tX = 12, tY = 42, tW = w - 24, tH = h - 56;
+            ctx.fillStyle = "#f8fafc";
+            ctx.fillRect(tX, tY, tW, tH);
+            ctx.strokeStyle = "#cbd5e1";
+            ctx.strokeRect(tX, tY, tW, tH);
+
+            // Başlık satırı
+            ctx.fillStyle = "#1e293b";
+            ctx.fillRect(tX, tY, tW, tH / rowsCount);
+
+            // Çizgiler
+            for (let r = 1; r < rowsCount; r++) {
+                ctx.beginPath();
+                ctx.moveTo(tX, tY + (r * (tH / rowsCount)));
+                ctx.lineTo(tX + tW, tY + (r * (tH / rowsCount)));
+                ctx.stroke();
+            }
+            for (let c = 1; c < colsCount; c++) {
+                ctx.beginPath();
+                ctx.moveTo(tX + (c * (tW / colsCount)), tY);
+                ctx.lineTo(tX + (c * (tW / colsCount)), tY + tH);
+                ctx.stroke();
+            }
+        } else {
+            // Metin çizgileri
+            ctx.fillStyle = "#cbd5e1";
+            for (let i = 0; i < 5; i++) {
+                ctx.fillRect(16, 48 + (i * 24), w - 32, 10);
+            }
+        }
     }
 };
 
-// Slayt Taşıma, Silme ve Sıfırlama
+window.guncelleKartBaslik = function(id, val) {
+    const s = tumAyiklananSlaytlar.find(x => x.id === id);
+    if (s) {
+        s.baslik = val;
+        window.cizAkilliMinyatur(s);
+    }
+};
+
 window.tasiSlayt = function(idx, yon) {
     const hedef = idx + yon;
     if (hedef < 0 || hedef >= tumAyiklananSlaytlar.length) return;
@@ -1472,104 +1542,158 @@ window.silSlayt = function(idx) {
 };
 
 window.temizleTumSunumlar = function() {
-    if (confirm("Yüklenen tüm sunumları temizlemek istediğinize emin misiniz?")) {
+    if (confirm("Tüm sunum sayfaları sıfırlansın mı?")) {
         tumAyiklananSlaytlar = [];
         window.renderSlaytMuayeneMasasi();
     }
 };
 
-// Slayt İnceleme Modalı
-window.inceleSlayt = function(slideId) {
-    const s = tumAyiklananSlaytlar.find(x => x.id === slideId);
-    if (!s) return;
-    document.getElementById('modalSlaytBaslik').innerText = `${s.dosyaAdi} - Sayfa ${s.sayfaNo}: ${s.baslik}`;
-    
-    let html = '';
-    if (s.tablolar.length) {
-        html += '<h6 class="fw-bold mb-2">Tablo Verileri:</h6>';
-        s.tablolar.forEach((t, tIdx) => {
-            html += `<table class="table table-bordered table-sm mb-3" style="font-size:11px;"><thead class="table-dark">`;
-            t.forEach((row, rIdx) => {
-                html += `<tr>${row.map(c => `<${rIdx===0?'th':'td'}>${c || '-'}</${rIdx===0?'th':'td'}>`).join('')}</tr>`;
-                if (rIdx === 0) html += `</thead><tbody>`;
-            });
-            html += `</tbody></table>`;
-        });
-    }
-    
-    html += '<h6 class="fw-bold mt-3 mb-2">Slaytta Geçen Metinler:</h6><div class="p-2 border rounded bg-light small" style="max-height:180px; overflow-y:auto;">';
-    html += s.metinler.map(m => `<div>• ${m}</div>`).join('') || '<div class="text-muted">Metin bulunamadı.</div>';
-    html += '</div>';
-
-    document.getElementById('modalSlaytIcerik').innerHTML = html;
-    document.getElementById('slaytDetayModal').classList.add('active');
-};
-
-window.slaytDetayModalKapat = function(e) {
-    if (e.target.id === 'slaytDetayModal') {
-        document.getElementById('slaytDetayModal').classList.remove('active');
-    }
-};
-
-// TÜM SUNUMLARI BİRLEŞTİRİP RESMİ ŞABLONDA TEK PPTX ÜRETEN MOTOR
+// 4. ADIM: AKILLI TAŞMA ÖNLEYİCİ & BİRLEŞTİRİCİ MOTOR (PPTXGENJS)
 window.birlestirVeIndirPPTX = async function() {
     if (!tumAyiklananSlaytlar.length) return;
+
+    const kurumsalRenk = document.getElementById('selectKurumsalRenk')?.value || 'B91C1C';
+    const ajandaEkle = document.getElementById('chkOtomatikAjanda')?.checked ?? true;
 
     try {
         const pptx = new PptxGenJS();
         pptx.layout = 'LAYOUT_4x3';
 
-        tumAyiklananSlaytlar.forEach(s => {
-            const slide = pptx.addSlide();
+        // 1. GENEL BAŞLIK KAPAK SLAYTI (İlk Slayt)
+        const ilkSlayt = tumAyiklananSlaytlar[0];
+        const kapakSlide = pptx.addSlide();
+        kapakSlide.addImage({
+            path: "https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od",
+            x: 0, y: 0, w: 10.0, h: 7.5
+        });
+        kapakSlide.addText((ilkSlayt.baslik || 'BAŞKANLAR TOPLANTISI BRİFİNGİ').toUpperCase(), {
+            x: 1.0, y: 2.6, w: 8.0, h: 1.2,
+            fontSize: 24, fontFace: "Arial Black", color: "FFFFFF", bold: true, align: "center", valign: "middle"
+        });
+        kapakSlide.addText(`T.C. SAĞLIK BAKANLIĞI\n${new Date().toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' })}`, {
+            x: 1.0, y: 4.2, w: 8.0, h: 1.0,
+            fontSize: 14, fontFace: "Arial", color: "FFFFFF", align: "center", bold: true
+        });
 
-            // 1. Resmi Arka Plan
+        // 2. OTOMATİK İÇİNDEKİLER / SUNUM AKIŞI SLAYTI (Seçildiyse)
+        if (ajandaEkle) {
+            const ajandaSlide = pptx.addSlide();
+            ajandaSlide.addImage({
+                path: "https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od",
+                x: 0, y: 0, w: 10.0, h: 7.5
+            });
+            ajandaSlide.addText("SUNUM AKIŞI VE BÖLÜM BRİFİNGLERİ", {
+                x: 1.25, y: 0.22, w: 8.0, h: 0.55,
+                fontSize: 16, fontFace: "Arial Black", color: "FFFFFF", bold: true, valign: "middle"
+            });
+
+            // Dosya bazlı bölüm dökümü
+            const dosyaGruplari = [...new Set(tumAyiklananSlaytlar.map(s => s.dosyaAdi))];
+            const ajandaMetinleri = dosyaGruplari.map((dosya, dIdx) => {
+                const count = tumAyiklananSlaytlar.filter(s => s.dosyaAdi === dosya).length;
+                return `${dIdx + 1}. ${dosya.replace('.pptx', '').toUpperCase()} (${count} Slayt)`;
+            });
+
+            ajandaSlide.addText(ajandaMetinleri.join('\n\n'), {
+                x: 1.2, y: 1.8, w: 7.6, h: 4.8,
+                fontSize: 13, fontFace: "Arial", color: "0F172A", bold: true, lineSpacing: 26
+            });
+        }
+
+        // 3. TÜM BİRİM SLAYTLARINI İŞLE VE TAŞMALARI ÖNLE
+        for (let s of tumAyiklananSlaytlar) {
+            // Eğer kapak ise şık ara kapak yap
+            if (s.tip === 'KAPAK') {
+                const araKapak = pptx.addSlide();
+                araKapak.addImage({
+                    path: "https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od",
+                    x: 0, y: 0, w: 10.0, h: 7.5
+                });
+                araKapak.addText((s.baslik || 'BÖLÜM SUNUMU').toUpperCase(), {
+                    x: 1.0, y: 2.8, w: 8.0, h: 1.0,
+                    fontSize: 22, fontFace: "Arial Black", color: "FFFFFF", bold: true, align: "center"
+                });
+                if (s.altBaslik) {
+                    araKapak.addText(s.altBaslik.toUpperCase(), {
+                        x: 1.0, y: 4.0, w: 8.0, h: 0.8,
+                        fontSize: 14, fontFace: "Arial", color: "FFFFFF", align: "center", bold: true
+                    });
+                }
+                continue;
+            }
+
+            // Tablo veya Veri Slaytı
+            const slide = pptx.addSlide();
             slide.addImage({
                 path: "https://lh3.googleusercontent.com/d/1dy_vLXryVfQvvlH9J0QZSFs6ODz479od",
                 x: 0, y: 0, w: 10.0, h: 7.5
             });
-
-            // 2. Üst Kırmızı Bant Başlığı
             slide.addText((s.baslik || '').toUpperCase(), {
                 x: 1.25, y: 0.22, w: 8.0, h: 0.55,
                 fontSize: 16, fontFace: "Arial Black", color: "FFFFFF", bold: true, valign: "middle"
             });
 
-            // 3. Tabloları Aktar
+            // Tabloyu Auto-Fit Olarak Yerleştir
             if (s.tablolar && s.tablolar.length) {
-                let startY = 1.6;
-                s.tablolar.forEach(tbl => {
-                    const pptxRows = tbl.map((row, rIdx) => {
-                        return row.map(cell => ({
-                            text: cell || '',
-                            options: {
-                                fill: { color: rIdx === 0 ? "B91C1C" : "FFFFFF" },
-                                color: rIdx === 0 ? "FFFFFF" : "000000",
-                                bold: rIdx === 0,
-                                fontSize: 9,
-                                align: 'center',
-                                border: { pt: 0.75, color: "000000" }
-                            }
-                        }));
-                    });
+                const tblData = s.tablolar[0];
+                const rowCount = tblData.length;
 
-                    slide.addTable(pptxRows, {
-                        x: 0.4, y: startY, w: 9.2, autoPage: false
-                    });
-                    startY += (tbl.length * 0.25) + 0.4;
+                // Dinamik Font ve Yükseklik Hesabı (TAŞMAYI ÖNLEYEN MATEMATİK)
+                let fontSize = 8.5;
+                let cellPadding = 0.10;
+                let maxAvailableHeight = 5.2; // Slaytın üst bandı ile altı arasındaki boş alan (inç)
+
+                if (rowCount > 8 && rowCount <= 14) {
+                    fontSize = 7.5;
+                    cellPadding = 0.07;
+                } else if (rowCount > 14) {
+                    fontSize = 6.5;
+                    cellPadding = 0.04;
+                }
+
+                const dynamicRowHeight = Math.min(0.30, maxAvailableHeight / rowCount);
+
+                const pptxRows = tblData.map((row, rIdx) => {
+                    const isHeader = (rIdx === 0);
+                    return row.map(cell => ({
+                        text: cell.text || '',
+                        options: {
+                            colspan: cell.colSpan || 1,
+                            rowspan: cell.rowSpan || 1,
+                            fill: { color: isHeader ? kurumsalRenk : (rIdx % 2 === 0 ? "F8FAFC" : "FFFFFF") },
+                            color: isHeader ? "FFFFFF" : "0F172A",
+                            bold: isHeader,
+                            fontSize: fontSize,
+                            fontFace: "Arial",
+                            align: 'center',
+                            valign: 'middle',
+                            margin: [cellPadding, cellPadding, cellPadding, cellPadding],
+                            border: { pt: 0.5, color: "CBD5E1" }
+                        }
+                    }));
+                });
+
+                slide.addTable(pptxRows, {
+                    x: 0.40,
+                    y: 1.55,
+                    w: 9.20,
+                    rowH: dynamicRowHeight,
+                    autoPage: false
                 });
             } else if (s.metinler && s.metinler.length) {
-                // Metin Slaytıysa
-                slide.addText(s.metinler.slice(0, 12).join('\n\n'), {
-                    x: 0.8, y: 1.8, w: 8.4, h: 4.8,
-                    fontSize: 13, color: "0F172A", lineSpacing: 22
+                // Metin / Liste İçeriği
+                slide.addText(s.metinler.slice(0, 10).map(m => `• ${m}`).join('\n\n'), {
+                    x: 0.80, y: 1.80, w: 8.40, h: 4.80,
+                    fontSize: 13, color: "0F172A", fontFace: "Arial", lineSpacing: 24
                 });
             }
-        });
+        }
 
-        await pptx.writeFile({ fileName: `Hastane_Konsolide_Brifing_Sunumu_${new Date().toISOString().slice(0,10)}.pptx` });
+        await pptx.writeFile({ fileName: `Baskanlik_Birlestirilmis_Brifing_${new Date().toISOString().slice(0,10)}.pptx` });
+
     } catch (err) {
-        console.error("Birleştirme hatası:", err);
-        alert("Sunumlar birleştirilirken hata oluştu: " + err.message);
+        console.error("Konsolidasyon hatası:", err);
+        alert("Sunumlar birleştirilirken teknik hata oluştu: " + err.message);
     }
 };
     // ---------- GLOBAL MENÜ AÇMA / KAPAMA FONKSİYONU (Her Koşulda Güvenli Çalışır) ----------
