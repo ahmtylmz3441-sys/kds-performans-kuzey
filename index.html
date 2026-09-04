@@ -566,6 +566,32 @@
     background-color: #bfdbfe !important;
     outline: 2px solid #2563eb !important;
 }
+        /* ============================================================= */
+/* GİRİŞ EKRANI (LOGIN OVERLAY & KART STİLLERİ)                  */
+/* ============================================================= */
+#login-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle at center, #1e293b 0%, #0b1329 100%);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+}
+
+.login-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 36px 32px;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
     </style>
 </head>
 <body>
@@ -600,7 +626,7 @@
             </div>
         </div>
         <div id="loginError" class="alert alert-danger py-2 small mb-3" style="display: none; border-radius: 10px;"></div>
-        <button class="btn btn-primary w-100 fw-bold py-2" style="border-radius:12px; background:var(--accent); border:none;" id="loginSubmitBtn" onclick="handleLogin()">Giriş Yap</button>
+        <button class="btn btn-primary w-100 fw-bold py-2" style="border-radius:12px; background:var(--primary); border:none;" id="loginSubmitBtn" onclick="handleLogin()">Giriş Yap</button>
     </div>
 </div>
 
