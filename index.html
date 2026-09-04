@@ -566,6 +566,24 @@
     background-color: #bfdbfe !important;
     outline: 2px solid #2563eb !important;
 }
+        /* GİRİŞ EKRANINI DÜZELTEN VE SAYFADAN AYIRAN KURAL */
+#login-screen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100vh !important;
+    background: radial-gradient(circle at 10% 20%, rgba(15,23,42,1) 0%, rgba(21,34,64,1) 90%) !important;
+    z-index: 999999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* KULLANICI GİRİŞ YAPTIYSA GİRİŞ EKRANINI KESİNLİKLE GİZLE */
+body:not(.logged-out) #login-screen[style*="display: none"] {
+    display: none !important;
+}
     </style>
 </head>
 <body>
@@ -1247,7 +1265,8 @@
                 sessionStorage.setItem('khhb_auth_email', data.email);
                 sessionStorage.setItem('khhb_auth_role', data.rol || 'Kullanıcı');
                 
-                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('login-screen').style.setProperty('display', 'none', 'important');
+                document.getElementById('login-screen').style.setProperty('display', 'none', 'important');
                 document.getElementById('activeUserName').innerHTML = `<i class="bi bi-person-check-fill text-success"></i> ${data.ad_soyad} (${data.rol || 'Kullanıcı'})`;
                 
                 uygulaYetkilendirme(data.rol);
@@ -5166,7 +5185,7 @@ window.kunyeModalDisKlikKapat = function(e) {
         const activeUser = sessionStorage.getItem('khhb_auth_user');
         const activeRole = sessionStorage.getItem('khhb_auth_role');
         if (activeUser) {
-            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('login-screen').style.setProperty('display', 'none', 'important');
             document.getElementById('activeUserName').innerHTML = `<i class="bi bi-person-check-fill text-success"></i> ${activeUser} (${activeRole || 'Kullanıcı'})`;
             uygulaYetkilendirme(activeRole);
         } else {
