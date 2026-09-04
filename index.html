@@ -837,6 +837,130 @@
         <button class="btn btn-primary w-100 fw-bold py-2" style="border-radius:12px; background:var(--primary); border:none;" id="loginSubmitBtn" onclick="handleLogin()">Giriş Yap</button>
     </div>
 </div>
+    <!-- SPYGLASS TARZI LAUNCHPAD (KARŞILAMA EKRANI) -->
+<div id="launchpad-screen">
+    <!-- Üst Bar -->
+    <header class="lp-navbar">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fs-4">🏥</span>
+            <span class="fw-bold text-dark fs-6" style="letter-spacing: -0.3px;">VERİ ANALİZ PORTALI</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <span id="lpActiveUser" class="badge bg-light text-secondary border px-3 py-2" style="border-radius:20px; font-weight:600;">
+                <i class="bi bi-person-check-fill text-success me-1"></i> Yetkili Kullanıcı
+            </span>
+            <button class="btn btn-sm btn-dark px-3 py-1 fw-bold" style="border-radius:20px;" onclick="window.modulSec('genel-bakis')">
+                Panele Geç <i class="bi bi-arrow-right-short"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Orta Başlık & Spotlight Arama -->
+    <div class="lp-hero">
+        <h1>Sağlık Yönetimi & Analitik Platformu</h1>
+        <p>Bölge verilerini inceleyin, MHRS doluluklarını takip edin, yapay zeka destekli istatistiksel modelleri çalıştırın veya brifing sunumları oluşturun.</p>
+        
+        <div class="lp-search-box">
+            <input type="text" id="lpSearchInput" class="lp-search-input" placeholder="Bir modül veya analiz arayın... (Örn: MHRS, Künye, Sunum)" onkeydown="if(event.key === 'Enter') window.lpHizliArama()">
+            <button class="lp-search-btn" onclick="window.lpHizliArama()" title="Aç">
+                <i class="bi bi-arrow-up-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Alt: Kavisli Yay Şeklindeki Hareketli Modül Kartları -->
+    <div class="lp-ribbon-container" id="lpRibbon">
+        <!-- 1. Genel Bakış -->
+        <div class="lp-card" onclick="window.modulSec('genel-bakis')">
+            <div class="lp-card-icon" style="background:#eef2ff; color:#4f46e5;"><i class="bi bi-speedometer2"></i></div>
+            <div>
+                <div class="lp-card-tag">Özet</div>
+                <div class="lp-card-title">Genel Bakış</div>
+            </div>
+        </div>
+
+        <!-- 2. Tüm Bölge -->
+        <div class="lp-card" onclick="window.modulSec('tum-bolge')">
+            <div class="lp-card-icon" style="background:#f1f5f9; color:#0f172a;"><i class="bi bi-grid-3x3-gap"></i></div>
+            <div>
+                <div class="lp-card-tag">Sıralama</div>
+                <div class="lp-card-title">Tüm Bölge</div>
+            </div>
+        </div>
+
+        <!-- 3. Kurum Bazlı -->
+        <div class="lp-card" onclick="window.modulSec('kurum-bazli')">
+            <div class="lp-card-icon" style="background:#ecfdf5; color:#059669;"><i class="bi bi-hospital"></i></div>
+            <div>
+                <div class="lp-card-tag">Denetim</div>
+                <div class="lp-card-title">Kurum Bazlı</div>
+            </div>
+        </div>
+
+        <!-- 4. Karşılaştırma -->
+        <div class="lp-card" onclick="window.modulSec('karsilastirma')">
+            <div class="lp-card-icon" style="background:#eff6ff; color:#2563eb;"><i class="bi bi-arrow-left-right"></i></div>
+            <div>
+                <div class="lp-card-tag">Kıyas</div>
+                <div class="lp-card-title">Dönemsel Kıyaslama</div>
+            </div>
+        </div>
+
+        <!-- 5. Raporlar -->
+        <div class="lp-card" onclick="window.modulSec('raporlar')">
+            <div class="lp-card-icon" style="background:#faf5ff; color:#9333ea;"><i class="bi bi-graph-up"></i></div>
+            <div>
+                <div class="lp-card-tag">Grafik</div>
+                <div class="lp-card-title">Kurumsal Trendler</div>
+            </div>
+        </div>
+
+        <!-- 6. Gelişmiş Analitik (Merkez Kart) -->
+        <div class="lp-card" onclick="window.modulSec('derin-analiz')" style="border-color: #cbd5e1;">
+            <div class="lp-card-icon" style="background:#fef2f2; color:#dc2626;"><i class="bi bi-cpu-fill"></i></div>
+            <div>
+                <div class="lp-card-tag text-danger">Modelleme</div>
+                <div class="lp-card-title">Gelişmiş Analitik</div>
+            </div>
+        </div>
+
+        <!-- 7. MHRS Analiz -->
+        <div class="lp-card" onclick="window.modulSec('mhrs')">
+            <div class="lp-card-icon" style="background:#fffbeb; color:#d97706;"><i class="bi bi-calendar2-week"></i></div>
+            <div>
+                <div class="lp-card-tag text-warning">Canlı Takip</div>
+                <div class="lp-card-title">MHRS Analizi</div>
+            </div>
+        </div>
+
+        <!-- 8. Kriz Koordinasyon -->
+        <div class="lp-card" onclick="window.modulSec('e-tablo')">
+            <div class="lp-card-icon" style="background:#ecfdf5; color:#10b981;"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+            <div>
+                <div class="lp-card-tag">Yoğun Bakım</div>
+                <div class="lp-card-title">Kriz Masası</div>
+            </div>
+        </div>
+
+        <!-- 9. Hastane Künye -->
+        <div class="lp-card" onclick="window.modulSec('hastane-kunye')">
+            <div class="lp-card-icon" style="background:#fef2f2; color:#b91c1c;"><i class="bi bi-buildings-fill"></i></div>
+            <div>
+                <div class="lp-card-tag">360° Harita</div>
+                <div class="lp-card-title">Hastane Künyeleri</div>
+            </div>
+        </div>
+
+        <!-- 10. Sunum Sihirbazı -->
+        <div class="lp-card" onclick="window.modulSec('sunum-olusturucu')">
+            <div class="lp-card-icon" style="background:#fff1f2; color:#e11d48;"><i class="bi bi-file-earmark-slides-fill"></i></div>
+            <div>
+                <div class="lp-card-tag">PowerPoint</div>
+                <div class="lp-card-title">Brifing Stüdyosu</div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="app-wrapper">
     <aside class="sidebar">
@@ -844,6 +968,7 @@
             <h5 class="fw-bold mb-0 text-white"><i class="bi bi-activity text-info me-2"></i>VERİ ANALİZ</h5>
         </div>
         <nav class="nav-container">
+            <div class="nav-item" onclick="window.acLaunchpad()"><i class="bi bi-grid text-warning"></i> <b>Ana Portal</b></div>
             <div class="nav-item" data-page="genel-bakis"><i class="bi bi-speedometer2"></i> Genel Bakış</div>
             <div class="nav-item" data-page="tum-bolge"><i class="bi bi-grid-3x3-gap"></i> Tüm Bölge</div>
             <div class="nav-item" data-page="kurum-bazli"><i class="bi bi-hospital"></i> Kurum Bazlı</div>            
@@ -5953,44 +6078,53 @@ window.kunyeModalDisKlikKapat = function(e) {
 };
     // ---------- BAŞLATMA ----------
     (async function init() {
-        const activeUser = sessionStorage.getItem('khhb_auth_user');
-        const activeRole = sessionStorage.getItem('khhb_auth_role');
-        if (activeUser) {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('activeUserName').innerHTML = `<i class="bi bi-person-check-fill text-success"></i> ${activeUser} (${activeRole || 'Kullanıcı'})`;
-            uygulaYetkilendirme(activeRole);
-        } else {
-            uygulaYetkilendirme(null);
-        }
+    const activeUser = sessionStorage.getItem('khhb_auth_user');
+    const activeRole = sessionStorage.getItem('khhb_auth_role');
+    if (activeUser) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('activeUserName').innerHTML = `<i class="bi bi-person-check-fill text-success"></i> ${activeUser} (${activeRole || 'Kullanıcı'})`;
+        uygulaYetkilendirme(activeRole);
+        
+        // <<< BURASI EKLENDİ: Sayfa yenilendiğinde doğrudan Spyglass Portalını aç >>>
+        window.acLaunchpad();
+    } else {
+        uygulaYetkilendirme(null);
+    }
 
-        await dinamikFiltreleriDoldur();
-        await itirazDurumlariniYukle();
-        
-        const fTipSelect = document.getElementById('f-tip');
-        if(fTipSelect) {
-            fTipSelect.onchange = async () => {
-                const tip = fTipSelect.value;
-                let q = _supabase.from('toplam_puanlar').select('kurum_adi');
-                
-                if(tip === 'ADSM') q = q.in('kurum_tipi', ['ADSM', 'ADSH']);
-                else if(tip) q = q.eq('kurum_tipi', tip);
-                
-                const { data } = await q;
-                const tekil = [...new Set((data||[]).map(d=>d.kurum_adi))].sort();
-                document.getElementById('f-kurum').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k=>`<option value="${k}">${k}</option>`).join('');
-            };
-        }
-        
-        document.getElementById('kurumSorgulaBtn').onclick = () => window.kurumAnaliz();
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                const sayfa = item.getAttribute('data-page');
-                if(sayfa) window.gitSayfa(sayfa, item);
-            });
+    await dinamikFiltreleriDoldur();
+    await itirazDurumlariniYukle();
+    
+    const fTipSelect = document.getElementById('f-tip');
+    if(fTipSelect) {
+        fTipSelect.onchange = async () => {
+            const tip = fTipSelect.value;
+            let q = _supabase.from('toplam_puanlar').select('kurum_adi');
+            
+            if(tip === 'ADSM') q = q.in('kurum_tipi', ['ADSM', 'ADSH']);
+            else if(tip) q = q.eq('kurum_tipi', tip);
+            
+            const { data } = await q;
+            const tekil = [...new Set((data||[]).map(d=>d.kurum_adi))].sort();
+            document.getElementById('f-kurum').innerHTML = '<option value="">Seçiniz</option>' + tekil.map(k=>`<option value="${k}">${k}</option>`).join('');
+        };
+    }
+    
+    document.getElementById('kurumSorgulaBtn').onclick = () => window.kurumAnaliz();
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            const sayfa = item.getAttribute('data-page');
+            if(sayfa) window.gitSayfa(sayfa, item);
         });
-        
-        await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
-    })();
+    });
+    
+    // Arka planda Genel Bakış verilerini hazırla (kullanıcı portaldan kart seçtiğinde hazır olsun)
+    await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
+    
+    // Eğer oturum açıksa portalın önde kalmasını sağla
+    if (activeUser) {
+        window.acLaunchpad();
+    }
+})();
    // =============================================================
     // SAĞLIK BAKANLIĞI SLAYT SİHİRBAZI & AKICI TAŞIMA MOTORU (V7)
     // =============================================================
@@ -6405,6 +6539,83 @@ window.kunyeModalDisKlikKapat = function(e) {
             alert("PowerPoint oluşturulamadı: " + err.message);
         }
     };
+    // =========================================================================
+// SPYGLASS LAUNCHPAD & KAVİSLİ YAY MOTORU
+// =========================================================================
+
+// 1. Kartları Yay / Kavis (U Şeklinde) Dizen Matematiksel Fonksiyon
+window.hesaplaRibbonKavis = function() {
+    const cards = document.querySelectorAll('#lpRibbon .lp-card');
+    const total = cards.length;
+    if (total === 0) return;
+
+    const mid = (total - 1) / 2; // Merkez indeks
+
+    cards.forEach((card, i) => {
+        const offset = i - mid; // Merkeze olan uzaklık (-4.5 ile +4.5 arası)
+        
+        // Parabol Formülü: Kenarlar yukarıda, orta aşağıda
+        // y = a * x^2
+        const translateY = Math.pow(offset, 2) * 4.2; 
+        
+        // Kenarlara doğru hafif rotasyon (Yay etkisi verir)
+        const rotateDeg = offset * 2.8; 
+
+        card.style.transform = `translateY(${translateY}px) rotate(${rotateDeg}deg)`;
+    });
+};
+
+// 2. Launchpad'i Açma Fonksiyonu
+window.acLaunchpad = function() {
+    const lp = document.getElementById('launchpad-screen');
+    if (lp) {
+        lp.style.display = 'flex';
+        // Giriş yapan kullanıcının adını portala da yansıtalım
+        const user = sessionStorage.getItem('khhb_auth_user') || 'Yetkili Kullanıcı';
+        const userEl = document.getElementById('lpActiveUser');
+        if (userEl) userEl.innerHTML = `<i class="bi bi-person-check-fill text-success me-1"></i> ${user}`;
+        
+        // Kavis hesaplamasını başlat
+        setTimeout(window.hesaplaRibbonKavis, 50);
+    }
+};
+
+// 3. Modül Seçip Launchpad'i Kapatma
+window.modulSec = function(sayfaId) {
+    const lp = document.getElementById('launchpad-screen');
+    if (lp) lp.style.display = 'none';
+
+    // İlgili sol menü öğesini bul ve sayfayı aç
+    const navEl = document.querySelector(`.nav-item[data-page="${sayfaId}"]`);
+    window.gitSayfa(sayfaId, navEl);
+};
+
+// 4. Spotlight Hızlı Arama
+window.lpHizliArama = function() {
+    const query = document.getElementById('lpSearchInput')?.value.toLowerCase().trim() || '';
+    if (!query) return;
+
+    // Anahtar kelime eşleştirme tablosu
+    const moduller = [
+        { id: 'genel-bakis', keys: ['genel', 'bakis', 'ozet', 'skor', 'dashboard'] },
+        { id: 'tum-bolge', keys: ['bolge', 'siralama', 'tum', 'liste'] },
+        { id: 'kurum-bazli', keys: ['kurum', 'hastane puan', 'adsm', 'detay'] },
+        { id: 'karsilastirma', keys: ['kiyas', 'donem', 'karsilastir'] },
+        { id: 'raporlar', keys: ['rapor', 'trend', 'grafik', 'sapma'] },
+        { id: 'derin-analiz', keys: ['analitik', 'tahmin', 'anomali', 'regresyon', 'korelasyon'] },
+        { id: 'mhrs', keys: ['mhrs', 'randevu', 'kapasite', 'poliklinik'] },
+        { id: 'e-tablo', keys: ['kriz', 'yogun bakim', 'yatak', 'e-tablo', 'google'] },
+        { id: 'hastane-kunye', keys: ['kunye', 'harita', '360', 'bina', 'otopark'] },
+        { id: 'sunum-olusturucu', keys: ['sunum', 'pptx', 'slayt', 'powerpoint', 'brifing'] }
+    ];
+
+    const match = moduller.find(m => m.keys.some(k => query.includes(k) || k.includes(query)));
+    if (match) {
+        window.modulSec(match.id);
+    } else {
+        alert(`"${query}" ile eşleşen bir modül bulunamadı. Lütfen örn: MHRS, Künye, Analitik veya Sunum yazınız.`);
+    }
+};
 </script>
 </body>
 </html>
