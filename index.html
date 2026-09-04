@@ -736,45 +736,45 @@
     transform: scale(1.08);
 }
 
-/* Alt Kavisli Kart Şeridi (Curved Ribbon) */
+/* Alt Kavisli Kart Şeridi - YUKARI TAŞINDI VE ALAN GENİŞLETİLDİ */
 .lp-ribbon-container {
     width: 100%;
-    max-width: 1300px;
-    height: 240px;
+    max-width: 1350px;
+    height: 310px; /* 240px'den 310px'e çıkarıldı, kartların boyu sığacak */
     display: flex;
     justify-content: center;
-    align-items: flex-end;
-    gap: 16px;
+    align-items: flex-start; /* flex-end yerine flex-start yapıldı */
+    gap: 14px;
     position: relative;
-    padding-bottom: 10px;
+    padding-top: 20px;
+    margin-bottom: 25px; /* Görev çubuğundan yukarı kalkmasını sağlar */
 }
 
 /* Tekil Kavisli Modül Kartı */
 .lp-card {
-    width: 125px;
-    height: 190px;
+    width: 120px;
+    height: 180px;
     background: #ffffff;
-    border-radius: 20px;
+    border-radius: 18px;
     border: 1px solid #e2e8f0;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
     cursor: pointer;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     padding: 16px 12px;
     position: relative;
-    overflow: hidden;
-    transform-origin: bottom center;
-    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease, border-color 0.35s;
+    flex-shrink: 0;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s;
     user-select: none;
 }
 
-/* Kartın Üzerine Gelindiğinde Yukarı Zıplama Efekti */
+/* Üzerine gelince kartın yukarı fırlaması */
 .lp-card:hover {
-    transform: translateY(-35px) scale(1.15) !important;
-    box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.22);
+    transform: translateY(-28px) scale(1.12) !important;
+    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.25);
     border-color: #4f46e5;
-    z-index: 100;
+    z-index: 50;
 }
 
 .lp-card-icon {
@@ -968,7 +968,7 @@
             <h5 class="fw-bold mb-0 text-white"><i class="bi bi-activity text-info me-2"></i>VERİ ANALİZ</h5>
         </div>
         <nav class="nav-container">
-            <div class="nav-item" onclick="window.acLaunchpad()"><i class="bi bi-grid text-warning"></i> <b>Ana Portal</b></div>
+            <div class="nav-item" data-page="launchpad" onclick="window.acLaunchpad()"><i class="bi bi-grid-fill text-warning"></i> Ana Portal</div>
             <div class="nav-item" data-page="genel-bakis"><i class="bi bi-speedometer2"></i> Genel Bakış</div>
             <div class="nav-item" data-page="tum-bolge"><i class="bi bi-grid-3x3-gap"></i> Tüm Bölge</div>
             <div class="nav-item" data-page="kurum-bazli"><i class="bi bi-hospital"></i> Kurum Bazlı</div>            
@@ -6549,44 +6549,66 @@ window.hesaplaRibbonKavis = function() {
     const total = cards.length;
     if (total === 0) return;
 
-    const mid = (total - 1) / 2; // Merkez indeks
+    const mid = (total - 1) / 2;
 
     cards.forEach((card, i) => {
-        const offset = i - mid; // Merkeze olan uzaklık (-4.5 ile +4.5 arası)
+        const offset = i - mid; // Merkeze olan mesafe
         
-        // Parabol Formülü: Kenarlar yukarıda, orta aşağıda
-        // y = a * x^2
-        const translateY = Math.pow(offset, 2) * 4.2; 
-        
-        // Kenarlara doğru hafif rotasyon (Yay etkisi verir)
-        const rotateDeg = offset * 2.8; 
+        // Çok hafif ve dengeli kavis (kartlar aşağı gömülmez)
+        const translateY = Math.pow(offset, 2) * 1.8; 
+        const rotateDeg = offset * 2.2; 
 
         card.style.transform = `translateY(${translateY}px) rotate(${rotateDeg}deg)`;
     });
 };
 
-// 2. Launchpad'i Açma Fonksiyonu
+// Launchpad'i Açma Fonksiyonu
 window.acLaunchpad = function() {
     const lp = document.getElementById('launchpad-screen');
     if (lp) {
         lp.style.display = 'flex';
-        // Giriş yapan kullanıcının adını portala da yansıtalım
+        lp.style.pointerEvents = 'all'; // Tıklamalara izin ver
+        
         const user = sessionStorage.getItem('khhb_auth_user') || 'Yetkili Kullanıcı';
         const userEl = document.getElementById('lpActiveUser');
         if (userEl) userEl.innerHTML = `<i class="bi bi-person-check-fill text-success me-1"></i> ${user}`;
         
-        // Kavis hesaplamasını başlat
-        setTimeout(window.hesaplaRibbonKavis, 50);
+        setTimeout(window.hesaplaRibbonKavis, 60);
     }
 };
 
-// 3. Modül Seçip Launchpad'i Kapatma
+// Modül Seçildiğinde Ekranı Temizleyen ve Sayfayı Açan Fonksiyon
 window.modulSec = function(sayfaId) {
     const lp = document.getElementById('launchpad-screen');
-    if (lp) lp.style.display = 'none';
+    if (lp) {
+        lp.style.display = 'none'; // Launchpad'i tamamen kaldır
+    }
 
-    // İlgili sol menü öğesini bul ve sayfayı aç
+    // Sol menüdeki ilgili butonu bul
     const navEl = document.querySelector(`.nav-item[data-page="${sayfaId}"]`);
+    
+    // Üst başlığı dinamik güncelle
+    const baslikMap = {
+        'genel-bakis': 'Genel Bakış',
+        'tum-bolge': 'Tüm Bölge Sıralaması',
+        'kurum-bazli': 'Kurum Bazlı Performans Analizi',
+        'karsilastirma': 'Dönemsel Karşılaştırma',
+        'raporlar': 'Raporlar ve Trend Analizi',
+        'derin-analiz': 'Gelişmiş Analitik & İstatistiksel Modelleme',
+        'itirazlar': 'İtiraz Yönetimi',
+        'mhrs': 'MHRS Analiz Paneli',
+        'e-tablo': 'Kriz Koordinasyon (Yoğun Bakım)',
+        'hastane-kunye': 'Hastane Künyeleri',
+        'sunum-olusturucu': 'Sunum Sihirbazı',
+        'kullanici-yonetimi': 'Kullanıcı Yönetimi'
+    };
+    
+    const pageTitleEl = document.getElementById('page-title');
+    if (pageTitleEl && baslikMap[sayfaId]) {
+        pageTitleEl.innerText = baslikMap[sayfaId];
+    }
+
+    // Sayfayı tetikle
     window.gitSayfa(sayfaId, navEl);
 };
 
