@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
     <!-- Leaflet.js Harita Kütüphanesi -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -798,30 +799,23 @@
 
    <main class="main-content">
         <div id="page-loader" class="page-loader-overlay">
-            <!-- Arka plan odak ışığı -->
-            <div class="loader-ambient-glow"></div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;">
+                
+                <!-- Beğendiğiniz Lottie Animasyonu -->
+                <lottie-player 
+                    src="https://lottie.host/51a71630-8ff5-4919-8162-7f679573484d/0LaDmkNTVM.json" 
+                    background="transparent" 
+                    speed="1" 
+                    style="width: 170px; height: 170px;" 
+                    loop 
+                    autoplay>
+                </lottie-player>
 
-            <div class="medical-loader-core">
-                <!-- 1. Dış Yavaş Halka -->
-                <div class="ring-outer"></div>
-
-                <!-- 2. İç Hızlı Koni Gradyan Halka -->
-                <div class="ring-inner"></div>
-
-                <!-- 3. Merkez: Parlayan Nabız İkonu & Dinamik Metin -->
-                <div class="loader-center-content">
-                    <div class="loader-heartbeat-icon">
-                        <i class="bi bi-activity"></i>
-                    </div>
-                    <div class="loader-status-wrap">
-                        <span class="loader-main-text" id="loaderDynamicText">YÜKLENİYOR</span>
-                        <span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
-                    </div>
-                    <!-- İnce Shimmer İlerleme Çubuğu -->
-                    <div class="loader-progress-track">
-                        <div class="loader-progress-bar"></div>
-                    </div>
+                <!-- Altındaki Şık Medikal Yazı -->
+                <div style="color: #ffffff; font-weight: 800; font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; margin-top: 5px; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">
+                    VERİLER YÜKLENİYOR...
                 </div>
+
             </div>
         </div>
         <header class="top-header">
