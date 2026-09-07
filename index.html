@@ -5373,6 +5373,18 @@ function getMhrsRowMetrics(item, type) {
 
     // ---------- SAYFA GEÇIŞLERI ----------
     window.gitSayfa = async function(sayfa, el) {
+    // EĞER TIKLANAN ŞEY ANA PORTAL İSE NORMAL SAYFA GEÇİŞİNİ DURDUR VE PORTALI AÇ
+    if (sayfa === 'launchpad') {
+        window.acLaunchpad();
+        return;
+    }
+
+    // Hedef sayfa DOM'da yoksa hata fırlatıp sistemi kilitlemesini önle
+    const hedefSayfaEl = document.getElementById(sayfa);
+    if (!hedefSayfaEl) return;
+
+    const loader = document.getElementById('page-loader');
+    if (loader) loader.classList.add('active');
         const loader = document.getElementById('page-loader');
         if (loader) loader.classList.add('active');
 
@@ -6117,21 +6129,20 @@ window.kunyeModalDisKlikKapat = function(e) {
         };
     }
     
-    document.getElementById('kurumSorgulaBtn').onclick = () => window.kurumAnaliz();
-    // SOL MENÜ TIKLAMA DİNLEYİCİSİ (Kesintisiz Geçiş)
+   document.getElementById('kurumSorgulaBtn').onclick = () => window.kurumAnaliz();
+
+    // SOL MENÜ TIKLAMALARI
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', function(e) {
             const sayfa = this.getAttribute('data-page');
 
-            // Eğer "Ana Portal"a tıklandıysa kartlı karşılama ekranını aç
             if (sayfa === 'launchpad') {
                 window.acLaunchpad();
                 return;
             }
 
-            // Normal bir sayfaya tıklandıysa (Genel Bakış, MHRS, vb.)
             if (sayfa) {
-                // Launchpad'in kesinlikle kapalı ve tıklanamaz olduğundan emin ol
+                // Portalı kapat ve arkada menüyü örtmesini engelle
                 const lp = document.getElementById('launchpad-screen');
                 if (lp) {
                     lp.classList.add('pasif');
@@ -6159,16 +6170,17 @@ window.kunyeModalDisKlikKapat = function(e) {
                     pageTitleEl.innerText = baslikMap[sayfa];
                 }
 
-                // Sayfayı aç
                 window.gitSayfa(sayfa, this);
             }
         });
     });
 
-    // İLK GİRİŞ VE F5 DURUMU:
-    // Sayfa açıldığında doğrudan "Ana Portal" (gülümseyen kartlar) ekranı gelsin
+    // DOĞRUDAN LAUNCHPAD (GÜLÜMSEYEN KARTLAR) İLE BAŞLAT
     if (activeUser) {
         window.acLaunchpad();
+    } else {
+        // Oturum yoksa Genel Bakış'ı hazırla
+        await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
     }
 })();
    // =============================================================
