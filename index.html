@@ -6118,17 +6118,55 @@ window.kunyeModalDisKlikKapat = function(e) {
     }
     
     document.getElementById('kurumSorgulaBtn').onclick = () => window.kurumAnaliz();
+    // SOL MENÜ TIKLAMA DİNLEYİCİSİ (Kesintisiz Geçiş)
     document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            const sayfa = item.getAttribute('data-page');
-            if(sayfa) window.gitSayfa(sayfa, item);
+        item.addEventListener('click', function(e) {
+            const sayfa = this.getAttribute('data-page');
+
+            // Eğer "Ana Portal"a tıklandıysa kartlı karşılama ekranını aç
+            if (sayfa === 'launchpad') {
+                window.acLaunchpad();
+                return;
+            }
+
+            // Normal bir sayfaya tıklandıysa (Genel Bakış, MHRS, vb.)
+            if (sayfa) {
+                // Launchpad'in kesinlikle kapalı ve tıklanamaz olduğundan emin ol
+                const lp = document.getElementById('launchpad-screen');
+                if (lp) {
+                    lp.classList.add('pasif');
+                    lp.style.display = 'none';
+                    lp.style.pointerEvents = 'none';
+                }
+
+                // Üst Başlığı Güncelle
+                const baslikMap = {
+                    'genel-bakis': 'Genel Bakış',
+                    'tum-bolge': 'Tüm Bölge Sıralaması',
+                    'kurum-bazli': 'Kurum Bazlı Performans Analizi',
+                    'karsilastirma': 'Dönemsel Karşılaştırma',
+                    'raporlar': 'Raporlar ve Trend Analizi',
+                    'derin-analiz': 'Gelişmiş Analitik & İstatistiksel Modelleme',
+                    'itirazlar': 'İtiraz Yönetimi',
+                    'mhrs': 'MHRS Analiz Paneli',
+                    'e-tablo': 'Kriz Koordinasyon (Yoğun Bakım)',
+                    'hastane-kunye': 'Hastane Künyeleri',
+                    'sunum-olusturucu': 'Sunum Sihirbazı',
+                    'kullanici-yonetimi': 'Kullanıcı Yönetimi'
+                };
+                const pageTitleEl = document.getElementById('page-title');
+                if (pageTitleEl && baslikMap[sayfa]) {
+                    pageTitleEl.innerText = baslikMap[sayfa];
+                }
+
+                // Sayfayı aç
+                window.gitSayfa(sayfa, this);
+            }
         });
     });
-    
-    // Arka planda Genel Bakış verilerini hazırla (kullanıcı portaldan kart seçtiğinde hazır olsun)
-    await window.gitSayfa('genel-bakis', document.querySelector('.nav-item[data-page="genel-bakis"]'));
-    
-    // Eğer oturum açıksa portalın önde kalmasını sağla
+
+    // İLK GİRİŞ VE F5 DURUMU:
+    // Sayfa açıldığında doğrudan "Ana Portal" (gülümseyen kartlar) ekranı gelsin
     if (activeUser) {
         window.acLaunchpad();
     }
@@ -6570,53 +6608,36 @@ window.hesaplaRibbonKavis = function() {
     });
 };
 
-// Launchpad'i Açma Fonksiyonu
+// Launchpad'i (Ana Portalı) Açar
 window.acLaunchpad = function() {
     const lp = document.getElementById('launchpad-screen');
     if (lp) {
+        lp.classList.remove('pasif');
         lp.style.display = 'flex';
-        lp.style.pointerEvents = 'all'; // Tıklamalara izin ver
-        
+        lp.style.visibility = 'visible';
+        lp.style.pointerEvents = 'auto';
+
         const user = sessionStorage.getItem('khhb_auth_user') || 'Yetkili Kullanıcı';
         const userEl = document.getElementById('lpActiveUser');
         if (userEl) userEl.innerHTML = `<i class="bi bi-person-check-fill text-success me-1"></i> ${user}`;
-        
-        setTimeout(window.hesaplaRibbonKavis, 60);
+
+        setTimeout(window.hesaplaRibbonKavis, 50);
     }
 };
 
-// Modül Seçildiğinde Ekranı Temizleyen ve Sayfayı Açan Fonksiyon
+// Bir Karta Tıklandığında Paneli Açar ve Portalı KESİN OLARAK Kapatır
 window.modulSec = function(sayfaId) {
     const lp = document.getElementById('launchpad-screen');
     if (lp) {
-        lp.style.display = 'none'; // Launchpad'i tamamen kaldır
+        // Portalı tamamen yok et ki sol menüyü örtmesin
+        lp.classList.add('pasif');
+        lp.style.display = 'none';
+        lp.style.visibility = 'hidden';
+        lp.style.pointerEvents = 'none';
     }
 
-    // Sol menüdeki ilgili butonu bul
+    // Sol menüdeki ilgili butonu bul ve tetikle
     const navEl = document.querySelector(`.nav-item[data-page="${sayfaId}"]`);
-    
-    // Üst başlığı dinamik güncelle
-    const baslikMap = {
-        'genel-bakis': 'Genel Bakış',
-        'tum-bolge': 'Tüm Bölge Sıralaması',
-        'kurum-bazli': 'Kurum Bazlı Performans Analizi',
-        'karsilastirma': 'Dönemsel Karşılaştırma',
-        'raporlar': 'Raporlar ve Trend Analizi',
-        'derin-analiz': 'Gelişmiş Analitik & İstatistiksel Modelleme',
-        'itirazlar': 'İtiraz Yönetimi',
-        'mhrs': 'MHRS Analiz Paneli',
-        'e-tablo': 'Kriz Koordinasyon (Yoğun Bakım)',
-        'hastane-kunye': 'Hastane Künyeleri',
-        'sunum-olusturucu': 'Sunum Sihirbazı',
-        'kullanici-yonetimi': 'Kullanıcı Yönetimi'
-    };
-    
-    const pageTitleEl = document.getElementById('page-title');
-    if (pageTitleEl && baslikMap[sayfaId]) {
-        pageTitleEl.innerText = baslikMap[sayfaId];
-    }
-
-    // Sayfayı tetikle
     window.gitSayfa(sayfaId, navEl);
 };
 
