@@ -655,6 +655,14 @@
     align-items: center;
     overflow: hidden;
     padding: 40px 24px 20px 24px;
+    pointer-events: auto;
+}
+
+/* Paneldeyken bu ekranın menüyü kilitlemesini önleyen kural */
+#launchpad-screen.pasif {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
 }
 
 /* Üst Minimalist Navigasyon */
