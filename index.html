@@ -3349,8 +3349,18 @@ window.updateAylikKarsilastirmaChart = function() {
     }
 
     // Belirli bir Ay-Yıl ve Hastane için toplam değeri hesaplayan yardımcı fonksiyon
+    // Belirli bir Ay-Yıl ve Hastane için değeri hesaplayan Akıllı Fonksiyon
     const getMonthTotal = (monthKey, hospital, variable) => {
+        // Değişken türünü tespit et: 24 saatlik akış verisi mi yoksa anlık durum mu?
+        const isFlowVariable = variable.includes("24 SAATLİK") || 
+                               variable.includes("TABURCU") || 
+                               variable.includes("EX") || 
+                               variable.includes("YATIRILAN");
+
         let sum = 0;
+        let latestDate = null;
+        let latestValue = 0;
+
         for (let i = 1; i < rows.length; i++) {
             const r = rows[i];
             const dStr = r[1];
@@ -3370,12 +3380,24 @@ window.updateAylikKarsilastirmaChart = function() {
                 vName.trim().toLowerCase() === variable.trim().toLowerCase()) {
                 
                 const num = parseFloat(valStr?.toString().replace(/\./g, '').replace(',', '.').trim());
-                if (!isNaN(num)) sum += num;
+                if (!isNaN(num)) {
+                    if (isFlowVariable) {
+                        // Ex, Taburcu gibi veriler için kümülatif topla
+                        sum += num;
+                    } else {
+                        // Yatak sayısı gibi veriler için o ayın EN SON GÜNÜNDEKİ değeri bul
+                        if (!latestDate || d >= latestDate) {
+                            latestDate = d;
+                            latestValue = num;
+                        }
+                    }
+                }
             }
         }
-        return sum;
-    };
 
+        // Akış verisi ise toplamı, yatak sayısı ise son gün değerini döndür
+        return isFlowVariable ? sum : latestValue;
+    };
     const d1Values = [];
     const d2Values = [];
     const tableRows = [];
