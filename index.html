@@ -2097,8 +2097,8 @@ window.birlestirVeIndirPPTX = async function() {
             return { class: 'badge-muaf', text: '🔘 Muaf' + itirazBadge };
         const ilOrtBasari = yon === 'Pozitif' ? gd >= trOrt : gd <= trOrt;
         const puanOrani = (puan / gp) * 100;
-        if (ilOrtBasari && puanOrani >= 75) return { class: 'badge-basarili', text: '✅ Mükemmel' + itirazBadge };
-        if (ilOrtBasari && puanOrani >= 50) return { class: 'badge-basarili', text: '✅ Başarılı' + itirazBadge };
+        if (ilOrtBasari && puanOrani >= 75) return { class: 'badge-basarili', text: '✅ Başarılı' + itirazBadge };
+        if (ilOrtBasari && puanOrani >= 50) return { class: 'badge-basarili', text: '✅ Orta' + itirazBadge };
         if (!ilOrtBasari && puanOrani >= 50) return { class: 'badge-orta', text: '⚠️ Gelişmeli' + itirazBadge };
         return { class: 'badge-kritik', text: '❌ Kritik' + itirazBadge };
     }
