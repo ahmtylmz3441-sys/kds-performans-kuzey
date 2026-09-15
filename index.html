@@ -2371,77 +2371,78 @@ window.birlestirVeIndirPPTX = async function() {
         }
     }
 
-    // ---------- RAPORLAR SAYFASI ----------
+    // ---------- RAPORLAR SAYFASI (YENİLENMİŞ TEKİL TREND & İLERLEME MATRİSİ) ----------
     async function raporlar() {
         const container = document.getElementById('raporlar');
         
-        const globalYil = document.getElementById('f-yil')?.value || mevcutYillarDonemler.yillar[0];
-        const globalDonem = document.getElementById('f-donem')?.value || mevcutYillarDonemler.donemler[0];
-
-        const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}" ${y == globalYil ? 'selected' : ''}>${y}</option>`).join('');
-        const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}" ${d == globalDonem ? 'selected' : ''}>${formatDonemAdi(d)}</option>`).join('');
-
         container.innerHTML = `
             <div class="row g-4">
+                <!-- 1. KART: TEKİL KURUM ÇİZGİ TREND ANALİZİ -->
                 <div class="col-12">
                     <div class="kds-card">
-                        <h6>📈 Gösterge Bazlı Kurumsal Trend Grafiği (Yatay Görünüm)</h6>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold text-secondary">Kurum Türü</label>
-                                <select id="raporKurumTipi" class="form-select form-select-sm" style="border-radius:10px;">
-                                    <option value="">Tümü (Hastane & ADSM)</option>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-graph-up text-primary me-2"></i>Dönemsel Performans Çizgi Trendi (Kurum vs. TR Ortalaması)</h6>
+                                <p class="text-muted small mb-0">Seçilen kurumun dönemler boyunca gösterdiği ilerlemeyi Türkiye referans çizgisiyle karşılaştırın.</p>
+                            </div>
+                            <div id="raporHedefYonBadge"></div>
+                        </div>
+                        
+                        <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-secondary">1. Kurum Türü</label>
+                                <select id="raporKurumTipi" class="form-select form-select-sm shadow-sm" onchange="window.raporFiltreleriGuncelle()">
                                     <option value="Hastane">Hastane</option>
                                     <option value="ADSM">ADSM / ADSH</option>
                                 </select>
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-secondary">2. Odaklanılacak Kurum</label>
+                                <select id="raporKurum" class="form-select form-select-sm shadow-sm" onchange="window.cizKurumTrendAnalizi()">
+                                    <option value="">Kurum Seçiniz</option>
+                                </select>
+                            </div>
                             <div class="col-md-5">
-                                <label class="form-label small fw-bold text-secondary">Analiz Edilecek Gösterge</label>
-                                <select id="raporGosterge" class="form-select form-select-sm" style="border-radius:10px;">
+                                <label class="form-label small fw-bold text-secondary">3. İncelenecek Gösterge</label>
+                                <select id="raporGosterge" class="form-select form-select-sm shadow-sm" onchange="window.cizKurumTrendAnalizi()">
                                     <option value="">Gösterge Seçiniz</option>
                                 </select>
                             </div>
-                            <div class="col-md-3 d-flex align-items-end">
-                                <button class="btn-sm-custom w-100" id="trendGosterBtn">📊 Grafiği Çiz (Soldan Sağa)</button>
-                            </div>
                         </div>
-                        <div class="chart-container">
-                            <canvas id="gostergeChart"></canvas>
+
+                        <div style="height: 340px; position: relative;">
+                            <canvas id="gostergeLineChart"></canvas>
                         </div>
                     </div>
                 </div>
                 
+                <!-- 2. KART (ÖNERİ A): DÖNEMSEL İLERLEME VE DEĞİŞİM (MOMENTUM) MATRİSİ -->
                 <div class="col-12">
                     <div class="kds-card">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                             <div>
-                                <h6>🎯 Kurumsal Karne & Hedef Sapma Analizi (Kritik Eşik Kontrolü)</h6>
-                                <p class="text-muted small mb-0">Türkiye ortalamasından en negatif yönde sapan kurum ve göstergelerin dökümüdür.</p>
+                                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-arrow-left-right text-success me-2"></i>Dönemsel İlerleme & Gelişim (Momentum) Matrisi</h6>
+                                <p class="text-muted small mb-0">Seçili göstergede bölgedeki tüm kurumların ilk dönemden son döneme kat ettiği net değişim ve eğilim tablosudur.</p>
                             </div>
-                            <div class="d-flex gap-2">
-                                <div class="filter-group text-start" style="min-width:100px;">
-                                    <label class="small fw-bold text-secondary">Yıl</label>
-                                    <select id="sapmaFiltreYil" class="form-select form-select-sm" style="border-radius:8px;">${yilOptions}</select>
-                                </div>
-                                <div class="filter-group text-start" style="min-width:110px;">
-                                    <label class="small fw-bold text-secondary">Dönem</label>
-                                    <select id="sapmaFiltreDonem" class="form-select form-select-sm" style="border-radius:8px;">${donemOptions}</select>
-                                </div>
-                            </div>
+                            <button class="btn btn-sm btn-outline-success" style="border-radius:8px;" onclick="window.exportTableToExcel('momentumTablo', 'Donemsel_Ilerleme_Matrisi')">
+                                <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
+                            </button>
                         </div>
+                        
                         <div class="table-responsive">
-                            <table class="table table-sm table-hover" id="sapmaTablo">
-                                <thead>
+                            <table class="table table-sm table-hover table-bordered align-middle mb-0" id="momentumTablo" style="font-size: 12px;">
+                                <thead class="table-dark">
                                     <tr>
                                         <th>Kurum Adı</th>
-                                        <th>Gösterge Adı</th>
-                                        <th class="text-center">Kurum Verisi (GD)</th>
-                                        <th class="text-center">TR Ortalaması</th>
-                                        <th class="text-center">Sapma Oranı</th>
+                                        <th class="text-center" id="thIlkDonem">İlk Dönem GD</th>
+                                        <th class="text-center" id="thSonDonem">Son Dönem GD</th>
+                                        <th class="text-center">Net Değişim</th>
+                                        <th class="text-center">Değişim Oranı (%)</th>
+                                        <th class="text-center" style="width: 140px;">Süreç Eğilimi</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr><td colspan="5" class="text-center text-muted">Yükleniyor...</td></tr>
+                                <tbody id="momentumTabloBody">
+                                    <tr><td colspan="6" class="text-center text-muted py-4">Veriler hesaplanıyor...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -2449,190 +2450,206 @@ window.birlestirVeIndirPPTX = async function() {
                 </div>
             </div>`;
         
-        await gostergeListesiniYukle('');
+        await window.raporFiltreleriGuncelle(true);
+    }
+
+    // Filtre Kurum ve Göstergelerini Doldurucu
+    window.raporFiltreleriGuncelle = async function(isInitial = false) {
+        const tip = document.getElementById('raporKurumTipi')?.value || 'Hastane';
         
-        document.getElementById('raporKurumTipi').onchange = async (e) => {
-            await gostergeListesiniYukle(e.target.value);
-        };
+        // 1. Kurum Listesi
+        let qKurum = _supabase.from('toplam_puanlar').select('kurum_adi');
+        if(tip === 'Hastane') qKurum = qKurum.eq('kurum_tipi', 'Hastane');
+        else qKurum = qKurum.in('kurum_tipi', ['ADSM', 'ADSH']);
         
-        document.getElementById('trendGosterBtn').onclick = async () => {
-            const gosterge = document.getElementById('raporGosterge').value;
-            const kurumTipi = document.getElementById('raporKurumTipi').value;
-            if(!gosterge) return;
+        const { data: dKurum } = await qKurum;
+        const tekilKurumlar = [...new Set((dKurum || []).map(d => d.kurum_adi))].sort();
+        
+        const kurumSelect = document.getElementById('raporKurum');
+        if (kurumSelect) {
+            kurumSelect.innerHTML = tekilKurumlar.map(k => `<option value="${k}">${k}</option>`).join('');
+            if (tekilKurumlar.length > 0) kurumSelect.value = tekilKurumlar[0];
+        }
+
+        // 2. Gösterge Listesi
+        await gostergeListesiniYukle(tip);
+        
+        // İlk açılışta veya kurum tipi değişiminde grafiği çiz
+        await window.cizKurumTrendAnalizi();
+    };
+
+    // Tek Kurum Çizgi Trendi ve Alt Momentum Tablosunu Çizen Motor
+    window.cizKurumTrendAnalizi = async function() {
+        const kurum = document.getElementById('raporKurum')?.value;
+        const gosterge = document.getElementById('raporGosterge')?.value;
+        const tip = document.getElementById('raporKurumTipi')?.value;
+        const ctx = document.getElementById('gostergeLineChart')?.getContext('2d');
+        const badgeEl = document.getElementById('raporHedefYonBadge');
+        
+        if (!gosterge) return;
+
+        // İlgili göstergenin tüm bölge verilerini çek
+        let q = _supabase.from('performans')
+            .select('kurum_adi, gd, tr_ort, donem, yil, gosterge_yonu, gosterge_kodu')
+            .eq('gosterge_adi', gosterge);
             
-            let query = _supabase.from('performans').select('kurum_adi, gd, donem, kurum_tipi').eq('gosterge_adi', gosterge);
-            if(kurumTipi === 'Hastane') {
-                query = query.eq('kurum_tipi', 'Hastane');
-            } else if(kurumTipi === 'ADSM') {
-                query = query.in('kurum_tipi', ['ADSM', 'ADSH']);
-            }
-            const { data } = await query;
-            
-            const sonuc = {};
-            data?.forEach(r => { if(!sonuc[r.kurum_adi]) sonuc[r.kurum_adi] = {}; sonuc[r.kurum_adi][`d${r.donem}`] = r.gd; });
-            const labels = Object.keys(sonuc).slice(0,10);
-            
-            const donemler = [...new Set(data?.map(r => r.donem).filter(d => d))].sort((a,b)=>a-b);
-            const colors = [
-                { bg: 'rgba(79, 70, 229, 0.75)', border: 'rgba(79, 70, 229, 1)' },
-                { bg: 'rgba(245, 158, 11, 0.75)', border: 'rgba(245, 158, 11, 1)' },
-                { bg: 'rgba(16, 185, 129, 0.75)', border: 'rgba(16, 185, 129, 1)' },
-                { bg: 'rgba(239, 68, 68, 0.75)', border: 'rgba(239, 68, 68, 1)' },
-                { bg: 'rgba(139, 92, 246, 0.75)', border: 'rgba(139, 92, 246, 1)' },
-                { bg: 'rgba(236, 72, 153, 0.75)', border: 'rgba(236, 72, 153, 1)' },
-                { bg: 'rgba(20, 184, 166, 0.75)', border: 'rgba(20, 184, 166, 1)' }
-            ];
-            
-            const datasets = donemler.map((d, index) => {
-                const color = colors[index % colors.length];
-                const monthLabel = AYLAR[d - 1] || `${d}. Dönem`;
-                const dData = labels.map(l => sonuc[l]?.[`d${d}`] !== undefined ? sonuc[l][`d${d}`] : null);
-                
-                return {
-                    label: `${monthLabel} GD`,
-                    data: dData,
-                    backgroundColor: color.bg,
-                    borderColor: color.border,
-                    borderWidth: 1.5,
-                    borderRadius: 6,
-                    hoverBackgroundColor: color.bg.replace('0.75', '0.95')
-                };
-            });
-            
-            if(charts.gosterge) charts.gosterge.destroy();
-            charts.gosterge = new Chart(document.getElementById('gostergeChart'), { 
-                type: 'bar', 
-                data: { 
-                    labels: labels, 
-                    datasets: datasets 
-                }, 
-                options: { 
-                    indexAxis: 'y', 
-                    responsive: true, 
+        if (tip === 'Hastane') q = q.eq('kurum_tipi', 'Hastane');
+        else q = q.in('kurum_tipi', ['ADSM', 'ADSH']);
+
+        const { data, error } = await q.order('donem', { ascending: true });
+        if (error || !data || data.length === 0) return;
+
+        const gostergeYonu = data[0]?.gosterge_yonu || 'Pozitif';
+        if (badgeEl) {
+            badgeEl.innerHTML = gostergeYonu === 'Pozitif' 
+                ? '<span class="badge bg-success-subtle text-success border border-success px-3 py-2 fw-bold"><i class="bi bi-arrow-up-right me-1"></i> Beklenen Yön: Pozitif (Artış Başarılı)</span>'
+                : '<span class="badge bg-danger-subtle text-danger border border-danger px-3 py-2 fw-bold"><i class="bi bi-arrow-down-right me-1"></i> Beklenen Yön: Negatif (Düşüş Başarılı)</span>';
+        }
+
+        // Dönemleri sıralı al
+        const donemler = [...new Set(data.map(d => d.donem))].sort((a,b) => a - b);
+        const donemEtiketleri = donemler.map(d => AYLAR[d - 1] || `${d}. Dönem`);
+
+        // 1. GRAFİK VERİSİ (Seçilen Kurum vs TR Ort)
+        const kurumVerileri = [];
+        const trOrtVerileri = [];
+
+        donemler.forEach(d => {
+            const kRow = data.find(x => x.donem === d && x.kurum_adi === kurum);
+            kurumVerileri.push(kRow && kRow.gd !== null && kRow.gd !== undefined ? parseFloat(kRow.gd) : null);
+
+            // O dönemin TR Ortalaması (Kayıtlardaki ilk geçerli TR Ort)
+            const trRow = data.find(x => x.donem === d && x.tr_ort !== null && x.tr_ort !== undefined);
+            trOrtVerileri.push(trRow ? parseFloat(trRow.tr_ort) : null);
+        });
+
+        // Çizgi Grafiğini Oluştur
+        if (ctx) {
+            if (charts.gosterge) charts.gosterge.destroy();
+            charts.gosterge = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: donemEtiketleri,
+                    datasets: [
+                        {
+                            label: `${kurum} (GD)`,
+                            data: kurumVerileri,
+                            borderColor: '#4f46e5',
+                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.25,
+                            pointBackgroundColor: '#4f46e5',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                            pointHoverRadius: 8
+                        },
+                        {
+                            label: 'Türkiye Ortalaması (TR Ort)',
+                            data: trOrtVerileri,
+                            borderColor: '#ef4444',
+                            borderWidth: 2,
+                            borderDash: [6, 6],
+                            fill: false,
+                            tension: 0.2,
+                            pointBackgroundColor: '#ef4444',
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     plugins: {
                         legend: {
-                            labels: {
-                                font: {
-                                    family: "'Plus Jakarta Sans', sans-serif",
-                                    size: 11
-                                }
-                            }
+                            position: 'top',
+                            labels: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold', size: 12 } }
                         }
                     },
                     scales: {
-                        x: {
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)',
-                                borderDash: [5, 5]
-                            }
-                        },
+                        x: { grid: { display: false } },
                         y: {
-                            grid: {
-                                display: false
-                            }
+                            grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [4, 4] },
+                            ticks: { precision: 2 }
                         }
-                    },
-                    animation: {
-                        duration: 1000,
-                        easing: 'easeOutQuart'
-                    }
-                } 
-            });
-        };
-
-        document.getElementById('sapmaFiltreYil').onchange = () => hedefSapmaAnaliziYukle();
-        document.getElementById('sapmaFiltreDonem').onchange = () => hedefSapmaAnaliziYukle();
-
-        await hedefSapmaAnaliziYukle();
-    }
-
-    // ---------- RAPORLAR: HEDEF SAPMA ANALİZİ YÜKLEME FONKSİYONU ----------
-    async function hedefSapmaAnaliziYukle() {
-        const tbody = document.querySelector('#sapmaTablo tbody');
-        if(!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Yükleniyor...</td></tr>';
-        
-        const yil = document.getElementById('sapmaFiltreYil')?.value;
-        const donem = document.getElementById('sapmaFiltreDonem')?.value;
-        
-        if(!yil || !donem) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Lütfen yıl ve dönem seçiniz.</td></tr>';
-            return;
-        }
-        
-        try {
-            const { data, error } = await _supabase
-                .from('performans')
-                .select('*')
-                .eq('yil', yil)
-                .eq('donem', donem);
-            
-            if (error) throw error;
-            
-            if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Seçili dönem için veri bulunamadı.</td></tr>';
-                return;
-            }
-            
-            const sapmalar = [];
-            
-            data.forEach(r => {
-                const gd = parseFloat(r.gd);
-                const trOrt = parseFloat(r.tr_ort);
-                
-                if (isNaN(gd) || isNaN(trOrt) || trOrt === 0) return;
-                
-                let sapmaOrani = 0;
-                let isNegativeDeviation = false;
-                
-                if (r.gosterge_yonu === 'Pozitif') {
-                    if (gd < trOrt) {
-                        sapmaOrani = ((trOrt - gd) / trOrt) * 100;
-                        isNegativeDeviation = true;
-                    }
-                } else if (r.gosterge_yonu === 'Negatif') {
-                    if (gd > trOrt) {
-                        sapmaOrani = ((gd - trOrt) / trOrt) * 100;
-                        isNegativeDeviation = true;
                     }
                 }
-                
-                if (isNegativeDeviation && sapmaOrani > 0) {
-                    sapmalar.push({
-                        kurum_adi: r.kurum_adi,
-                        gosterge_adi: r.gosterge_kodu ? `${r.gosterge_kodu} - ${r.gosterge_adi}` : r.gosterge_adi,
-                        gd: gd,
-                        tr_ort: trOrt,
-                        sapma_orani: sapmaOrani
-                    });
-                }
             });
-            
-            sapmalar.sort((a, b) => b.sapma_orani - a.sapma_orani);
-            
-            const listelenen = sapmalar.slice(0, 15);
-            
-            if (listelenen.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success fw-semibold">Türkiye ortalamasının gerisinde kalan negatif sapmalı kurum bulunamadı.</td></tr>';
-                return;
-            }
-            
-            tbody.innerHTML = listelenen.map(s => `
-                <tr>
-                    <td><b>${s.kurum_adi}</b></td>
-                    <td>${s.gosterge_adi}</td>
-                    <td class="text-center fw-semibold text-dark">${s.gd}</td>
-                    <td class="text-center text-secondary">${s.tr_ort}</td>
-                    <td class="text-center text-danger fw-bold">-%${s.sapma_orani.toFixed(1)}</td>
-                </tr>
-            `).join('');
-            
-        } catch(err) {
-            console.error("Sapma analizi yükleme hatası:", err);
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Veriler hesaplanırken teknik bir hata oluştu.</td></tr>';
         }
-    }
+
+        // 2. ÖNERİ A: DÖNEMSEL İLERLEME (MOMENTUM) MATRİSİNİ DOLDUR
+        const ilkDonem = donemler[0];
+        const sonDonem = donemler[donemler.length - 1];
+
+        const thIlk = document.getElementById('thIlkDonem');
+        const thSon = document.getElementById('thSonDonem');
+        if (thIlk) thIlk.innerText = `${AYLAR[ilkDonem - 1] || ilkDonem + '. Dönem'} GD`;
+        if (thSon) thSon.innerText = `${AYLAR[sonDonem - 1] || sonDonem + '. Dönem'} GD`;
+
+        const tumKurumlar = [...new Set(data.map(d => d.kurum_adi))].sort();
+        const matrisSatirlari = [];
+
+        tumKurumlar.forEach(kAdi => {
+            const rowIlk = data.find(x => x.kurum_adi === kAdi && x.donem === ilkDonem);
+            const rowSon = data.find(x => x.kurum_adi === kAdi && x.donem === sonDonem);
+
+            const gdIlk = rowIlk && rowIlk.gd !== null ? parseFloat(rowIlk.gd) : null;
+            const gdSon = rowSon && rowSon.gd !== null ? parseFloat(rowSon.gd) : null;
+
+            if (gdIlk !== null && gdSon !== null) {
+                const fark = gdSon - gdIlk;
+                const pct = gdIlk !== 0 ? ((fark / Math.abs(gdIlk)) * 100) : 0;
+                matrisSatirlari.push({ kurum: kAdi, gdIlk, gdSon, fark, pct });
+            }
+        });
+
+        // Beklenen yöne göre başarı sırasına diz (Pozitifse en çok artan en üstte, Negatifse en çok düşen en üstte)
+        matrisSatirlari.sort((a, b) => gostergeYonu === 'Pozitif' ? b.fark - a.fark : a.fark - b.fark);
+
+        const tbody = document.getElementById('momentumTabloBody');
+        if (tbody) {
+            if (matrisSatirlari.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Karşılaştırılabilir en az iki dönem verisi bulunamadı.</td></tr>`;
+            } else {
+                tbody.innerHTML = matrisSatirlari.map(r => {
+                    const isPositiveDirection = gostergeYonu === 'Pozitif';
+                    const isImproved = isPositiveDirection ? (r.fark > 0) : (r.fark < 0);
+                    const isRegressed = isPositiveDirection ? (r.fark < 0) : (r.fark > 0);
+
+                    let durumBadge = `<span class="badge bg-light text-secondary border">Değişmedi</span>`;
+                    let farkClass = "text-muted";
+
+                    if (isImproved) {
+                        durumBadge = `<span class="badge bg-success-subtle text-success border border-success fw-bold"><i class="bi bi-arrow-up-right me-1"></i> İyileşti</span>`;
+                        farkClass = "text-success fw-bold";
+                    } else if (isRegressed) {
+                        durumBadge = `<span class="badge bg-danger-subtle text-danger border border-danger fw-bold"><i class="bi bi-arrow-down-right me-1"></i> Geriledi</span>`;
+                        farkClass = "text-danger fw-bold";
+                    }
+
+                    const isSelected = (r.kurum === kurum);
+                    const farkIsaret = r.fark > 0 ? `+${r.fark.toFixed(2)}` : r.fark.toFixed(2);
+                    const pctIsaret = r.pct > 0 ? `+${r.pct.toFixed(1)}%` : `${r.pct.toFixed(1)}%`;
+
+                    return `
+                        <tr class="${isSelected ? 'table-primary border-primary' : ''}">
+                            <td>
+                                <b>${r.kurum}</b>
+                                ${isSelected ? '<span class="badge bg-primary ms-1">Odak Kurum</span>' : ''}
+                            </td>
+                            <td class="text-center">${r.gdIlk.toFixed(2)}</td>
+                            <td class="text-center fw-bold text-dark">${r.gdSon.toFixed(2)}</td>
+                            <td class="text-center ${farkClass}">${farkIsaret}</td>
+                            <td class="text-center ${farkClass}">${pctIsaret}</td>
+                            <td class="text-center">${durumBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+    };
 
     // ---------- DÖNEMSEL KARŞILAŞTIRMA ----------
     window.karsilastirmaKurumListesiGuncelle = async function() {
