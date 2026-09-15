@@ -1813,7 +1813,33 @@
             trOrtVerileri.push(trRow ? parseFloat(trRow.tr_ort) : null);
         });
 
-        // Çizgi Grafiğini Oluştur
+// 1.1 NOKTALARI BEKLENEN YÖNE VE TR ORTALAMASINA GÖRE DİNAMİK RENKLENDİR
+        const noktaRenkleri = [];
+        const noktaCerceveRenkleri = [];
+
+        donemler.forEach((d, idx) => {
+            const kVal = kurumVerileri[idx];
+            const trVal = trOrtVerileri[idx];
+
+            if (kVal === null || trVal === null) {
+                noktaRenkleri.push('#94a3b8');
+                noktaCerceveRenkleri.push('#ffffff');
+                return;
+            }
+
+            // Başarı Kriteri Mantığı
+            const isSuccess = (gostergeYonu === 'Pozitif') ? (kVal >= trVal) : (kVal <= trVal);
+
+            if (isSuccess) {
+                noktaRenkleri.push('#10b981'); // Canlı Yeşil (Hedefe Uygun)
+                noktaCerceveRenkleri.push('#064e3b');
+            } else {
+                noktaRenkleri.push('#ef4444'); // Canlı Kırmızı (Hedefin Gerisinde)
+                noktaCerceveRenkleri.push('#7f1d1d');
+            }
+        });
+
+        // 1.2 ÇİZGİ GRAFİĞİNİ OLUŞTUR
         if (ctx) {
             if (charts.gosterge) charts.gosterge.destroy();
             charts.gosterge = new Chart(ctx, {
@@ -1824,27 +1850,27 @@
                         {
                             label: `${kurum} (GD)`,
                             data: kurumVerileri,
-                            borderColor: '#4f46e5',
-                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                            borderWidth: 3,
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                            borderWidth: 2.5,
                             fill: true,
                             tension: 0.25,
-                            pointBackgroundColor: '#4f46e5',
+                            pointBackgroundColor: noktaRenkleri,       // Dinamik Yeşil / Kırmızı
                             pointBorderColor: '#ffffff',
-                            pointBorderWidth: 2,
-                            pointRadius: 6,
-                            pointHoverRadius: 8
+                            pointBorderWidth: 2.5,
+                            pointRadius: 7,                           // Belirgin ve şık noktalar
+                            pointHoverRadius: 9
                         },
                         {
                             label: 'Türkiye Ortalaması (TR Ort)',
                             data: trOrtVerileri,
-                            borderColor: '#ef4444',
+                            borderColor: '#dc2626',
                             borderWidth: 2,
-                            borderDash: [6, 6],
+                            borderDash: [5, 5],
                             fill: false,
                             tension: 0.2,
-                            pointBackgroundColor: '#ef4444',
-                            pointRadius: 4
+                            pointBackgroundColor: '#dc2626',
+                            pointRadius: 3
                         }
                     ]
                 },
@@ -1856,6 +1882,20 @@
                         legend: {
                             position: 'top',
                             labels: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold', size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(context) {
+                                    const idx = context[0].dataIndex;
+                                    const kVal = kurumVerileri[idx];
+                                    const trVal = trOrtVerileri[idx];
+                                    if (kVal === null || trVal === null) return '';
+                                    const isSuccess = (gostergeYonu === 'Pozitif') ? (kVal >= trVal) : (kVal <= trVal);
+                                    return isSuccess 
+                                        ? '\n🟢 Durum: Hedefe Uygun / Başarılı' 
+                                        : '\n🔴 Durum: TR Ortalamasının Gerisinde / Kritik';
+                                }
+                            }
                         }
                     },
                     scales: {
