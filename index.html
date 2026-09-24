@@ -2983,14 +2983,15 @@ window.updateAylikKarsilastirmaChart = function() {
     };
 
     // =========================================================================
-    // MHRS TALEP SAYILARI MODÜLÜ (16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw)
+    // MHRS TALEP SAYILARI MODÜLÜ (talep_veri SEKMESİ ENTEGRASYONU)
     // =========================================================================
     const MHRS_TALEP_CONFIG = {
-        spreadsheetId: '16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw'
+        spreadsheetId: '16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw',
+        sheetName: 'talep_veri',
+        gid: '868689015'
     };
     let mhrsTalepRawData = [];
 
-    // Google Sheets'ten Talep Verisini Çeken Fonksiyon
     window.initMhrsTalepView = async function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
@@ -3003,43 +3004,67 @@ window.updateAylikKarsilastirmaChart = function() {
         container.innerHTML = `
             <div class="text-center py-5">
                 <div class="spinner-border text-warning" role="status"></div>
-                <div class="mt-2 text-muted fw-bold small">MHRS Talep verileri Google Sheets üzerinden alınıyor...</div>
+                <div class="mt-2 text-muted fw-bold small">talep_veri sekmesinden veriler canlı olarak alınıyor...</div>
             </div>
         `;
 
         try {
-            const url = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv`;
+            // Hem sheet ismiyle hem de garanti olsun diye gid parametresiyle çekiyoruz:
+            const url = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MHRS_TALEP_CONFIG.sheetName)}&gid=${MHRS_TALEP_CONFIG.gid}`;
             const res = await fetch(url);
-            if (!res.ok) throw new Error("Google Sheets tablosuna erişilemedi. Tablonun 'Bağlantıya sahip olan herkes görüntüleyebilir' şeklinde paylaşıldığından emin olun.");
+            
+            if (!res.ok) {
+                throw new Error("Google Sheets tablosuna erişilemedi. Lütfen dosyanın sağ üstündeki 'Paylaş' butonundan erişimin 'Bağlantıya sahip olan herkes görüntüleyebilir' olduğundan emin olun.");
+            }
 
             const csvText = await res.text();
+            
+            if (csvText.includes("<!DOCTYPE html") || csvText.includes("accounts.google.com")) {
+                throw new Error("Tablonuz gizli modda. Lütfen sağ üstteki 'Paylaş' butonuna tıklayarak 'Genel Erişim' ayarını 'Bağlantıya sahip olan herkes' yapın.");
+            }
+
             const parsedRows = parseCSV(csvText);
 
             if (!parsedRows || parsedRows.length <= 1) {
-                container.innerHTML = '<div class="alert alert-warning text-center">Talep tablosunda okunacak veri bulunamadı.</div>';
-                return;
+                throw new Error("talep_veri sekmesinde satır verisi bulunamadı.");
             }
 
-            // Başlıklar: 0: Kurum Adı, 1: Klinik Adı, 3: Hekim Ad Soyad
+            // Başlık satırını atla ve satırları eşle
             const rows = parsedRows.slice(1);
-            mhrsTalepRawData = rows.map(r => ({
-                kurum: (r[0] || '').toString().trim(),
-                klinik: (r[1] || '').toString().trim(),
-                hekim: (r[3] || '').toString().trim(),
-                durum: (r[9] || '').toString().trim()
-            })).filter(x => x.kurum && x.klinik);
+            mhrsTalepRawData = [];
 
+            rows.forEach(r => {
+                const kurum = (r[0] || '').toString().trim();
+                const klinik = (r[1] || '').toString().trim();
+                
+                // Başlık satırları veya boşluklar elenir
+                if (kurum && klinik && !kurum.toUpperCase().includes("KURUM ADI")) {
+                    mhrsTalepRawData.push({
+                        kurum: kurum,
+                        klinik: klinik,
+                        hekim: (r[3] || '').toString().trim()
+                    });
+                }
+            });
+
+            if (mhrsTalepRawData.length === 0) {
+                throw new Error("talep_veri sekmesinde geçerli Kurum ve Klinik verisi okunamadı.");
+            }
+
+            // Başarılıysa arayüzü çiz
             window.renderMhrsTalepLayout();
 
         } catch (err) {
             console.error("Talep verisi çekme hatası:", err);
             container.innerHTML = `
-                <div class="alert alert-danger py-4" style="border-radius:12px;">
-                    <h6 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> Talep Tablosu Okunamadı</h6>
-                    <p class="small mb-1">Lütfen Google Sheets dosyanızın sağ üstündeki <b>Paylaş</b> butonundan erişimi <b>"Bağlantıya sahip olan herkes görüntüleyebilir"</b> olarak ayarladığınızdan emin olun.</p>
-                    <div class="small text-muted font-monospace">${err.message}</div>
-                    <button class="btn btn-sm btn-outline-danger mt-3" onclick="mhrsTalepRawData=[]; window.initMhrsTalepView();">
-                        <i class="bi bi-arrow-clockwise"></i> Yeniden Dene
+                <div class="alert alert-warning py-4 my-3 text-center" style="border-radius:14px; border-left: 5px solid #f59e0b;">
+                    <h5 class="fw-bold text-dark"><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Bağlantı Uyarısı</h5>
+                    <p class="text-secondary small mb-2">${err.message}</p>
+                    <div class="p-2 bg-light rounded text-muted font-monospace small mx-auto mb-3" style="max-width: 600px; font-size:11px;">
+                        Tablo ID: ${MHRS_TALEP_CONFIG.spreadsheetId} | Sekme: ${MHRS_TALEP_CONFIG.sheetName}
+                    </div>
+                    <button class="btn btn-sm btn-warning text-white fw-bold px-4 py-2" style="border-radius:10px;" onclick="mhrsTalepRawData=[]; window.initMhrsTalepView();">
+                        <i class="bi bi-arrow-clockwise"></i> Tekrar Kontrol Et
                     </button>
                 </div>
             `;
