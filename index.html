@@ -2984,19 +2984,17 @@ window.updateAylikKarsilastirmaChart = function() {
     };
 
 // =========================================================================
-    // MHRS TALEP SAYILARI MODÜLÜ (DOĞRUDAN VE CANLI TEST MOTORU)
+    // MHRS TALEP SAYILARI MODÜLÜ (TÜMÜ FİLTRESİ + BÜYÜK HARF + KURUM DETAYLI EXCEL)
     // =========================================================================
     window.initMhrsTalepView = async function() {
-        console.log("--> TALEP SAYILARI BUTONUNA TIKLANDI!");
-        
-        // 1. Ekran Konteynerini Bul
         const container = document.getElementById('mhrsDashboardContent');
-        if (!container) {
-            alert("Hata: mhrsDashboardContent alanı bulunamadı!");
+        if (!container) return;
+
+        if (window.mhrsTalepGlobalData && window.mhrsTalepGlobalData.length > 0) {
+            window.cizTalepEkrani();
             return;
         }
 
-        // 2. Yükleniyor Uyarısı Ver
         container.innerHTML = `
             <div class="text-center py-5">
                 <div class="spinner-border text-warning" role="status"></div>
@@ -3006,39 +3004,25 @@ window.updateAylikKarsilastirmaChart = function() {
         `;
 
         try {
-            // Verdiğiniz orijinal linkin doğrudan CSV indirme ucu:
             const fetchUrl = "https://docs.google.com/spreadsheets/d/16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw/export?format=csv&gid=868689015";
-            
-            console.log("İstek atılan URL:", fetchUrl);
             const response = await fetch(fetchUrl);
             
-            if (!response.ok) {
-                throw new Error("Google bağlantıyı reddetti. HTTP Durumu: " + response.status);
-            }
+            if (!response.ok) throw new Error("Google bağlantıyı reddetti. Durum: " + response.status);
 
             const csvMetni = await response.text();
-            console.log("Google'dan gelen veri uzunluğu:", csvMetni.length);
-
             if (csvMetni.includes("<!DOCTYPE html") || csvMetni.includes("accounts.google.com")) {
-                throw new Error("Google Sheets tablonuz kilitli/gizli modda! Sağ üstteki 'Paylaş' butonundan 'Bağlantıya sahip herkes' seçeneğini işaretleyin.");
+                throw new Error("Google Sheets tablonuz gizli modda!");
             }
 
-            // Satırları Parçala
             const satirlar = csvMetni.split(/\r?\n/).filter(s => s.trim().length > 0);
-            console.log("Toplam okunan satır sayısı:", satirlar.length);
+            if (satirlar.length <= 1) throw new Error("Tablo boş veya veri bulunamadı!");
 
-            if (satirlar.length <= 1) {
-                throw new Error("Tablo boş veya satır bulunamadı!");
-            }
-
-            // CSV Satırlarını Ayıran Basit ve Güçlü Fonksiyon
             const parcalaSatir = (satir) => {
                 let ayirici = satir.includes("\t") ? "\t" : (satir.includes(";") ? ";" : ",");
                 return satir.split(ayirici).map(s => s.replace(/^["']|["']$/g, "").trim());
             };
 
             const data = [];
-            // İlk satır başlık olduğu için 1'den başla
             for (let i = 1; i < satirlar.length; i++) {
                 const hucreler = parcalaSatir(satirlar[i]);
                 if (hucreler.length >= 2) {
@@ -3046,7 +3030,6 @@ window.updateAylikKarsilastirmaChart = function() {
                     let klinik = hucreler[1] || "";
 
                     if (hamKurum && klinik && !hamKurum.toUpperCase().includes("KURUM ADI")) {
-                        // Kurum Adını Kırp ve Temizle
                         let temizKurum = hamKurum;
                         if (temizKurum.includes("-")) {
                             const p = temizKurum.split("-");
@@ -3055,34 +3038,31 @@ window.updateAylikKarsilastirmaChart = function() {
                         temizKurum = temizKurum.replace(/\(.*?\)/g, "").trim();
 
                         const up = temizKurum.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
-                        if (up.includes("FATİH SULTAN") || up.includes("FATIH SULTAN")) temizKurum = "Fatih Sultan Mehmet EAH";
-                        else if (up.includes("SANCAKTEPE") || up.includes("VARANK")) temizKurum = "Sancaktepe EAH";
-                        else if (up.includes("ÜMRANİYE") || up.includes("UMRANIYE")) temizKurum = "Ümraniye EAH";
-                        else if (up.includes("GÖZTEPE") || up.includes("GOZTEPE")) temizKurum = "Göztepe ŞH";
-                        else if (up.includes("HAYDARPAŞA") || up.includes("HAYDARPASA")) temizKurum = "Haydarpaşa Numune EAH";
-                        else if (up.includes("ABDÜLHAMİD") || up.includes("SULTAN 2")) temizKurum = "Sultan 2. Abdulhamid Han EAH";
-                        else if (up.includes("SİYAMİ ERSEK")) temizKurum = "Dr. Siyami Ersek GKDC EAH";
-                        else if (up.includes("BEYKOZ")) temizKurum = "Beykoz DH";
-                        else if (up.includes("ÇEKMEKÖY")) temizKurum = "Çekmeköy DH";
-                        else if (up.includes("ÜSKÜDAR")) temizKurum = "Üsküdar DH";
-                        else if (up.includes("FERİHA ÖZ")) temizKurum = "Prof. Dr. Feriha Öz ADH";
-                        else if (up.includes("ZEYNEP KAMİL")) temizKurum = "Zeynep Kamil KDH";
+                        
+                        // Kurumları Standart ve Tamamen BÜYÜK HARF Eşle
+                        if (up.includes("FATİH SULTAN") || up.includes("FATIH SULTAN")) temizKurum = "FATİH SULTAN MEHMET EAH";
+                        else if (up.includes("SANCAKTEPE") || up.includes("VARANK")) temizKurum = "SANCAKTEPE EAH";
+                        else if (up.includes("ÜMRANİYE") || up.includes("UMRANIYE")) temizKurum = "ÜMRANİYE EAH";
+                        else if (up.includes("GÖZTEPE") || up.includes("GOZTEPE")) temizKurum = "GÖZTEPE ŞH";
+                        else if (up.includes("HAYDARPAŞA") || up.includes("HAYDARPASA")) temizKurum = "HAYDARPAŞA NUMUNE EAH";
+                        else if (up.includes("ABDÜLHAMİD") || up.includes("SULTAN 2")) temizKurum = "SULTAN 2. ABDULHAMİD HAN EAH";
+                        else if (up.includes("SİYAMİ ERSEK")) temizKurum = "DR. SİYAMİ ERSEK GKDC EAH";
+                        else if (up.includes("BEYKOZ")) temizKurum = "BEYKOZ DH";
+                        else if (up.includes("ÇEKMEKÖY")) temizKurum = "ÇEKMEKÖY DH";
+                        else if (up.includes("ÜSKÜDAR")) temizKurum = "ÜSKÜDAR DH";
+                        else if (up.includes("FERİHA ÖZ")) temizKurum = "PROF. DR. FERİHA ÖZ ADH";
+                        else if (up.includes("ZEYNEP KAMİL")) temizKurum = "ZEYNEP KAMİL KDH";
+                        else if (up.includes("ERENKÖY FİZİK") || up.includes("ERENKOY FIZIK")) temizKurum = "ERENKÖY FTRH";
+                        else if (up.includes("ERENKÖY RUH") || up.includes("ERENKOY RUH")) temizKurum = "ERENKÖY RSH EAH";
+                        else if (up.includes("ŞİLE") || up.includes("SILE")) temizKurum = "ŞİLE DH";
+                        else temizKurum = up; // Kural dışındakileri de tamamen büyük harfe çevir
 
                         data.push({ kurum: temizKurum, klinik: klinik });
                     }
                 }
             }
 
-            console.log("İşlenen geçerli kayıt sayısı:", data.length);
-
-            if (data.length === 0) {
-                throw new Error("Tabloda Kurum veya Klinik verisi bulunamadı!");
-            }
-
-            // Global hafızaya kaydet
             window.mhrsTalepGlobalData = data;
-
-            // Ekranı Çiz
             window.cizTalepEkrani();
 
         } catch (hata) {
@@ -3097,7 +3077,6 @@ window.updateAylikKarsilastirmaChart = function() {
         }
     };
 
-    // Ekranı Çizen Fonksiyon
     window.cizTalepEkrani = function() {
         const container = document.getElementById('mhrsDashboardContent');
         const data = window.mhrsTalepGlobalData || [];
@@ -3107,18 +3086,20 @@ window.updateAylikKarsilastirmaChart = function() {
             <div class="p-3 bg-light rounded border mb-4 shadow-sm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold text-secondary mb-1">Kurum Seçiniz (${kurumlar.length} Kurum)</label>
+                        <label class="form-label small fw-bold text-secondary mb-1">Kurum Seçiniz</label>
                         <select id="talepKurumSelect" class="form-select form-select-sm shadow-sm" onchange="window.guncelleTalepListesi()">
+                            <!-- TÜMÜ SEÇENEĞİ EN BAŞA EKLENDİ -->
+                            <option value="ALL">🌍 TÜMÜ (TÜM BÖLGE - ${kurumlar.length} KURUM)</option>
                             ${kurumlar.map(k => `<option value="${k}">${k}</option>`).join('')}
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small fw-bold text-secondary mb-1">Branş İçi Arama</label>
-                        <input type="text" id="talepBransArama" class="form-control form-control-sm" placeholder="Branş adı yaz..." onkeyup="window.guncelleTalepListesi(true)">
+                        <label class="form-label small fw-bold text-secondary mb-1">Branş / Kurum İçi Arama</label>
+                        <input type="text" id="talepBransArama" class="form-control form-control-sm" placeholder="Arama yapın..." onkeyup="window.guncelleTalepListesi(true)">
                     </div>
                     <div class="col-md-2 text-end">
-                        <button class="btn btn-sm btn-warning text-white fw-bold w-100" onclick="window.initMhrsTalepView()">
-                            <i class="bi bi-arrow-clockwise"></i> Yenile
+                        <button class="btn btn-sm btn-warning text-white fw-bold w-100" onclick="window.mhrsTalepGlobalData=[]; window.initMhrsTalepView();">
+                            <i class="bi bi-arrow-clockwise"></i> Canlı Yenile
                         </button>
                     </div>
                 </div>
@@ -3131,7 +3112,7 @@ window.updateAylikKarsilastirmaChart = function() {
             <div class="row g-4">
                 <div class="col-lg-6">
                     <div class="p-3 border rounded bg-white shadow-sm h-100" style="border-radius:14px !important;">
-                        <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-bar-chart-fill text-warning me-2"></i>En Çok Talep Alan İlk 10 Branş</h6>
+                        <h6 class="fw-bold mb-3 text-secondary" id="talepGrafikBaslik"><i class="bi bi-bar-chart-fill text-warning me-2"></i>En Çok Talep Alan İlk 10 Branş</h6>
                         <div style="height: 380px; position: relative;">
                             <canvas id="talepBransChart"></canvas>
                         </div>
@@ -3140,20 +3121,15 @@ window.updateAylikKarsilastirmaChart = function() {
                 <div class="col-lg-6">
                     <div class="p-3 border rounded bg-white shadow-sm h-100" style="border-radius:14px !important;">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-table text-primary me-2"></i>Branş Bazlı Talep Toplamları</h6>
-                            <button class="btn btn-sm btn-outline-success" style="border-radius:8px;" onclick="window.exportTableToExcel('talepOzetTablosu', 'MHRS_Talep_Sayilari')">
-                                <i class="bi bi-file-earmark-excel"></i> Excel
+                            <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-table text-primary me-2"></i>Talep Dağılım Tablosu</h6>
+                            <button class="btn btn-sm btn-outline-success fw-bold" style="border-radius:8px;" onclick="window.exportTableToExcel('talepOzetTablosu', 'MHRS_Talep_Sayilari')">
+                                <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
                             </button>
                         </div>
                         <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
-                            <table class="table table-sm table-hover table-bordered align-middle mb-0" id="talepOzetTablosu" style="font-size: 12px;">
-                                <thead class="table-dark" style="position: sticky; top:0; z-index:2;">
-                                    <tr>
-                                        <th style="width: 40px;" class="text-center">#</th>
-                                        <th>Klinik / Branş Adı</th>
-                                        <th class="text-center" style="width: 110px;">Toplam Talep</th>
-                                        <th class="text-center" style="width: 90px;">Oran (%)</th>
-                                    </tr>
+                            <table class="table table-sm table-hover table-bordered align-middle mb-0" id="talepOzetTablosu" style="font-size: 11.5px;">
+                                <thead class="table-dark" style="position: sticky; top:0; z-index:2;" id="talepTableHeader">
+                                    <!-- Başlıklar Dinamik Gelecek -->
                                 </thead>
                                 <tbody id="talepTabloBody"></tbody>
                             </table>
@@ -3166,88 +3142,152 @@ window.updateAylikKarsilastirmaChart = function() {
         window.guncelleTalepListesi();
     };
 
-    // Tabloyu ve Grafiği Dolduran Motor
     window.guncelleTalepListesi = function(sadeceArama = false) {
-        const seciliKurum = document.getElementById('talepKurumSelect')?.value;
+        const seciliKurum = document.getElementById('talepKurumSelect')?.value || 'ALL';
         const arama = (document.getElementById('talepBransArama')?.value || '').toLowerCase().trim();
         const data = window.mhrsTalepGlobalData || [];
-        if (!seciliKurum) return;
+        if (data.length === 0) return;
 
-        const kurumSatirlari = data.filter(d => d.kurum === seciliKurum);
+        const isAll = (seciliKurum === 'ALL');
+        const filtrelenmisData = isAll ? data : data.filter(d => d.kurum === seciliKurum);
 
-        const bransMap = {};
-        let toplam = 0;
+        // Tablo Header'ını Ayarla (Tümü ise Kurum Adı sütunu ekle)
+        const thead = document.getElementById('talepTableHeader');
+        if (thead) {
+            if (isAll) {
+                thead.innerHTML = `
+                    <tr>
+                        <th style="width: 35px;" class="text-center">#</th>
+                        <th>Kurum Adı</th>
+                        <th>Klinik / Branş Adı</th>
+                        <th class="text-center" style="width: 95px;">Toplam Talep</th>
+                        <th class="text-center" style="width: 80px;">Oran (%)</th>
+                    </tr>
+                `;
+            } else {
+                thead.innerHTML = `
+                    <tr>
+                        <th style="width: 35px;" class="text-center">#</th>
+                        <th>Klinik / Branş Adı</th>
+                        <th class="text-center" style="width: 95px;">Toplam Talep</th>
+                        <th class="text-center" style="width: 80px;">Oran (%)</th>
+                    </tr>
+                `;
+            }
+        }
 
-        kurumSatirlari.forEach(r => {
-            bransMap[r.klinik] = (bransMap[r.klinik] || 0) + 1;
-            toplam++;
-        });
+        let toplamTalep = filtrelenmisData.length;
+        let liste = [];
 
-        let sirali = Object.entries(bransMap)
-            .map(([brans, adet]) => ({
+        if (isAll) {
+            // TÜMÜ SEÇİLİ: Kurum + Branş bazında grupla
+            const grupMap = {};
+            filtrelenmisData.forEach(r => {
+                const key = `${r.kurum}___${r.klinik}`;
+                grupMap[key] = (grupMap[key] || 0) + 1;
+            });
+
+            liste = Object.entries(grupMap).map(([key, adet]) => {
+                const [kurum, klinik] = key.split("___");
+                return {
+                    kurum,
+                    brans: klinik,
+                    adet,
+                    oran: toplamTalep > 0 ? ((adet / toplamTalep) * 100).toFixed(1) : 0
+                };
+            }).sort((a, b) => b.adet - a.adet);
+
+        } else {
+            // TEK KURUM SEÇİLİ: Sadece Branş bazında grupla
+            const bransMap = {};
+            filtrelenmisData.forEach(r => {
+                bransMap[r.klinik] = (bransMap[r.klinik] || 0) + 1;
+            });
+
+            liste = Object.entries(bransMap).map(([brans, adet]) => ({
+                kurum: seciliKurum,
                 brans,
                 adet,
-                oran: toplam > 0 ? ((adet / toplam) * 100).toFixed(1) : 0
-            }))
-            .sort((a, b) => b.adet - a.adet);
+                oran: toplamTalep > 0 ? ((adet / toplamTalep) * 100).toFixed(1) : 0
+            })).sort((a, b) => b.adet - a.adet);
+        }
 
-        const filtrelenmis = arama ? sirali.filter(b => b.brans.toLowerCase().includes(arama)) : sirali;
+        // Arama Filtresi
+        const sonListe = arama 
+            ? liste.filter(item => item.brans.toLowerCase().includes(arama) || (item.kurum && item.kurum.toLowerCase().includes(arama)))
+            : liste;
 
         // KPI Kartlarını Doldur
         const kpi = document.getElementById('talepKpiAlani');
         if (kpi && !sadeceArama) {
-            const enCok = sirali[0] || { brans: '-', adet: 0, oran: 0 };
+            const enCok = liste[0] || { brans: '-', adet: 0, oran: 0, kurum: '-' };
+            const baslikMetin = isAll ? "TÜM BÖLGE (GENEL TOPLAM)" : seciliKurum;
+
             kpi.innerHTML = `
                 <div class="col-md-4">
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
                         <div class="text-secondary small fw-bold">TOPLAM TALEP ADEDİ</div>
-                        <div class="fs-3 fw-bold text-warning">${toplam.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">${seciliKurum}</div>
+                        <div class="fs-3 fw-bold text-warning">${toplamTalep.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small text-truncate" title="${baslikMetin}">${baslikMetin}</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">TALEP ALAN BRANŞ SAYISI</div>
-                        <div class="fs-3 fw-bold text-primary">${sirali.length}</div>
-                        <div class="text-muted small">Aktif Klinik</div>
+                        <div class="text-secondary small fw-bold">TALEP OLUŞAN POLİKLİNİK SAYISI</div>
+                        <div class="fs-3 fw-bold text-primary">${liste.length.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small">${isAll ? 'Tüm Kurumlardaki Toplam Branş Kalemi' : 'Aktif Talep Olan Branşlar'}</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">EN ÇOK TALEP ALAN BRANŞ</div>
+                        <div class="text-secondary small fw-bold">EN ÇOK TALEP ALAN</div>
                         <div class="fs-5 fw-bold text-danger text-truncate" title="${enCok.brans}">${enCok.brans}</div>
-                        <div class="text-muted small"><b>${enCok.adet.toLocaleString('tr-TR')}</b> Talep (%${enCok.oran})</div>
+                        <div class="text-muted small"><b>${enCok.adet.toLocaleString('tr-TR')}</b> Talep (%${enCok.oran}) ${isAll ? ` - <span class="text-dark fw-bold">${enCok.kurum}</span>` : ''}</div>
                     </div>
                 </div>
             `;
         }
 
-        // Tabloyu Doldur
+        // Tablo Satırlarını Doldur
         const tbody = document.getElementById('talepTabloBody');
         if (tbody) {
-            tbody.innerHTML = filtrelenmis.map((item, idx) => `
-                <tr>
-                    <td class="text-center fw-bold text-secondary">${idx + 1}</td>
-                    <td><b>${item.brans}</b></td>
-                    <td class="text-center fw-bold text-warning">${item.adet.toLocaleString('tr-TR')}</td>
-                    <td class="text-center text-muted">%${item.oran}</td>
-                </tr>
-            `).join('');
+            if (sonListe.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${isAll ? 5 : 4}" class="text-center text-muted py-4">Kriterlere uygun talep kaydı bulunamadı.</td></tr>`;
+            } else {
+                tbody.innerHTML = sonListe.map((item, idx) => `
+                    <tr>
+                        <td class="text-center fw-bold text-secondary">${idx + 1}</td>
+                        ${isAll ? `<td class="fw-bold text-dark"><small>${item.kurum}</small></td>` : ''}
+                        <td><b>${item.brans}</b></td>
+                        <td class="text-center fw-bold text-warning">${item.adet.toLocaleString('tr-TR')}</td>
+                        <td class="text-center text-muted">%${item.oran}</td>
+                    </tr>
+                `).join('');
+            }
         }
 
-        // Grafiği Çiz
+        // Grafik Çizimi (İlk 10 Branşı Kümülatif Gösterir)
         if (!sadeceArama) {
-            const top10 = sirali.slice(0, 10);
+            // Grafikte branş bazlı kümülatif topla
+            const grafikBransMap = {};
+            filtrelenmisData.forEach(r => {
+                grafikBransMap[r.klinik] = (grafikBransMap[r.klinik] || 0) + 1;
+            });
+            const top10Grafik = Object.entries(grafikBransMap)
+                .map(([brans, adet]) => ({ brans, adet }))
+                .sort((a, b) => b.adet - a.adet)
+                .slice(0, 10);
+
             const ctx = document.getElementById('talepBransChart')?.getContext('2d');
             if (ctx) {
                 if (window.talepChartNesnesi) window.talepChartNesnesi.destroy();
                 window.talepChartNesnesi = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: top10.map(t => t.brans.length > 22 ? t.brans.substring(0, 20) + '...' : t.brans),
+                        labels: top10Grafik.map(t => t.brans.length > 22 ? t.brans.substring(0, 20) + '...' : t.brans),
                         datasets: [{
                             label: 'Talep Sayısı',
-                            data: top10.map(t => t.adet),
+                            data: top10Grafik.map(t => t.adet),
                             backgroundColor: 'rgba(245, 158, 11, 0.8)',
                             borderColor: '#d97706',
                             borderWidth: 1.5,
