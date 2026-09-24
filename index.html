@@ -2984,7 +2984,7 @@ window.updateAylikKarsilastirmaChart = function() {
     };
 
 // =========================================================================
-    // MHRS TALEP SAYILARI MODÜLÜ (DÖNEMLİ + KONSOLİDE EK BİNALI + BRANŞ FİLTRELİ)
+    // MHRS TALEP SAYILARI MODÜLÜ (KESİN TARİH VE M SÜTUNU KORUMALI TAM SÜRÜM)
     // =========================================================================
     const MHRS_TALEP_CONFIG = {
         spreadsheetId: '16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw',
@@ -2992,11 +2992,9 @@ window.updateAylikKarsilastirmaChart = function() {
         sheetKurum: 'kurumlar'
     };
 
-    // Hafıza Depoları
     let mhrsTalepRawData = [];
-    let mhrsKurumlarMap = {}; // Ham Kurum Adı -> { sinif: 1..20, anaKurumAdi: "...", isAnaKurum: true/false, temizAd: "..." }
+    let mhrsKurumlarMap = {};
 
-    // İl-ilçe kalıplarını temizleyen fonksiyon
     function temizleMetinKurumAdi(hamAd) {
         if (!hamAd) return "BİLİNMEYEN KURUM";
         let ad = hamAd.toString().trim();
@@ -3005,7 +3003,6 @@ window.updateAylikKarsilastirmaChart = function() {
         return ad.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
     }
 
-    // Google Sheets'ten İki Sekmeyi (talep_veri ve kurumlar) Canlı Çeken Fonksiyon
     window.initMhrsTalepView = async function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
@@ -3024,56 +3021,43 @@ window.updateAylikKarsilastirmaChart = function() {
         `;
 
         try {
-            const parcalaSatir = (satir) => {
-                let ayirici = satir.includes("\t") ? "\t" : (satir.includes(";") ? ";" : ",");
-                return satir.split(ayirici).map(s => s.replace(/^["']|["']$/g, "").trim());
-            };
-
             const urlTalep = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MHRS_TALEP_CONFIG.sheetTalep)}`;
             const urlKurum = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MHRS_TALEP_CONFIG.sheetKurum)}`;
 
-            // İki sekmeyi aynı anda çek
             const [resTalep, resKurum] = await Promise.all([
                 fetch(urlTalep),
                 fetch(urlKurum)
             ]);
 
-            if (!resTalep.ok || !resKurum.ok) {
-                throw new Error("Google Sheets sekmelerine ulaşılamadı. İzinleri kontrol ediniz.");
-            }
+            if (!resTalep.ok || !resKurum.ok) throw new Error("Google Sheets sekmelerine ulaşılamadı.");
 
             const [txtTalep, txtKurum] = await Promise.all([
                 resTalep.text(),
                 resKurum.text()
             ]);
 
-            // 1. KURUMLAR SEKMESİNİ İŞLE (A: Ham Ad, B: Sınıf, C: Ana Kurum 'A')
-            const satirlarKurum = txtKurum.split(/\r?\n/).filter(s => s.trim().length > 0);
+            // 1. KURUMLAR SEKMESİNİ İŞLE (parseCSV ile standart ayırma)
+            const rowsKurum = parseCSV(txtKurum);
             mhrsKurumlarMap = {};
-            const sinifAnaKurumAdlari = {}; // sinifNo -> Ana Kurum Temiz Adı
+            const sinifAnaKurumAdlari = {};
 
-            // Önce Ana Kurumları tespit et
-            for (let i = 1; i < satirlarKurum.length; i++) {
-                const cols = parcalaSatir(satirlarKurum[i]);
+            for (let i = 1; i < rowsKurum.length; i++) {
+                const cols = rowsKurum[i];
                 if (cols.length >= 2) {
-                    const hamAd = cols[0].trim();
-                    const sinif = cols[1].trim();
-                    const isAna = (cols[2] || '').trim().toUpperCase() === 'A';
+                    const hamAd = (cols[0] || "").trim();
+                    const sinif = (cols[1] || "").trim();
+                    const isAna = (cols[2] || "").trim().toUpperCase() === 'A';
                     const temizAd = temizleMetinKurumAdi(hamAd);
-
-                    if (isAna && sinif) {
-                        sinifAnaKurumAdlari[sinif] = temizAd;
-                    }
+                    if (isAna && sinif) sinifAnaKurumAdlari[sinif] = temizAd;
                 }
             }
 
-            // Kurum haritasını doldur
-            for (let i = 1; i < satirlarKurum.length; i++) {
-                const cols = parcalaSatir(satirlarKurum[i]);
+            for (let i = 1; i < rowsKurum.length; i++) {
+                const cols = rowsKurum[i];
                 if (cols.length >= 2) {
-                    const hamAd = cols[0].trim();
-                    const sinif = cols[1].trim();
-                    const isAna = (cols[2] || '').trim().toUpperCase() === 'A';
+                    const hamAd = (cols[0] || "").trim();
+                    const sinif = (cols[1] || "").trim();
+                    const isAna = (cols[2] || "").trim().toUpperCase() === 'A';
                     const temizAd = temizleMetinKurumAdi(hamAd);
                     const anaKurumAdi = sinifAnaKurumAdlari[sinif] || temizAd;
 
@@ -3086,23 +3070,27 @@ window.updateAylikKarsilastirmaChart = function() {
                 }
             }
 
-            // 2. TALEP_VERİ SEKMESİNİ İŞLE (A: Kurum, B: Klinik ... M: Rapor Tarihi)
-            const satirlarTalep = txtTalep.split(/\r?\n/).filter(s => s.trim().length > 0);
-            if (satirlarTalep.length <= 1) throw new Error("talep_veri sekmesinde satır bulunamadı!");
-            // Başlıkları oku ve "Dönem" sütununun yerini kesin olarak bul:
-            const baslikSatiri = parcalaSatir(satirlarTalep[0]).map(b => b.trim().toUpperCase());
-            // Türkçe karakter uyumlu arama (DÖNEM veya DONEM)
-            let donemSutunIdx = baslikSatiri.findIndex(b => b.includes("DÖNEM") || b.includes("DONEM"));
-            if (donemSutunIdx === -1) donemSutunIdx = baslikSatiri.length - 1; // Bulamazsa en son sütun
+            // 2. TALEP_VERİ SEKMESİNİ İŞLE (parseCSV ile tırnak duyarlı hatasız ayırma)
+            const rowsTalep = parseCSV(txtTalep);
+            if (!rowsTalep || rowsTalep.length <= 1) throw new Error("talep_veri sekmesinde satır bulunamadı!");
+
+            // Başlıkları incele ve "DÖNEM" sütun indeksini kesin bul
+            const basliklar = rowsTalep[0].map(b => (b || "").toString().toUpperCase().trim());
+            let donemIdx = basliklar.findIndex(b => b.includes("DÖNEM") || b.includes("DONEM"));
+            if (donemIdx === -1) donemIdx = 12; // M sütunu 13. sütundur (index 12)
 
             mhrsTalepRawData = [];
-            for (let i = 1; i < satirlarTalep.length; i++) {
-                const cols = parcalaSatir(satirlarTalep[i]);
+            for (let i = 1; i < rowsTalep.length; i++) {
+                const cols = rowsTalep[i];
                 if (cols.length >= 2) {
-                    const hamKurum = cols[0] || "";
-                    const klinik = cols[1] || "";
-                    // M sütunu (index 12) -> Dönem / Tarih
-                    let donemTarih = (cols[donemSutunIdx] || "").trim();
+                    const hamKurum = (cols[0] || "").trim();
+                    const klinik = (cols[1] || "").trim();
+                    
+                    // Sadece M sütunundaki değeri al
+                    let donemDegeri = (cols[donemIdx] || "").toString().trim();
+                    
+                    // Eğer M sütununda saat sızmışsa sadece tarihi al
+                    if (donemDegeri.includes(" ")) donemDegeri = donemDegeri.split(" ")[0].trim();
 
                     if (hamKurum && klinik && !hamKurum.toUpperCase().includes("KURUM ADI")) {
                         const meta = mhrsKurumlarMap[hamKurum] || {
@@ -3114,12 +3102,12 @@ window.updateAylikKarsilastirmaChart = function() {
 
                         mhrsTalepRawData.push({
                             hamKurum: hamKurum,
-                            kurumTekil: meta.temizAd,          // Ek bina hariçken görünecek tekil yerleşke adı
-                            kurumKonsolide: meta.anaKurumAdi,   // Ek bina dahilken bağlanacağı ana kurum adı
+                            kurumTekil: meta.temizAd,
+                            kurumKonsolide: meta.anaKurumAdi,
                             isAnaKurum: meta.isAnaKurum,
                             sinif: meta.sinif,
                             klinik: klinik,
-                            donem: donemTarih
+                            donem: donemDegeri || "22.09.2026"
                         });
                     }
                 }
@@ -3141,33 +3129,38 @@ window.updateAylikKarsilastirmaChart = function() {
         }
     };
 
-    // Arayüz Çerçevesini ve 4'lü Filtre Panelini Çizen Motor
     window.cizTalepEkrani = function() {
         const container = document.getElementById('mhrsDashboardContent');
         const data = mhrsTalepRawData || [];
 
-        // 1. Tekil Tarih / Dönem Listesini Çıkar (En günceli en başa gelsin)
+        // KESİN FİLTRE: İçinde saat (iki nokta ":") barındıran veya tarih formatında olmayanları AT!
+        // Sadece GG.AA.YYYY formatındaki gerçek dönem tarihlerini kabul eder:
+        const gecerliTarihMi = (str) => /^\d{2}\.\d{2}\.\d{4}$/.test(str);
+        
+        let tekilDonemler = [...new Set(data.map(d => d.donem))].filter(d => gecerliTarihMi(d));
+
+        // Eğer filtre sonucu boş kalırsa varsayılan tarihi ekle
+        if (tekilDonemler.length === 0) tekilDonemler = ["22.09.2026"];
+
         const parseTarihDegeri = (str) => {
-            if (!str || str === 'GENEL') return 0;
             const pts = str.split(".");
             if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
-            return new Date(str).getTime() || 0;
+            return 0;
         };
-        const donemler = [...new Set(data.map(d => d.donem))].sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
-        const enGuncelDonem = donemler[0] || "GENEL";
+
+        // Tarihleri büyükten küçüğe sırala (en güncel en başta)
+        tekilDonemler.sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
+        const enGuncelDonem = tekilDonemler[0];
 
         container.innerHTML = `
             <div class="p-3 bg-light rounded border mb-4 shadow-sm">
                 <div class="row g-3 align-items-end">
-                    <!-- 1. DÖNEM FİLTRESİ -->
                     <div class="col-md-2">
                         <label class="form-label small fw-bold text-secondary mb-1">📅 Rapor Dönemi</label>
                         <select id="talepDonemSelect" class="form-select form-select-sm shadow-sm" onchange="window.filtreSecenekleriniDoldur(false)">
-                            ${donemler.map(d => `<option value="${d}" ${d === enGuncelDonem ? 'selected' : ''}>${d}</option>`).join('')}
+                            ${tekilDonemler.map(d => `<option value="${d}" ${d === enGuncelDonem ? 'selected' : ''}>${d}</option>`).join('')}
                         </select>
                     </div>
-
-                    <!-- 2. EK BİNA DAHİL / HARİÇ FİLTRESİ -->
                     <div class="col-md-3">
                         <label class="form-label small fw-bold text-secondary mb-1">🏢 Yerleşke Kapsamı</label>
                         <select id="talepKapsamSelect" class="form-select form-select-sm shadow-sm" onchange="window.filtreSecenekleriniDoldur(false)">
@@ -3175,29 +3168,21 @@ window.updateAylikKarsilastirmaChart = function() {
                             <option value="HARIC">📍 Ek Binalar Hariç (Tüm Yerleşkeler)</option>
                         </select>
                     </div>
-
-                    <!-- 3. KURUM SEÇİMİ FİLTRESİ -->
                     <div class="col-md-4">
                         <label class="form-label small fw-bold text-secondary mb-1">🏥 Kurum / Yerleşke</label>
                         <select id="talepKurumSelect" class="form-select form-select-sm shadow-sm" onchange="window.filtreSecenekleriniDoldur(true)">
-                            <!-- Dinamik Dolacak -->
                         </select>
                     </div>
-
-                    <!-- 4. DİNAMİK BRANŞ / KLİNİK DROPDOWN FİLTRESİ -->
                     <div class="col-md-3">
                         <label class="form-label small fw-bold text-secondary mb-1">🩺 Branş / Klinik</label>
                         <select id="talepBransSelect" class="form-select form-select-sm shadow-sm" onchange="window.guncelleTalepListesi()">
-                            <!-- Dinamik Dolacak -->
                         </select>
                     </div>
                 </div>
             </div>
 
-            <!-- KPI Kartları -->
             <div class="row g-3 mb-4" id="talepKpiAlani"></div>
 
-            <!-- Grafik ve Tablo Alanı -->
             <div class="row g-4">
                 <div class="col-lg-6">
                     <div class="p-3 border rounded bg-white shadow-sm h-100" style="border-radius:14px !important;">
@@ -3237,15 +3222,13 @@ window.updateAylikKarsilastirmaChart = function() {
         window.filtreSecenekleriniDoldur(false);
     };
 
-    // Filtreleri Kapsam ve Döneme Göre Dolduran Motor
     window.filtreSecenekleriniDoldur = function(sadeceBransGuncelle = false) {
         const data = mhrsTalepRawData || [];
-        const seciliDonem = document.getElementById('talepDonemSelect')?.value || 'GENEL';
+        const seciliDonem = document.getElementById('talepDonemSelect')?.value || '22.09.2026';
         const kapsam = document.getElementById('talepKapsamSelect')?.value || 'DAHIL';
         const donemVerisi = data.filter(d => d.donem === seciliDonem);
 
         if (!sadeceBransGuncelle) {
-            // Kurum Listesini Oluştur
             const kurumSelect = document.getElementById('talepKurumSelect');
             let kurumListesi = [];
 
@@ -3263,7 +3246,6 @@ window.updateAylikKarsilastirmaChart = function() {
             }
         }
 
-        // Branş Listesini Seçili Kuruma Göre Doldur
         const seciliKurum = document.getElementById('talepKurumSelect')?.value || 'ALL';
         let kurumFiltreli = donemVerisi;
         if (seciliKurum !== 'ALL') {
@@ -3281,41 +3263,35 @@ window.updateAylikKarsilastirmaChart = function() {
                 <option value="ALL">🩺 TÜM BRANŞLAR (${tekilBranslar.length} Farklı Branş)</option>
                 ${tekilBranslar.map(b => `<option value="${b}">${b}</option>`).join('')}
             `;
-            // Eğer önceki seçili branş listede hala varsa koru
             if (tekilBranslar.includes(oncekiBrans)) bransSelect.value = oncekiBrans;
         }
 
         window.guncelleTalepListesi();
     };
 
-    // Tüm Ekranı (KPI + Grafik + Tablo) Anında Güncelleyen Hesaplayıcı
     window.guncelleTalepListesi = function() {
         const data = mhrsTalepRawData || [];
         if (data.length === 0) return;
 
-        const seciliDonem = document.getElementById('talepDonemSelect')?.value || 'GENEL';
+        const seciliDonem = document.getElementById('talepDonemSelect')?.value || '22.09.2026';
         const kapsam = document.getElementById('talepKapsamSelect')?.value || 'DAHIL';
         const seciliKurum = document.getElementById('talepKurumSelect')?.value || 'ALL';
         const seciliBrans = document.getElementById('talepBransSelect')?.value || 'ALL';
 
-        // 1. Dönem Filtresi
         let filtered = data.filter(d => d.donem === seciliDonem);
 
-        // 2. Kurum Filtresi
         if (seciliKurum !== 'ALL') {
             filtered = (kapsam === 'DAHIL')
                 ? filtered.filter(d => d.kurumKonsolide === seciliKurum)
                 : filtered.filter(d => d.kurumTekil === seciliKurum);
         }
 
-        // 3. Branş Filtresi (Tüm ekranı filtreler!)
         if (seciliBrans !== 'ALL') {
             filtered = filtered.filter(d => d.klinik === seciliBrans);
         }
 
         const toplamTalep = filtered.length;
 
-        // Gruplama Mantığı
         const grupMap = {};
         filtered.forEach(r => {
             const aktifKurumAdi = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
@@ -3333,10 +3309,8 @@ window.updateAylikKarsilastirmaChart = function() {
             };
         }).sort((a, b) => b.adet - a.adet);
 
-        // Tekil Branş Sayısı Hesabı (İstediğiniz gibi tekil branş sayısı!)
         const tekilBransSayisi = new Set(filtered.map(d => d.klinik)).size;
 
-        // 4. KPI KARTLARINI DOLDUR
         const kpi = document.getElementById('talepKpiAlani');
         if (kpi) {
             const enCok = liste[0] || { brans: '-', adet: 0, oran: 0, kurum: '-' };
@@ -3367,7 +3341,6 @@ window.updateAylikKarsilastirmaChart = function() {
             `;
         }
 
-        // 5. TABLO SATIRLARI (Kurum Adı Sütunu Her Zaman Sabit)
         const tbody = document.getElementById('talepTabloBody');
         if (tbody) {
             if (liste.length === 0) {
@@ -3385,14 +3358,11 @@ window.updateAylikKarsilastirmaChart = function() {
             }
         }
 
-        // 6. GRAFİK ÇİZİMİ
-        // Eğer belirli bir branş seçilmişse grafikte "Kurum Dağılımı", branş TÜMÜ ise "İlk 10 Branş Dağılımı" çizilir
         let chartLabels = [];
         let chartData = [];
         let chartLabelText = "";
 
         if (seciliBrans !== 'ALL') {
-            // Tek Branş seçildiyse: Bu branşın en çok talep aldığı kurumları çiz
             const kurumTalepMap = {};
             filtered.forEach(r => {
                 const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
@@ -3403,7 +3373,6 @@ window.updateAylikKarsilastirmaChart = function() {
             chartData = topKurumlar.map(t => t.adet);
             chartLabelText = `${seciliBrans} - Kurum Dağılımı`;
         } else {
-            // Tüm branşlarsa: En çok talep alan ilk 10 branşı çiz
             const bransTalepMap = {};
             filtered.forEach(r => {
                 bransTalepMap[r.klinik] = (bransTalepMap[r.klinik] || 0) + 1;
