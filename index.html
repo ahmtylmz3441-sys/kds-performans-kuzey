@@ -2983,33 +2983,27 @@ window.updateAylikKarsilastirmaChart = function() {
     };
 
 // =========================================================================
-    // MHRS TALEP SAYILARI MODÜLÜ (AKILLI İSİM KIRPICI & TEMİZLEYİCİ ENTEGRASYON)
+    // MHRS TALEP SAYILARI MODÜLÜ (SÜTUN İSİMLERİNE GÖRE AKILLI EŞLEŞTİRİCİ)
     // =========================================================================
     const MHRS_TALEP_CONFIG = {
         spreadsheetId: '16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw',
-        sheetName: 'talep_veri',
-        gid: '868689015'
+        gid: '868689015',
+        sheetName: 'talep_veri'
     };
     let mhrsTalepRawData = [];
 
-    // Kurum isimlerindeki "İSTANBUL- (ANADOLU)- ATAŞEHİR-" kalıplarını temizleyen fonksiyon
+    // Kurum isimlerindeki il-ilçe ön eklerini temizleyen fonksiyon
     function temizleTalepKurumAdi(hamAd) {
-        if (!hamAd) return "";
+        if (!hamAd) return "Bilinmeyen Kurum";
         let ad = hamAd.toString().trim();
 
-        // 1. Başındaki tireli kalıpları parçala ve asıl hastane adını al
         if (ad.includes("-")) {
             const parcalar = ad.split("-");
-            // En son parça genelde asıl hastane adıdır
             ad = parcalar[parcalar.length - 1].trim();
         }
-
-        // 2. Parantez içindeki ifadeleri (örn: (ANADOLU)) temizle
         ad = ad.replace(/\(.*?\)/g, "").trim();
 
-        // 3. Türkçe karakter uyumlu standart hastane isimlerine eşle
         const up = ad.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
-
         if (up.includes("FATİH SULTAN") || up.includes("FATIH SULTAN")) return "Fatih Sultan Mehmet EAH";
         if (up.includes("SANCAKTEPE") || up.includes("VARANK")) return "Sancaktepe EAH";
         if (up.includes("ÜMRANİYE") || up.includes("UMRANIYE")) return "Ümraniye EAH";
@@ -3023,10 +3017,43 @@ window.updateAylikKarsilastirmaChart = function() {
         if (up.includes("FERİHA ÖZ") || up.includes("FERIHA OZ")) return "Prof. Dr. Feriha Öz ADH";
         if (up.includes("ZEYNEP KAMİL") || up.includes("ZEYNEP KAMIL")) return "Zeynep Kamil KDH";
 
-        return ad; // Özel kurala girmezse tirelerden temizlenmiş halini döndür
+        return ad || hamAd;
     }
 
-    // Google Sheets'ten Talep Verisini Çeken Fonksiyon
+    // Her türlü ayracı (Virgül, Noktalı Virgül, Tab) çözen özel ayrıştırıcı
+    function parseTalepCSVGuvenli(text) {
+        if (!text) return [];
+        const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length === 0) return [];
+
+        // Ayraç tespiti
+        const firstLine = lines[0];
+        let delimiter = ',';
+        if ((firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length) delimiter = ';';
+        if ((firstLine.match(/\t/g) || []).length > (firstLine.match(/;/g) || []).length) delimiter = '\t';
+
+        return lines.map(line => {
+            const row = [];
+            let inQuotes = false;
+            let current = '';
+            for (let i = 0; i < line.length; i++) {
+                const c = line[i];
+                const next = line[i+1];
+                if (c === '"') {
+                    if (inQuotes && next === '"') { current += '"'; i++; }
+                    else inQuotes = !inQuotes;
+                } else if (c === delimiter && !inQuotes) {
+                    row.push(current.replace(/^"(.*)"$/, '$1').trim());
+                    current = '';
+                } else {
+                    current += c;
+                }
+            }
+            row.push(current.replace(/^"(.*)"$/, '$1').trim());
+            return row;
+        });
+    }
+
     window.initMhrsTalepView = async function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
@@ -3039,71 +3066,75 @@ window.updateAylikKarsilastirmaChart = function() {
         container.innerHTML = `
             <div class="text-center py-5">
                 <div class="spinner-border text-warning" role="status"></div>
-                <div class="mt-2 text-muted fw-bold small">talep_veri sekmesinden veriler canlı olarak alınıyor...</div>
+                <div class="mt-3 text-dark fw-bold">talep_veri sekmesinden veriler alınıyor...</div>
             </div>
         `;
 
         try {
-            const url = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MHRS_TALEP_CONFIG.sheetName)}&gid=${MHRS_TALEP_CONFIG.gid}`;
+            const url = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&gid=${MHRS_TALEP_CONFIG.gid}`;
             const res = await fetch(url);
-            
-            if (!res.ok) {
-                throw new Error("Google Sheets tablosuna erişilemedi. Lütfen paylaşım ayarlarını kontrol ediniz.");
+            if (!res.ok) throw new Error("Google Sheets tablosuna ulaşılamadı.");
+
+            const rawText = await res.text();
+            const rows = parseTalepCSVGuvenli(rawText);
+
+            if (!rows || rows.length <= 1) {
+                throw new Error("Tabloda okunacak veri satırı bulunamadı.");
             }
 
-            const csvText = await res.text();
-            
-            if (csvText.includes("<!DOCTYPE html") || csvText.includes("accounts.google.com")) {
-                throw new Error("Tablonuz gizli modda. Lütfen sağ üstteki 'Paylaş' butonuna basarak 'Genel Erişim' ayarını 'Bağlantıya sahip olan herkes' yapın.");
-            }
+            // Sizin belirttiğiniz sütun başlıklarını arıyoruz
+            const headers = rows[0].map(h => (h || '').toString().toLowerCase().trim()
+                .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+                .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+            );
 
-            const parsedRows = parseCSV(csvText);
+            // Sütun pozisyonlarını bul
+            let colKurum = headers.findIndex(h => h.includes("kurum"));
+            let colKlinik = headers.findIndex(h => h.includes("klinik") || h.includes("brans"));
+            let colHekim = headers.findIndex(h => h.includes("hekim"));
 
-            if (!parsedRows || parsedRows.length <= 1) {
-                throw new Error("talep_veri sekmesinde satır verisi bulunamadı.");
-            }
+            // Eğer başlık bulunamazsa varsayılan sıra: 0: Kurum Adı, 1: Klinik Adı, 3: Hekim Ad Soyad
+            if (colKurum === -1) colKurum = 0;
+            if (colKlinik === -1) colKlinik = 1;
+            if (colHekim === -1) colHekim = 3;
 
-            const rows = parsedRows.slice(1);
             mhrsTalepRawData = [];
+            const dataRows = rows.slice(1);
 
-            rows.forEach(r => {
-                const hamKurum = (r[0] || '').toString().trim();
-                const klinik = (r[1] || '').toString().trim();
-                
-                // Başlık satırı veya boş satır değilse al ve kırp
-                if (hamKurum && klinik && !hamKurum.toUpperCase().includes("KURUM ADI")) {
-                    const temizKurum = temizleTalepKurumAdi(hamKurum);
+            dataRows.forEach(r => {
+                const hamKurum = (r[colKurum] || '').toString().trim();
+                const klinik = (r[colKlinik] || '').toString().trim();
+
+                if (hamKurum && klinik && !hamKurum.toLowerCase().includes("kurum adi")) {
                     mhrsTalepRawData.push({
-                        hamKurum: hamKurum,
-                        kurum: temizKurum,
+                        kurum: temizleTalepKurumAdi(hamKurum),
                         klinik: klinik,
-                        hekim: (r[3] || '').toString().trim()
+                        hekim: (r[colHekim] || '').toString().trim()
                     });
                 }
             });
 
             if (mhrsTalepRawData.length === 0) {
-                throw new Error("Tabloda geçerli Kurum ve Branş verisi okunamadı.");
+                throw new Error("Satırlar okundu fakat geçerli Kurum/Klinik bulunamadı. Lütfen ilk satır başlıklarını kontrol edin.");
             }
 
-            // Başarılıysa arayüzü çiz
+            // Arayüzü çiz
             window.renderMhrsTalepLayout();
 
         } catch (err) {
-            console.error("Talep verisi çekme hatası:", err);
+            console.error("Talep verisi hatası:", err);
             container.innerHTML = `
-                <div class="alert alert-warning py-4 my-3 text-center" style="border-radius:14px; border-left: 5px solid #f59e0b;">
-                    <h5 class="fw-bold text-dark"><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Bağlantı Uyarısı</h5>
-                    <p class="text-secondary small mb-2">${err.message}</p>
+                <div class="alert alert-warning py-4 text-center my-3" style="border-radius:14px; border-left: 5px solid #f59e0b;">
+                    <h5 class="fw-bold text-dark"><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Veri Alınamadı</h5>
+                    <p class="small text-secondary mb-2">${err.message}</p>
                     <button class="btn btn-sm btn-warning text-white fw-bold px-4 py-2" style="border-radius:10px;" onclick="mhrsTalepRawData=[]; window.initMhrsTalepView();">
-                        <i class="bi bi-arrow-clockwise"></i> Tekrar Kontrol Et
+                        <i class="bi bi-arrow-clockwise"></i> Yeniden Dene
                     </button>
                 </div>
             `;
         }
     };
 
-    // Talep Sayfası Arayüzünü ve Filtresini Çizen Fonksiyon
     window.renderMhrsTalepLayout = function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
@@ -3115,13 +3146,13 @@ window.updateAylikKarsilastirmaChart = function() {
             <div class="p-3 bg-light rounded border mb-4 shadow-sm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold text-secondary mb-1">İncelenecek Kurum (Hastane / ADSM)</label>
+                        <label class="form-label small fw-bold text-secondary mb-1">Kurum Seçimi (${kurumlar.length} Kurum)</label>
                         <select id="talepKurumSelect" class="form-select form-select-sm shadow-sm" onchange="window.updateTalepKurumAnalizi()">
                             ${kurumlar.map(k => `<option value="${k}">${k}</option>`).join('')}
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label small fw-bold text-secondary mb-1">Branş İçi Arama</label>
+                        <label class="form-label small fw-bold text-secondary mb-1">Branş Filtrele</label>
                         <input type="text" id="talepBransArama" class="form-control form-control-sm" placeholder="Branş adı ara..." onkeyup="window.updateTalepKurumAnalizi(true)">
                     </div>
                     <div class="col-md-3 text-end">
@@ -3149,7 +3180,7 @@ window.updateAylikKarsilastirmaChart = function() {
                 <div class="col-lg-6">
                     <div class="p-3 border rounded bg-white shadow-sm h-100" style="border-radius:14px !important;">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-table text-primary me-2"></i>Branş Bazlı Talep Toplamları</h6>
+                            <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-table text-primary me-2"></i>Branş Bazlı Talep Dağılımı</h6>
                             <button class="btn btn-sm btn-outline-success" style="border-radius:8px;" onclick="window.exportTableToExcel('talepOzetTablosu', 'MHRS_Talep_Sayilari')">
                                 <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
                             </button>
@@ -3176,13 +3207,11 @@ window.updateAylikKarsilastirmaChart = function() {
         window.updateTalepKurumAnalizi();
     };
 
-    // Branşları Toplayıp Sıralayan Fonksiyon
     window.updateTalepKurumAnalizi = function(sadeceTabloFiltrele = false) {
         const seciliKurum = document.getElementById('talepKurumSelect')?.value;
         const aramaMetni = (document.getElementById('talepBransArama')?.value || '').toLowerCase().trim();
         if (!seciliKurum) return;
 
-        // Seçili kuruma ait kayıtları süz
         const kurumSatirlari = mhrsTalepRawData.filter(d => d.kurum === seciliKurum);
 
         const bransSayilari = {};
