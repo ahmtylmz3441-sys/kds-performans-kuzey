@@ -801,13 +801,12 @@
                             <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-a-btn" onclick="window.switchMhrsSubTab('A')">🏛️ ADSM/ADSH</button>
                         </li>
                         <li style="flex:1;">
-                        <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-talep-btn" onclick="window.switchMhrsSubTab('TALEP')">📋 Talep Sayıları</button>
+                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-talep-btn" onclick="window.switchMhrsSubTab('TALEP')">📋 Talep Sayıları</button>
                         </li>
                     </ul>
 
-                    <!-- Filtreler -->
+                    <!-- Standart MHRS Filtreleri (Sadece bu div gizlenecek) -->
                     <div id="mhrs-standart-filtreler" class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
-                    <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
                         <div class="col-md-2">
                             <label class="form-label small fw-bold text-secondary">Veri Türü</label>
                             <select id="mhrs-f-tip" class="form-select form-select-sm shadow-sm" onchange="window.populateMhrsFilters(); window.filterMhrsData();">
@@ -834,9 +833,11 @@
                         </div>
                     </div>
 
+                    <!-- İÇERİK ALANI: Filtrelerin DIŞINDA ve AÇIK olmalı -->
                     <div id="mhrsDashboardContent">
                         <!-- Veriler Dinamik Olarak Buraya Yüklenecektir -->
                     </div>
+
                 </div>
             </section>
             <section id="kullanici-yonetimi" class="page">
