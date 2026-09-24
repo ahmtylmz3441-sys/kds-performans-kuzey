@@ -3089,6 +3089,11 @@ window.updateAylikKarsilastirmaChart = function() {
             // 2. TALEP_VERİ SEKMESİNİ İŞLE (A: Kurum, B: Klinik ... M: Rapor Tarihi)
             const satirlarTalep = txtTalep.split(/\r?\n/).filter(s => s.trim().length > 0);
             if (satirlarTalep.length <= 1) throw new Error("talep_veri sekmesinde satır bulunamadı!");
+            // Başlıkları oku ve "Dönem" sütununun yerini kesin olarak bul:
+            const baslikSatiri = parcalaSatir(satirlarTalep[0]).map(b => b.trim().toUpperCase());
+            // Türkçe karakter uyumlu arama (DÖNEM veya DONEM)
+            let donemSutunIdx = baslikSatiri.findIndex(b => b.includes("DÖNEM") || b.includes("DONEM"));
+            if (donemSutunIdx === -1) donemSutunIdx = baslikSatiri.length - 1; // Bulamazsa en son sütun
 
             mhrsTalepRawData = [];
             for (let i = 1; i < satirlarTalep.length; i++) {
@@ -3097,7 +3102,7 @@ window.updateAylikKarsilastirmaChart = function() {
                     const hamKurum = cols[0] || "";
                     const klinik = cols[1] || "";
                     // M sütunu (index 12) -> Dönem / Tarih
-                    let donemTarih = (cols[12] || "").trim();
+                    let donemTarih = (cols[donemSutunIdx] || "").trim();
 
                     if (hamKurum && klinik && !hamKurum.toUpperCase().includes("KURUM ADI")) {
                         const meta = mhrsKurumlarMap[hamKurum] || {
