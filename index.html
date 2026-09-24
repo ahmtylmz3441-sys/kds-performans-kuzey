@@ -800,9 +800,13 @@
                         <li style="flex:1;">
                             <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-a-btn" onclick="window.switchMhrsSubTab('A')">🏛️ ADSM/ADSH</button>
                         </li>
+                        <li style="flex:1;">
+                        <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-talep-btn" onclick="window.switchMhrsSubTab('TALEP')">📋 Talep Sayıları</button>
+                        </li>
                     </ul>
 
                     <!-- Filtreler -->
+                    <div id="mhrs-standart-filtreler" class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
                     <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0">
                         <div class="col-md-2">
                             <label class="form-label small fw-bold text-secondary">Veri Türü</label>
@@ -2956,14 +2960,279 @@ window.updateAylikKarsilastirmaChart = function() {
     window.switchMhrsSubTab = function(tabName) {
         currentMhrsSubTab = tabName;
         document.querySelectorAll('#mhrs .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
+        
+        const stdFiltreler = document.getElementById('mhrs-standart-filtreler');
+        
         if (tabName === 'H') {
-            document.getElementById('subtab-mhrs-h-btn').classList.add('active');
-        } else {
-            document.getElementById('subtab-mhrs-a-btn').classList.add('active');
+            document.getElementById('subtab-mhrs-h-btn')?.classList.add('active');
+            if (stdFiltreler) stdFiltreler.style.display = 'flex';
+            currentMhrsVeriTipi = document.getElementById('mhrs-f-tip')?.value || 'MESAİ_İÇİ';
+            window.populateMhrsFilters();
+            window.filterMhrsData();
+        } else if (tabName === 'A') {
+            document.getElementById('subtab-mhrs-a-btn')?.classList.add('active');
+            if (stdFiltreler) stdFiltreler.style.display = 'flex';
+            currentMhrsVeriTipi = document.getElementById('mhrs-f-tip')?.value || 'MESAİ_İÇİ';
+            window.populateMhrsFilters();
+            window.filterMhrsData();
+        } else if (tabName === 'TALEP') {
+            document.getElementById('subtab-mhrs-talep-btn')?.classList.add('active');
+            if (stdFiltreler) stdFiltreler.style.display = 'none'; // Standart MHRS filtrelerini gizle
+            window.initMhrsTalepView();
         }
-        currentMhrsVeriTipi = document.getElementById('mhrs-f-tip')?.value || 'MESAİ_İÇİ';
-        window.populateMhrsFilters();
-        window.filterMhrsData();
+    };
+
+    // =========================================================================
+    // MHRS TALEP SAYILARI MODÜLÜ (16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw)
+    // =========================================================================
+    const MHRS_TALEP_CONFIG = {
+        spreadsheetId: '16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw'
+    };
+    let mhrsTalepRawData = [];
+
+    // Google Sheets'ten Talep Verisini Çeken Fonksiyon
+    window.initMhrsTalepView = async function() {
+        const container = document.getElementById('mhrsDashboardContent');
+        if (!container) return;
+
+        if (mhrsTalepRawData.length > 0) {
+            window.renderMhrsTalepLayout();
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-warning" role="status"></div>
+                <div class="mt-2 text-muted fw-bold small">MHRS Talep verileri Google Sheets üzerinden alınıyor...</div>
+            </div>
+        `;
+
+        try {
+            const url = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Google Sheets tablosuna erişilemedi. Tablonun 'Bağlantıya sahip olan herkes görüntüleyebilir' şeklinde paylaşıldığından emin olun.");
+
+            const csvText = await res.text();
+            const parsedRows = parseCSV(csvText);
+
+            if (!parsedRows || parsedRows.length <= 1) {
+                container.innerHTML = '<div class="alert alert-warning text-center">Talep tablosunda okunacak veri bulunamadı.</div>';
+                return;
+            }
+
+            // Başlıklar: 0: Kurum Adı, 1: Klinik Adı, 3: Hekim Ad Soyad
+            const rows = parsedRows.slice(1);
+            mhrsTalepRawData = rows.map(r => ({
+                kurum: (r[0] || '').toString().trim(),
+                klinik: (r[1] || '').toString().trim(),
+                hekim: (r[3] || '').toString().trim(),
+                durum: (r[9] || '').toString().trim()
+            })).filter(x => x.kurum && x.klinik);
+
+            window.renderMhrsTalepLayout();
+
+        } catch (err) {
+            console.error("Talep verisi çekme hatası:", err);
+            container.innerHTML = `
+                <div class="alert alert-danger py-4" style="border-radius:12px;">
+                    <h6 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> Talep Tablosu Okunamadı</h6>
+                    <p class="small mb-1">Lütfen Google Sheets dosyanızın sağ üstündeki <b>Paylaş</b> butonundan erişimi <b>"Bağlantıya sahip olan herkes görüntüleyebilir"</b> olarak ayarladığınızdan emin olun.</p>
+                    <div class="small text-muted font-monospace">${err.message}</div>
+                    <button class="btn btn-sm btn-outline-danger mt-3" onclick="mhrsTalepRawData=[]; window.initMhrsTalepView();">
+                        <i class="bi bi-arrow-clockwise"></i> Yeniden Dene
+                    </button>
+                </div>
+            `;
+        }
+    };
+
+    // Talep Sayfası Arayüzünü ve Filtresini Çizen Fonksiyon
+    window.renderMhrsTalepLayout = function() {
+        const container = document.getElementById('mhrsDashboardContent');
+        if (!container) return;
+
+        const kurumlar = [...new Set(mhrsTalepRawData.map(d => d.kurum))].sort();
+
+        let html = `
+            <div class="p-3 bg-light rounded border mb-4 shadow-sm">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-secondary mb-1">İncelenecek Kurum (Hastane / ADSM)</label>
+                        <select id="talepKurumSelect" class="form-select form-select-sm shadow-sm" onchange="window.updateTalepKurumAnalizi()">
+                            ${kurumlar.map(k => `<option value="${k}">${k}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">Branş İçi Arama</label>
+                        <input type="text" id="talepBransArama" class="form-control form-control-sm" placeholder="Branş adı ara..." onkeyup="window.updateTalepKurumAnalizi(true)">
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button class="btn btn-sm btn-outline-warning w-100 fw-bold" onclick="mhrsTalepRawData=[]; window.initMhrsTalepView();">
+                            <i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Üst KPI Kartları -->
+            <div class="row g-3 mb-4" id="talepKpiKartlari"></div>
+
+            <!-- Grafik ve Tablo Alanı -->
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="p-3 border rounded bg-white shadow-sm h-100" style="border-radius:14px !important;">
+                        <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-bar-chart-fill text-warning me-2"></i>En Çok Talep Alan İlk 10 Branş</h6>
+                        <div style="height: 380px; position: relative;">
+                            <canvas id="talepBransChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="p-3 border rounded bg-white shadow-sm h-100" style="border-radius:14px !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-table text-primary me-2"></i>Branş Bazlı Talep Toplamları</h6>
+                            <button class="btn btn-sm btn-outline-success" style="border-radius:8px;" onclick="window.exportTableToExcel('talepOzetTablosu', 'MHRS_Talep_Sayilari')">
+                                <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
+                            </button>
+                        </div>
+                        <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                            <table class="table table-sm table-hover table-bordered align-middle mb-0" id="talepOzetTablosu" style="font-size: 12px;">
+                                <thead class="table-dark" style="position: sticky; top:0; z-index:2;">
+                                    <tr>
+                                        <th style="width: 40px;" class="text-center">#</th>
+                                        <th>Klinik / Branş Adı</th>
+                                        <th class="text-center" style="width: 110px;">Toplam Talep</th>
+                                        <th class="text-center" style="width: 90px;">Oran (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="talepTabloBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        window.updateTalepKurumAnalizi();
+    };
+
+    // Branşları Toplayıp Sıralayan Fonksiyon
+    window.updateTalepKurumAnalizi = function(sadeceTabloFiltrele = false) {
+        const seciliKurum = document.getElementById('talepKurumSelect')?.value;
+        const aramaMetni = (document.getElementById('talepBransArama')?.value || '').toLowerCase().trim();
+        if (!seciliKurum) return;
+
+        const kurumSatirlari = mhrsTalepRawData.filter(d => d.kurum === seciliKurum);
+
+        const bransSayilari = {};
+        let toplamKurumTalep = 0;
+
+        kurumSatirlari.forEach(row => {
+            const brans = row.klinik;
+            if (!brans) return;
+            bransSayilari[brans] = (bransSayilari[brans] || 0) + 1;
+            toplamKurumTalep++;
+        });
+
+        let siraliBranslar = Object.entries(bransSayilari)
+            .map(([brans, adet]) => ({
+                brans,
+                adet,
+                oran: toplamKurumTalep > 0 ? ((adet / toplamKurumTalep) * 100).toFixed(1) : 0
+            }))
+            .sort((a, b) => b.adet - a.adet);
+
+        const filtrelenmisBranslar = aramaMetni 
+            ? siraliBranslar.filter(b => b.brans.toLowerCase().includes(aramaMetni))
+            : siraliBranslar;
+
+        const kpiEl = document.getElementById('talepKpiKartlari');
+        if (kpiEl && !sadeceTabloFiltrele) {
+            const enCokTalep = siraliBranslar.length > 0 ? siraliBranslar[0] : { brans: '-', adet: 0 };
+            kpiEl.innerHTML = `
+                <div class="col-md-4">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold text-uppercase">TOPLAM TALEP ADEDİ</div>
+                        <div class="fs-3 fw-bold text-warning">${toplamKurumTalep.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small">${seciliKurum}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold text-uppercase">TALEP ALAN BRANŞ SAYISI</div>
+                        <div class="fs-3 fw-bold text-primary">${siraliBranslar.length}</div>
+                        <div class="text-muted small">Aktif Talep Oluşan Klinikler</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold text-uppercase">EN YOĞUN BRANŞ</div>
+                        <div class="fs-5 fw-bold text-danger text-truncate" title="${enCokTalep.brans}">${enCokTalep.brans}</div>
+                        <div class="text-muted small"><b>${enCokTalep.adet.toLocaleString('tr-TR')}</b> Talep (%${enCokTalep.oran})</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        const tbody = document.getElementById('talepTabloBody');
+        if (tbody) {
+            if (filtrelenmisBranslar.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Bu kuruma/aramaya ait talep kaydı bulunamadı.</td></tr>';
+            } else {
+                tbody.innerHTML = filtrelenmisBranslar.map((item, idx) => `
+                    <tr>
+                        <td class="text-center fw-bold text-secondary">${idx + 1}</td>
+                        <td><b>${item.brans}</b></td>
+                        <td class="text-center fw-bold text-warning">${item.adet.toLocaleString('tr-TR')}</td>
+                        <td class="text-center text-muted">%${item.oran}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        if (!sadeceTabloFiltrele) {
+            const top10 = siraliBranslar.slice(0, 10);
+            const ctx = document.getElementById('talepBransChart')?.getContext('2d');
+            if (ctx) {
+                if (charts.talepBrans) charts.talepBrans.destroy();
+                charts.talepBrans = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: top10.map(t => t.brans.length > 22 ? t.brans.substring(0, 20) + '...' : t.brans),
+                        datasets: [{
+                            label: 'Talep Sayısı',
+                            data: top10.map(t => t.adet),
+                            backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                            borderColor: '#d97706',
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                                ticks: { precision: 0 }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: {
+                                    font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold', size: 11 }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
     };
 
     window.initMhrsDashboard = async function() {
