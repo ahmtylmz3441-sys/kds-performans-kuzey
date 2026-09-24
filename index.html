@@ -3097,8 +3097,7 @@ window.updateAylikKarsilastirmaChart = function() {
                     const hamKurum = cols[0] || "";
                     const klinik = cols[1] || "";
                     // M sütunu (index 12) -> Dönem / Tarih
-                    let donemTarih = (cols[12] || cols[4] || "").trim();
-                    if (donemTarih.includes(" ")) donemTarih = donemTarih.split(" ")[0]; // Saat varsa at
+                    let donemTarih = (cols[12] || "").trim();
 
                     if (hamKurum && klinik && !hamKurum.toUpperCase().includes("KURUM ADI")) {
                         const meta = mhrsKurumlarMap[hamKurum] || {
@@ -3115,7 +3114,7 @@ window.updateAylikKarsilastirmaChart = function() {
                             isAnaKurum: meta.isAnaKurum,
                             sinif: meta.sinif,
                             klinik: klinik,
-                            donem: donemTarih || "GENEL"
+                            donem: donemTarih
                         });
                     }
                 }
