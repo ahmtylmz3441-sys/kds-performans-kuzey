@@ -2984,13 +2984,33 @@ window.updateAylikKarsilastirmaChart = function() {
     };
 
 // =========================================================================
-    // MHRS TALEP SAYILARI MODÜLÜ (TÜMÜ FİLTRESİ + BÜYÜK HARF + KURUM DETAYLI EXCEL)
+    // MHRS TALEP SAYILARI MODÜLÜ (DÖNEMLİ + KONSOLİDE EK BİNALI + BRANŞ FİLTRELİ)
     // =========================================================================
+    const MHRS_TALEP_CONFIG = {
+        spreadsheetId: '16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw',
+        sheetTalep: 'talep_veri',
+        sheetKurum: 'kurumlar'
+    };
+
+    // Hafıza Depoları
+    let mhrsTalepRawData = [];
+    let mhrsKurumlarMap = {}; // Ham Kurum Adı -> { sinif: 1..20, anaKurumAdi: "...", isAnaKurum: true/false, temizAd: "..." }
+
+    // İl-ilçe kalıplarını temizleyen fonksiyon
+    function temizleMetinKurumAdi(hamAd) {
+        if (!hamAd) return "BİLİNMEYEN KURUM";
+        let ad = hamAd.toString().trim();
+        ad = ad.replace(/^İSTANBUL\s*-\s*\([^)]+\)\s*-\s*([A-ZÇĞİÖŞÜa-zçğıöşü\s]+-\s*)?/i, "").trim();
+        ad = ad.replace(/^-\s*/, "").trim();
+        return ad.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
+    }
+
+    // Google Sheets'ten İki Sekmeyi (talep_veri ve kurumlar) Canlı Çeken Fonksiyon
     window.initMhrsTalepView = async function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
 
-        if (window.mhrsTalepGlobalData && window.mhrsTalepGlobalData.length > 0) {
+        if (mhrsTalepRawData.length > 0 && Object.keys(mhrsKurumlarMap).length > 0) {
             window.cizTalepEkrani();
             return;
         }
@@ -2998,109 +3018,174 @@ window.updateAylikKarsilastirmaChart = function() {
         container.innerHTML = `
             <div class="text-center py-5">
                 <div class="spinner-border text-warning" role="status"></div>
-                <div class="mt-3 text-dark fw-bold fs-5">Google Tablosuna Bağlanılıyor...</div>
-                <div class="text-muted small">Lütfen bekleyiniz, veriler indiriliyor...</div>
+                <div class="mt-3 text-dark fw-bold fs-5">Veri Tabanı Eşleştiriliyor...</div>
+                <div class="text-muted small">talep_veri ve kurumlar sekmeleri indiriliyor, lütfen bekleyiniz...</div>
             </div>
         `;
 
         try {
-            const fetchUrl = "https://docs.google.com/spreadsheets/d/16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw/export?format=csv&gid=868689015";
-            const response = await fetch(fetchUrl);
-            
-            if (!response.ok) throw new Error("Google bağlantıyı reddetti. Durum: " + response.status);
-
-            const csvMetni = await response.text();
-            if (csvMetni.includes("<!DOCTYPE html") || csvMetni.includes("accounts.google.com")) {
-                throw new Error("Google Sheets tablonuz gizli modda!");
-            }
-
-            const satirlar = csvMetni.split(/\r?\n/).filter(s => s.trim().length > 0);
-            if (satirlar.length <= 1) throw new Error("Tablo boş veya veri bulunamadı!");
-
             const parcalaSatir = (satir) => {
                 let ayirici = satir.includes("\t") ? "\t" : (satir.includes(";") ? ";" : ",");
                 return satir.split(ayirici).map(s => s.replace(/^["']|["']$/g, "").trim());
             };
 
-            const data = [];
-            for (let i = 1; i < satirlar.length; i++) {
-                const hucreler = parcalaSatir(satirlar[i]);
-                if (hucreler.length >= 2) {
-                    let hamKurum = hucreler[0] || "";
-                    let klinik = hucreler[1] || "";
+            const urlTalep = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MHRS_TALEP_CONFIG.sheetTalep)}`;
+            const urlKurum = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MHRS_TALEP_CONFIG.sheetKurum)}`;
 
-                    if (hamKurum && klinik && !hamKurum.toUpperCase().includes("KURUM ADI")) {
-                        let temizKurum = hamKurum;
-                        if (temizKurum.includes("-")) {
-                            const p = temizKurum.split("-");
-                            temizKurum = p[p.length - 1].trim();
-                        }
-                        temizKurum = temizKurum.replace(/\(.*?\)/g, "").trim();
+            // İki sekmeyi aynı anda çek
+            const [resTalep, resKurum] = await Promise.all([
+                fetch(urlTalep),
+                fetch(urlKurum)
+            ]);
 
-                        const up = temizKurum.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
-                        
-                        // Kurumları Standart ve Tamamen BÜYÜK HARF Eşle
-                        if (up.includes("FATİH SULTAN") || up.includes("FATIH SULTAN")) temizKurum = "FATİH SULTAN MEHMET EAH";
-                        else if (up.includes("SANCAKTEPE") || up.includes("VARANK")) temizKurum = "SANCAKTEPE EAH";
-                        else if (up.includes("ÜMRANİYE") || up.includes("UMRANIYE")) temizKurum = "ÜMRANİYE EAH";
-                        else if (up.includes("GÖZTEPE") || up.includes("GOZTEPE")) temizKurum = "GÖZTEPE ŞH";
-                        else if (up.includes("HAYDARPAŞA") || up.includes("HAYDARPASA")) temizKurum = "HAYDARPAŞA NUMUNE EAH";
-                        else if (up.includes("ABDÜLHAMİD") || up.includes("SULTAN 2")) temizKurum = "SULTAN 2. ABDULHAMİD HAN EAH";
-                        else if (up.includes("SİYAMİ ERSEK")) temizKurum = "DR. SİYAMİ ERSEK GKDC EAH";
-                        else if (up.includes("BEYKOZ")) temizKurum = "BEYKOZ DH";
-                        else if (up.includes("ÇEKMEKÖY")) temizKurum = "ÇEKMEKÖY DH";
-                        else if (up.includes("ÜSKÜDAR")) temizKurum = "ÜSKÜDAR DH";
-                        else if (up.includes("FERİHA ÖZ")) temizKurum = "PROF. DR. FERİHA ÖZ ADH";
-                        else if (up.includes("ZEYNEP KAMİL")) temizKurum = "ZEYNEP KAMİL KDH";
-                        else if (up.includes("ERENKÖY FİZİK") || up.includes("ERENKOY FIZIK")) temizKurum = "ERENKÖY FTRH";
-                        else if (up.includes("ERENKÖY RUH") || up.includes("ERENKOY RUH")) temizKurum = "ERENKÖY RSH EAH";
-                        else if (up.includes("ŞİLE") || up.includes("SILE")) temizKurum = "ŞİLE DH";
-                        else temizKurum = up; // Kural dışındakileri de tamamen büyük harfe çevir
+            if (!resTalep.ok || !resKurum.ok) {
+                throw new Error("Google Sheets sekmelerine ulaşılamadı. İzinleri kontrol ediniz.");
+            }
 
-                        data.push({ kurum: temizKurum, klinik: klinik });
+            const [txtTalep, txtKurum] = await Promise.all([
+                resTalep.text(),
+                resKurum.text()
+            ]);
+
+            // 1. KURUMLAR SEKMESİNİ İŞLE (A: Ham Ad, B: Sınıf, C: Ana Kurum 'A')
+            const satirlarKurum = txtKurum.split(/\r?\n/).filter(s => s.trim().length > 0);
+            mhrsKurumlarMap = {};
+            const sinifAnaKurumAdlari = {}; // sinifNo -> Ana Kurum Temiz Adı
+
+            // Önce Ana Kurumları tespit et
+            for (let i = 1; i < satirlarKurum.length; i++) {
+                const cols = parcalaSatir(satirlarKurum[i]);
+                if (cols.length >= 2) {
+                    const hamAd = cols[0].trim();
+                    const sinif = cols[1].trim();
+                    const isAna = (cols[2] || '').trim().toUpperCase() === 'A';
+                    const temizAd = temizleMetinKurumAdi(hamAd);
+
+                    if (isAna && sinif) {
+                        sinifAnaKurumAdlari[sinif] = temizAd;
                     }
                 }
             }
 
-            window.mhrsTalepGlobalData = data;
+            // Kurum haritasını doldur
+            for (let i = 1; i < satirlarKurum.length; i++) {
+                const cols = parcalaSatir(satirlarKurum[i]);
+                if (cols.length >= 2) {
+                    const hamAd = cols[0].trim();
+                    const sinif = cols[1].trim();
+                    const isAna = (cols[2] || '').trim().toUpperCase() === 'A';
+                    const temizAd = temizleMetinKurumAdi(hamAd);
+                    const anaKurumAdi = sinifAnaKurumAdlari[sinif] || temizAd;
+
+                    mhrsKurumlarMap[hamAd] = {
+                        sinif: sinif,
+                        isAnaKurum: isAna,
+                        temizAd: temizAd,
+                        anaKurumAdi: anaKurumAdi
+                    };
+                }
+            }
+
+            // 2. TALEP_VERİ SEKMESİNİ İŞLE (A: Kurum, B: Klinik ... M: Rapor Tarihi)
+            const satirlarTalep = txtTalep.split(/\r?\n/).filter(s => s.trim().length > 0);
+            if (satirlarTalep.length <= 1) throw new Error("talep_veri sekmesinde satır bulunamadı!");
+
+            mhrsTalepRawData = [];
+            for (let i = 1; i < satirlarTalep.length; i++) {
+                const cols = parcalaSatir(satirlarTalep[i]);
+                if (cols.length >= 2) {
+                    const hamKurum = cols[0] || "";
+                    const klinik = cols[1] || "";
+                    // M sütunu (index 12) -> Dönem / Tarih
+                    let donemTarih = (cols[12] || cols[4] || "").trim();
+                    if (donemTarih.includes(" ")) donemTarih = donemTarih.split(" ")[0]; // Saat varsa at
+
+                    if (hamKurum && klinik && !hamKurum.toUpperCase().includes("KURUM ADI")) {
+                        const meta = mhrsKurumlarMap[hamKurum] || {
+                            sinif: "0",
+                            isAnaKurum: true,
+                            temizAd: temizleMetinKurumAdi(hamKurum),
+                            anaKurumAdi: temizleMetinKurumAdi(hamKurum)
+                        };
+
+                        mhrsTalepRawData.push({
+                            hamKurum: hamKurum,
+                            kurumTekil: meta.temizAd,          // Ek bina hariçken görünecek tekil yerleşke adı
+                            kurumKonsolide: meta.anaKurumAdi,   // Ek bina dahilken bağlanacağı ana kurum adı
+                            isAnaKurum: meta.isAnaKurum,
+                            sinif: meta.sinif,
+                            klinik: klinik,
+                            donem: donemTarih || "GENEL"
+                        });
+                    }
+                }
+            }
+
+            if (mhrsTalepRawData.length === 0) throw new Error("Geçerli talep satırı bulunamadı!");
+
             window.cizTalepEkrani();
 
         } catch (hata) {
-            console.error("Talep hatası:", hata);
+            console.error("Talep veri yükleme hatası:", hata);
             container.innerHTML = `
                 <div class="alert alert-danger p-4 my-3 text-center" style="border-radius:14px;">
-                    <h5 class="fw-bold"><i class="bi bi-x-circle-fill text-danger me-2"></i>Veri Çekme Hatası</h5>
+                    <h5 class="fw-bold"><i class="bi bi-x-circle-fill text-danger me-2"></i>Veri Bağlantı Hatası</h5>
                     <p class="mb-2">${hata.message}</p>
-                    <button class="btn btn-sm btn-outline-danger mt-2" onclick="window.initMhrsTalepView()">Tekrar Dene</button>
+                    <button class="btn btn-sm btn-outline-danger mt-2" onclick="mhrsTalepRawData=[]; window.initMhrsTalepView()">Tekrar Dene</button>
                 </div>
             `;
         }
     };
 
+    // Arayüz Çerçevesini ve 4'lü Filtre Panelini Çizen Motor
     window.cizTalepEkrani = function() {
         const container = document.getElementById('mhrsDashboardContent');
-        const data = window.mhrsTalepGlobalData || [];
-        const kurumlar = [...new Set(data.map(d => d.kurum))].sort();
+        const data = mhrsTalepRawData || [];
+
+        // 1. Tekil Tarih / Dönem Listesini Çıkar (En günceli en başa gelsin)
+        const parseTarihDegeri = (str) => {
+            if (!str || str === 'GENEL') return 0;
+            const pts = str.split(".");
+            if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
+            return new Date(str).getTime() || 0;
+        };
+        const donemler = [...new Set(data.map(d => d.donem))].sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
+        const enGuncelDonem = donemler[0] || "GENEL";
 
         container.innerHTML = `
             <div class="p-3 bg-light rounded border mb-4 shadow-sm">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold text-secondary mb-1">Kurum Seçiniz</label>
-                        <select id="talepKurumSelect" class="form-select form-select-sm shadow-sm" onchange="window.guncelleTalepListesi()">
-                            <!-- TÜMÜ SEÇENEĞİ EN BAŞA EKLENDİ -->
-                            <option value="ALL">🌍 TÜMÜ (TÜM BÖLGE - ${kurumlar.length} KURUM)</option>
-                            ${kurumlar.map(k => `<option value="${k}">${k}</option>`).join('')}
+                    <!-- 1. DÖNEM FİLTRESİ -->
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-secondary mb-1">📅 Rapor Dönemi</label>
+                        <select id="talepDonemSelect" class="form-select form-select-sm shadow-sm" onchange="window.filtreSecenekleriniDoldur(false)">
+                            ${donemler.map(d => `<option value="${d}" ${d === enGuncelDonem ? 'selected' : ''}>${d}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold text-secondary mb-1">Branş / Kurum İçi Arama</label>
-                        <input type="text" id="talepBransArama" class="form-control form-control-sm" placeholder="Arama yapın..." onkeyup="window.guncelleTalepListesi(true)">
+
+                    <!-- 2. EK BİNA DAHİL / HARİÇ FİLTRESİ -->
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">🏢 Yerleşke Kapsamı</label>
+                        <select id="talepKapsamSelect" class="form-select form-select-sm shadow-sm" onchange="window.filtreSecenekleriniDoldur(false)">
+                            <option value="DAHIL" selected>🏢 Ek Binalar Dahil (Ana Kurumlar)</option>
+                            <option value="HARIC">📍 Ek Binalar Hariç (Tüm Yerleşkeler)</option>
+                        </select>
                     </div>
-                    <div class="col-md-2 text-end">
-                        <button class="btn btn-sm btn-warning text-white fw-bold w-100" onclick="window.mhrsTalepGlobalData=[]; window.initMhrsTalepView();">
-                            <i class="bi bi-arrow-clockwise"></i> Canlı Yenile
-                        </button>
+
+                    <!-- 3. KURUM SEÇİMİ FİLTRESİ -->
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-secondary mb-1">🏥 Kurum / Yerleşke</label>
+                        <select id="talepKurumSelect" class="form-select form-select-sm shadow-sm" onchange="window.filtreSecenekleriniDoldur(true)">
+                            <!-- Dinamik Dolacak -->
+                        </select>
+                    </div>
+
+                    <!-- 4. DİNAMİK BRANŞ / KLİNİK DROPDOWN FİLTRESİ -->
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">🩺 Branş / Klinik</label>
+                        <select id="talepBransSelect" class="form-select form-select-sm shadow-sm" onchange="window.guncelleTalepListesi()">
+                            <!-- Dinamik Dolacak -->
+                        </select>
                     </div>
                 </div>
             </div>
@@ -3112,8 +3197,8 @@ window.updateAylikKarsilastirmaChart = function() {
             <div class="row g-4">
                 <div class="col-lg-6">
                     <div class="p-3 border rounded bg-white shadow-sm h-100" style="border-radius:14px !important;">
-                        <h6 class="fw-bold mb-3 text-secondary" id="talepGrafikBaslik"><i class="bi bi-bar-chart-fill text-warning me-2"></i>En Çok Talep Alan İlk 10 Branş</h6>
-                        <div style="height: 380px; position: relative;">
+                        <h6 class="fw-bold mb-3 text-secondary" id="talepGrafikBaslik"><i class="bi bi-bar-chart-fill text-warning me-2"></i>Talep Yoğunluk Grafiği</h6>
+                        <div style="height: 420px; position: relative;">
                             <canvas id="talepBransChart"></canvas>
                         </div>
                     </div>
@@ -3126,10 +3211,16 @@ window.updateAylikKarsilastirmaChart = function() {
                                 <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
                             </button>
                         </div>
-                        <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                        <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
                             <table class="table table-sm table-hover table-bordered align-middle mb-0" id="talepOzetTablosu" style="font-size: 11.5px;">
-                                <thead class="table-dark" style="position: sticky; top:0; z-index:2;" id="talepTableHeader">
-                                    <!-- Başlıklar Dinamik Gelecek -->
+                                <thead class="table-dark" style="position: sticky; top:0; z-index:2;">
+                                    <tr>
+                                        <th style="width: 35px;" class="text-center">#</th>
+                                        <th>Kurum / Yerleşke Adı</th>
+                                        <th>Klinik / Branş Adı</th>
+                                        <th class="text-center" style="width: 95px;">Toplam Talep</th>
+                                        <th class="text-center" style="width: 80px;">Oran (%)</th>
+                                    </tr>
                                 </thead>
                                 <tbody id="talepTabloBody"></tbody>
                             </table>
@@ -3139,89 +3230,113 @@ window.updateAylikKarsilastirmaChart = function() {
             </div>
         `;
 
-        window.guncelleTalepListesi();
+        window.filtreSecenekleriniDoldur(false);
     };
 
-    window.guncelleTalepListesi = function(sadeceArama = false) {
-        const seciliKurum = document.getElementById('talepKurumSelect')?.value || 'ALL';
-        const arama = (document.getElementById('talepBransArama')?.value || '').toLowerCase().trim();
-        const data = window.mhrsTalepGlobalData || [];
-        if (data.length === 0) return;
+    // Filtreleri Kapsam ve Döneme Göre Dolduran Motor
+    window.filtreSecenekleriniDoldur = function(sadeceBransGuncelle = false) {
+        const data = mhrsTalepRawData || [];
+        const seciliDonem = document.getElementById('talepDonemSelect')?.value || 'GENEL';
+        const kapsam = document.getElementById('talepKapsamSelect')?.value || 'DAHIL';
+        const donemVerisi = data.filter(d => d.donem === seciliDonem);
 
-        const isAll = (seciliKurum === 'ALL');
-        const filtrelenmisData = isAll ? data : data.filter(d => d.kurum === seciliKurum);
+        if (!sadeceBransGuncelle) {
+            // Kurum Listesini Oluştur
+            const kurumSelect = document.getElementById('talepKurumSelect');
+            let kurumListesi = [];
 
-        // Tablo Header'ını Ayarla (Tümü ise Kurum Adı sütunu ekle)
-        const thead = document.getElementById('talepTableHeader');
-        if (thead) {
-            if (isAll) {
-                thead.innerHTML = `
-                    <tr>
-                        <th style="width: 35px;" class="text-center">#</th>
-                        <th>Kurum Adı</th>
-                        <th>Klinik / Branş Adı</th>
-                        <th class="text-center" style="width: 95px;">Toplam Talep</th>
-                        <th class="text-center" style="width: 80px;">Oran (%)</th>
-                    </tr>
-                `;
+            if (kapsam === 'DAHIL') {
+                kurumListesi = [...new Set(donemVerisi.map(d => d.kurumKonsolide))].sort();
             } else {
-                thead.innerHTML = `
-                    <tr>
-                        <th style="width: 35px;" class="text-center">#</th>
-                        <th>Klinik / Branş Adı</th>
-                        <th class="text-center" style="width: 95px;">Toplam Talep</th>
-                        <th class="text-center" style="width: 80px;">Oran (%)</th>
-                    </tr>
+                kurumListesi = [...new Set(donemVerisi.map(d => d.kurumTekil))].sort();
+            }
+
+            if (kurumSelect) {
+                kurumSelect.innerHTML = `
+                    <option value="ALL">🌍 TÜMÜ (${kurumListesi.length} KURUM / YERLEŞKE)</option>
+                    ${kurumListesi.map(k => `<option value="${k}">${k}</option>`).join('')}
                 `;
             }
         }
 
-        let toplamTalep = filtrelenmisData.length;
-        let liste = [];
-
-        if (isAll) {
-            // TÜMÜ SEÇİLİ: Kurum + Branş bazında grupla
-            const grupMap = {};
-            filtrelenmisData.forEach(r => {
-                const key = `${r.kurum}___${r.klinik}`;
-                grupMap[key] = (grupMap[key] || 0) + 1;
-            });
-
-            liste = Object.entries(grupMap).map(([key, adet]) => {
-                const [kurum, klinik] = key.split("___");
-                return {
-                    kurum,
-                    brans: klinik,
-                    adet,
-                    oran: toplamTalep > 0 ? ((adet / toplamTalep) * 100).toFixed(1) : 0
-                };
-            }).sort((a, b) => b.adet - a.adet);
-
-        } else {
-            // TEK KURUM SEÇİLİ: Sadece Branş bazında grupla
-            const bransMap = {};
-            filtrelenmisData.forEach(r => {
-                bransMap[r.klinik] = (bransMap[r.klinik] || 0) + 1;
-            });
-
-            liste = Object.entries(bransMap).map(([brans, adet]) => ({
-                kurum: seciliKurum,
-                brans,
-                adet,
-                oran: toplamTalep > 0 ? ((adet / toplamTalep) * 100).toFixed(1) : 0
-            })).sort((a, b) => b.adet - a.adet);
+        // Branş Listesini Seçili Kuruma Göre Doldur
+        const seciliKurum = document.getElementById('talepKurumSelect')?.value || 'ALL';
+        let kurumFiltreli = donemVerisi;
+        if (seciliKurum !== 'ALL') {
+            kurumFiltreli = (kapsam === 'DAHIL')
+                ? donemVerisi.filter(d => d.kurumKonsolide === seciliKurum)
+                : donemVerisi.filter(d => d.kurumTekil === seciliKurum);
         }
 
-        // Arama Filtresi
-        const sonListe = arama 
-            ? liste.filter(item => item.brans.toLowerCase().includes(arama) || (item.kurum && item.kurum.toLowerCase().includes(arama)))
-            : liste;
+        const tekilBranslar = [...new Set(kurumFiltreli.map(d => d.klinik))].sort();
+        const bransSelect = document.getElementById('talepBransSelect');
+        const oncekiBrans = bransSelect?.value || 'ALL';
 
-        // KPI Kartlarını Doldur
+        if (bransSelect) {
+            bransSelect.innerHTML = `
+                <option value="ALL">🩺 TÜM BRANŞLAR (${tekilBranslar.length} Farklı Branş)</option>
+                ${tekilBranslar.map(b => `<option value="${b}">${b}</option>`).join('')}
+            `;
+            // Eğer önceki seçili branş listede hala varsa koru
+            if (tekilBranslar.includes(oncekiBrans)) bransSelect.value = oncekiBrans;
+        }
+
+        window.guncelleTalepListesi();
+    };
+
+    // Tüm Ekranı (KPI + Grafik + Tablo) Anında Güncelleyen Hesaplayıcı
+    window.guncelleTalepListesi = function() {
+        const data = mhrsTalepRawData || [];
+        if (data.length === 0) return;
+
+        const seciliDonem = document.getElementById('talepDonemSelect')?.value || 'GENEL';
+        const kapsam = document.getElementById('talepKapsamSelect')?.value || 'DAHIL';
+        const seciliKurum = document.getElementById('talepKurumSelect')?.value || 'ALL';
+        const seciliBrans = document.getElementById('talepBransSelect')?.value || 'ALL';
+
+        // 1. Dönem Filtresi
+        let filtered = data.filter(d => d.donem === seciliDonem);
+
+        // 2. Kurum Filtresi
+        if (seciliKurum !== 'ALL') {
+            filtered = (kapsam === 'DAHIL')
+                ? filtered.filter(d => d.kurumKonsolide === seciliKurum)
+                : filtered.filter(d => d.kurumTekil === seciliKurum);
+        }
+
+        // 3. Branş Filtresi (Tüm ekranı filtreler!)
+        if (seciliBrans !== 'ALL') {
+            filtered = filtered.filter(d => d.klinik === seciliBrans);
+        }
+
+        const toplamTalep = filtered.length;
+
+        // Gruplama Mantığı
+        const grupMap = {};
+        filtered.forEach(r => {
+            const aktifKurumAdi = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
+            const key = `${aktifKurumAdi}___${r.klinik}`;
+            grupMap[key] = (grupMap[key] || 0) + 1;
+        });
+
+        const liste = Object.entries(grupMap).map(([key, adet]) => {
+            const [kurum, klinik] = key.split("___");
+            return {
+                kurum,
+                brans: klinik,
+                adet,
+                oran: toplamTalep > 0 ? ((adet / toplamTalep) * 100).toFixed(1) : 0
+            };
+        }).sort((a, b) => b.adet - a.adet);
+
+        // Tekil Branş Sayısı Hesabı (İstediğiniz gibi tekil branş sayısı!)
+        const tekilBransSayisi = new Set(filtered.map(d => d.klinik)).size;
+
+        // 4. KPI KARTLARINI DOLDUR
         const kpi = document.getElementById('talepKpiAlani');
-        if (kpi && !sadeceArama) {
+        if (kpi) {
             const enCok = liste[0] || { brans: '-', adet: 0, oran: 0, kurum: '-' };
-            const baslikMetin = isAll ? "TÜM BÖLGE (GENEL TOPLAM)" : seciliKurum;
+            const baslikMetin = (seciliKurum === 'ALL') ? `TÜM BÖLGE (${seciliDonem})` : `${seciliKurum} (${seciliDonem})`;
 
             kpi.innerHTML = `
                 <div class="col-md-4">
@@ -3234,30 +3349,30 @@ window.updateAylikKarsilastirmaChart = function() {
                 <div class="col-md-4">
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
                         <div class="text-secondary small fw-bold">TALEP OLUŞAN POLİKLİNİK SAYISI</div>
-                        <div class="fs-3 fw-bold text-primary">${liste.length.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">${isAll ? 'Tüm Kurumlardaki Toplam Branş Kalemi' : 'Aktif Talep Olan Branşlar'}</div>
+                        <div class="fs-3 fw-bold text-primary">${tekilBransSayisi} Branş</div>
+                        <div class="text-muted small">${seciliBrans === 'ALL' ? 'Talep Alan Farklı Uzmanlık Sayısı' : 'Seçili Tekil Branş'}</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
                         <div class="text-secondary small fw-bold">EN ÇOK TALEP ALAN</div>
                         <div class="fs-5 fw-bold text-danger text-truncate" title="${enCok.brans}">${enCok.brans}</div>
-                        <div class="text-muted small"><b>${enCok.adet.toLocaleString('tr-TR')}</b> Talep (%${enCok.oran}) ${isAll ? ` - <span class="text-dark fw-bold">${enCok.kurum}</span>` : ''}</div>
+                        <div class="text-muted small"><b>${enCok.adet.toLocaleString('tr-TR')}</b> Talep (%${enCok.oran}) - <span class="text-dark fw-bold">${enCok.kurum}</span></div>
                     </div>
                 </div>
             `;
         }
 
-        // Tablo Satırlarını Doldur
+        // 5. TABLO SATIRLARI (Kurum Adı Sütunu Her Zaman Sabit)
         const tbody = document.getElementById('talepTabloBody');
         if (tbody) {
-            if (sonListe.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="${isAll ? 5 : 4}" class="text-center text-muted py-4">Kriterlere uygun talep kaydı bulunamadı.</td></tr>`;
+            if (liste.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Seçilen kriterlere uygun talep kaydı bulunamadı.</td></tr>`;
             } else {
-                tbody.innerHTML = sonListe.map((item, idx) => `
+                tbody.innerHTML = liste.map((item, idx) => `
                     <tr>
                         <td class="text-center fw-bold text-secondary">${idx + 1}</td>
-                        ${isAll ? `<td class="fw-bold text-dark"><small>${item.kurum}</small></td>` : ''}
+                        <td class="fw-bold text-dark"><small>${item.kurum}</small></td>
                         <td><b>${item.brans}</b></td>
                         <td class="text-center fw-bold text-warning">${item.adet.toLocaleString('tr-TR')}</td>
                         <td class="text-center text-muted">%${item.oran}</td>
@@ -3266,46 +3381,71 @@ window.updateAylikKarsilastirmaChart = function() {
             }
         }
 
-        // Grafik Çizimi (İlk 10 Branşı Kümülatif Gösterir)
-        if (!sadeceArama) {
-            // Grafikte branş bazlı kümülatif topla
-            const grafikBransMap = {};
-            filtrelenmisData.forEach(r => {
-                grafikBransMap[r.klinik] = (grafikBransMap[r.klinik] || 0) + 1;
-            });
-            const top10Grafik = Object.entries(grafikBransMap)
-                .map(([brans, adet]) => ({ brans, adet }))
-                .sort((a, b) => b.adet - a.adet)
-                .slice(0, 10);
+        // 6. GRAFİK ÇİZİMİ
+        // Eğer belirli bir branş seçilmişse grafikte "Kurum Dağılımı", branş TÜMÜ ise "İlk 10 Branş Dağılımı" çizilir
+        let chartLabels = [];
+        let chartData = [];
+        let chartLabelText = "";
 
-            const ctx = document.getElementById('talepBransChart')?.getContext('2d');
-            if (ctx) {
-                if (window.talepChartNesnesi) window.talepChartNesnesi.destroy();
-                window.talepChartNesnesi = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: top10Grafik.map(t => t.brans.length > 22 ? t.brans.substring(0, 20) + '...' : t.brans),
-                        datasets: [{
-                            label: 'Talep Sayısı',
-                            data: top10Grafik.map(t => t.adet),
-                            backgroundColor: 'rgba(245, 158, 11, 0.8)',
-                            borderColor: '#d97706',
-                            borderWidth: 1.5,
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        indexAxis: 'y',
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { precision: 0 } },
-                            y: { grid: { display: false }, ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold', size: 11 } } }
+        if (seciliBrans !== 'ALL') {
+            // Tek Branş seçildiyse: Bu branşın en çok talep aldığı kurumları çiz
+            const kurumTalepMap = {};
+            filtered.forEach(r => {
+                const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
+                kurumTalepMap[kName] = (kurumTalepMap[kName] || 0) + 1;
+            });
+            const topKurumlar = Object.entries(kurumTalepMap).map(([kName, adet]) => ({ name: kName, adet })).sort((a, b) => b.adet - a.adet).slice(0, 10);
+            chartLabels = topKurumlar.map(t => t.name);
+            chartData = topKurumlar.map(t => t.adet);
+            chartLabelText = `${seciliBrans} - Kurum Dağılımı`;
+        } else {
+            // Tüm branşlarsa: En çok talep alan ilk 10 branşı çiz
+            const bransTalepMap = {};
+            filtered.forEach(r => {
+                bransTalepMap[r.klinik] = (bransTalepMap[r.klinik] || 0) + 1;
+            });
+            const topBranslar = Object.entries(bransTalepMap).map(([bName, adet]) => ({ name: bName, adet })).sort((a, b) => b.adet - a.adet).slice(0, 10);
+            chartLabels = topBranslar.map(t => t.name);
+            chartData = topBranslar.map(t => t.adet);
+            chartLabelText = "En Çok Talep Alan İlk 10 Branş";
+        }
+
+        const grafikBaslikEl = document.getElementById('talepGrafikBaslik');
+        if (grafikBaslikEl) grafikBaslikEl.innerHTML = `<i class="bi bi-bar-chart-fill text-warning me-2"></i>${chartLabelText}`;
+
+        const ctx = document.getElementById('talepBransChart')?.getContext('2d');
+        if (ctx) {
+            if (window.talepChartNesnesi) window.talepChartNesnesi.destroy();
+            window.talepChartNesnesi = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Talep Sayısı',
+                        data: chartData,
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                        borderColor: '#d97706',
+                        borderWidth: 1.5,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { precision: 0 } },
+                        y: { 
+                            grid: { display: false }, 
+                            ticks: { 
+                                font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold', size: 10.5 },
+                                autoSkip: false
+                            } 
                         }
                     }
-                });
-            }
+                }
+            });
         }
     };
 
