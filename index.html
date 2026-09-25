@@ -2984,7 +2984,7 @@ window.updateAylikKarsilastirmaChart = function() {
     };
 
 // =========================================================================
-    // MHRS TALEP SAYILARI MODÜLÜ (KESİN TARİH VE M SÜTUNU KORUMALI TAM SÜRÜM)
+    // MHRS TALEP SAYILARI MODÜLÜ (ANLIK DURUM + SEÇENEK A: DÖNEMSEL TREND PANELİ)
     // =========================================================================
     const MHRS_TALEP_CONFIG = {
         spreadsheetId: '16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw',
@@ -2998,13 +2998,9 @@ window.updateAylikKarsilastirmaChart = function() {
     function temizleMetinKurumAdi(hamAd) {
         if (!hamAd) return "BİLİNMEYEN KURUM";
         let ad = hamAd.toString().trim();
-
-        // 1. Sadece ve sadece en baştaki "İSTANBUL", "(ANADOLU)" veya "(AVRUPA)" kalıbını sil:
         ad = ad.replace(/^İSTANBUL\s*\(?ANADOLU\)?\s*[-–—]?\s*/i, "").trim();
         ad = ad.replace(/^İSTANBUL\s*[-–—]\s*\(?ANADOLU\)?\s*[-–—]?\s*/i, "").trim();
         ad = ad.replace(/^[-–—]\s*/, "").trim();
-
-        // 2. Türkçe kurallarına uygun BÜYÜK HARFE çevir (i -> İ, ı -> I):
         return ad.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
     }
 
@@ -3041,7 +3037,7 @@ window.updateAylikKarsilastirmaChart = function() {
                 resKurum.text()
             ]);
 
-            // 1. KURUMLAR SEKMESİNİ İŞLE (parseCSV ile standart ayırma)
+            // 1. KURUMLAR SEKMESİ
             const rowsKurum = parseCSV(txtKurum);
             mhrsKurumlarMap = {};
             const sinifAnaKurumAdlari = {};
@@ -3075,14 +3071,13 @@ window.updateAylikKarsilastirmaChart = function() {
                 }
             }
 
-            // 2. TALEP_VERİ SEKMESİNİ İŞLE (parseCSV ile tırnak duyarlı hatasız ayırma)
+            // 2. TALEP_VERİ SEKMESİ
             const rowsTalep = parseCSV(txtTalep);
             if (!rowsTalep || rowsTalep.length <= 1) throw new Error("talep_veri sekmesinde satır bulunamadı!");
 
-            // Başlıkları incele ve "DÖNEM" sütun indeksini kesin bul
             const basliklar = rowsTalep[0].map(b => (b || "").toString().toUpperCase().trim());
             let donemIdx = basliklar.findIndex(b => b.includes("DÖNEM") || b.includes("DONEM"));
-            if (donemIdx === -1) donemIdx = 12; // M sütunu 13. sütundur (index 12)
+            if (donemIdx === -1) donemIdx = 12;
 
             mhrsTalepRawData = [];
             for (let i = 1; i < rowsTalep.length; i++) {
@@ -3090,11 +3085,7 @@ window.updateAylikKarsilastirmaChart = function() {
                 if (cols.length >= 2) {
                     const hamKurum = (cols[0] || "").trim();
                     const klinik = (cols[1] || "").trim();
-                    
-                    // Sadece M sütunundaki değeri al
                     let donemDegeri = (cols[donemIdx] || "").toString().trim();
-                    
-                    // Eğer M sütununda saat sızmışsa sadece tarihi al
                     if (donemDegeri.includes(" ")) donemDegeri = donemDegeri.split(" ")[0].trim();
 
                     if (hamKurum && klinik && !hamKurum.toUpperCase().includes("KURUM ADI")) {
@@ -3112,7 +3103,7 @@ window.updateAylikKarsilastirmaChart = function() {
                             isAnaKurum: meta.isAnaKurum,
                             sinif: meta.sinif,
                             klinik: klinik,
-                            donem: donemDegeri || "22.09.2026"
+                            donem: donemDegeri
                         });
                     }
                 }
@@ -3138,13 +3129,8 @@ window.updateAylikKarsilastirmaChart = function() {
         const container = document.getElementById('mhrsDashboardContent');
         const data = mhrsTalepRawData || [];
 
-        // KESİN FİLTRE: İçinde saat (iki nokta ":") barındıran veya tarih formatında olmayanları AT!
-        // Sadece GG.AA.YYYY formatındaki gerçek dönem tarihlerini kabul eder:
         const gecerliTarihMi = (str) => /^\d{2}\.\d{2}\.\d{4}$/.test(str);
-        
         let tekilDonemler = [...new Set(data.map(d => d.donem))].filter(d => gecerliTarihMi(d));
-
-        // Eğer filtre sonucu boş kalırsa varsayılan tarihi ekle
         if (tekilDonemler.length === 0) tekilDonemler = ["22.09.2026"];
 
         const parseTarihDegeri = (str) => {
@@ -3153,11 +3139,11 @@ window.updateAylikKarsilastirmaChart = function() {
             return 0;
         };
 
-        // Tarihleri büyükten küçüğe sırala (en güncel en başta)
         tekilDonemler.sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
         const enGuncelDonem = tekilDonemler[0];
 
         container.innerHTML = `
+            <!-- 1. ÜST FİLTRE PANELİ -->
             <div class="p-3 bg-light rounded border mb-4 shadow-sm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-2">
@@ -3169,8 +3155,8 @@ window.updateAylikKarsilastirmaChart = function() {
                     <div class="col-md-3">
                         <label class="form-label small fw-bold text-secondary mb-1">🏢 Yerleşke Kapsamı</label>
                         <select id="talepKapsamSelect" class="form-select form-select-sm shadow-sm" onchange="window.filtreSecenekleriniDoldur(false)">
-                            <option value="DAHIL" selected>🏢 Ana Kurumlar (Ek Binalar Dahil)</option>
-                            <option value="HARIC">📍 Tüm Yerleşkeler</option>
+                            <option value="DAHIL" selected>🏢 Ek Binalar Dahil (Ana Kurumlar)</option>
+                            <option value="HARIC">📍 Ek Binalar Hariç (Tüm Yerleşkeler)</option>
                         </select>
                     </div>
                     <div class="col-md-4">
@@ -3186,13 +3172,15 @@ window.updateAylikKarsilastirmaChart = function() {
                 </div>
             </div>
 
+            <!-- 2. ÜST KPI KARTLARI -->
             <div class="row g-3 mb-4" id="talepKpiAlani"></div>
 
-            <div class="row g-4">
+            <!-- 3. ANLIK GRAFİK VE TABLO ALANI -->
+            <div class="row g-4 mb-4">
                 <div class="col-lg-6">
                     <div class="p-3 border rounded bg-white shadow-sm h-100" style="border-radius:14px !important;">
                         <h6 class="fw-bold mb-3 text-secondary" id="talepGrafikBaslik"><i class="bi bi-bar-chart-fill text-warning me-2"></i>Talep Yoğunluk Grafiği</h6>
-                        <div style="height: 420px; position: relative;">
+                        <div style="height: 400px; position: relative;">
                             <canvas id="talepBransChart"></canvas>
                         </div>
                     </div>
@@ -3205,7 +3193,7 @@ window.updateAylikKarsilastirmaChart = function() {
                                 <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
                             </button>
                         </div>
-                        <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                             <table class="table table-sm table-hover table-bordered align-middle mb-0" id="talepOzetTablosu" style="font-size: 11.5px;">
                                 <thead class="table-dark" style="position: sticky; top:0; z-index:2;">
                                     <tr>
@@ -3222,6 +3210,63 @@ window.updateAylikKarsilastirmaChart = function() {
                     </div>
                 </div>
             </div>
+
+            <!-- ============================================================= -->
+            <!-- 4. SEÇENEK A: DÖNEMSEL DEĞİŞİM & TREND ANALİZ PANELİ         -->
+            <!-- ============================================================= -->
+            <div class="p-3 border rounded bg-white shadow-sm mb-4" style="border-radius:14px !important; border-top: 4px solid #4f46e5 !important;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-arrow-left-right text-primary me-2"></i>Dönemsel Değişim ve Talep Trend Analizi
+                        </h6>
+                        <small class="text-muted" id="trendKiyaslamaBaslik">Önceki Hafta vs Güncel Hafta Karşılaştırması</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small fw-bold text-secondary">Kıyaslanacak Geçmiş Dönem:</span>
+                        <select id="talepTrendKiyasDonemSelect" class="form-select form-select-sm shadow-sm" style="width: 140px;" onchange="window.guncelleTrendPaneli()">
+                            <!-- Otomatik Önceki Hafta Gelecek -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Sol: Karşılaştırmalı Yan Yana Çift Bar Grafiği -->
+                    <div class="col-lg-6">
+                        <div class="p-2 border rounded bg-light" style="border-radius:10px;">
+                            <h6 class="small fw-bold text-secondary mb-2 text-center">📊 İki Dönem Arası Branş Talep Karşılaştırması (Top 10)</h6>
+                            <div style="height: 380px; position: relative;">
+                                <canvas id="talepTrendKiyasChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sağ: Branş Değişim Matrisi Tablosu -->
+                    <div class="col-lg-6">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small fw-bold text-secondary">📋 Branş Bazlı Haftalık Fark Matrisi</span>
+                            <button class="btn btn-xs btn-outline-success py-1 px-2 fw-bold" style="font-size:11px; border-radius:6px;" onclick="window.exportTableToExcel('talepTrendFarkTablosu', 'MHRS_Talep_Donemsel_Fark_Matrisi')">
+                                <i class="bi bi-file-earmark-excel"></i> Fark Tablosu Excel
+                            </button>
+                        </div>
+                        <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                            <table class="table table-sm table-hover table-bordered align-middle mb-0" id="talepTrendFarkTablosu" style="font-size: 11.5px;">
+                                <thead class="table-dark" style="position: sticky; top:0; z-index:2;">
+                                    <tr>
+                                        <th>Branş Adı</th>
+                                        <th class="text-center" id="thTrendDonem1">Önceki</th>
+                                        <th class="text-center" id="thTrendDonem2">Güncel</th>
+                                        <th class="text-center">Net Fark</th>
+                                        <th class="text-center">Değişim (%)</th>
+                                        <th class="text-center">Eğilim</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="talepTrendFarkBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
 
         window.filtreSecenekleriniDoldur(false);
@@ -3232,6 +3277,21 @@ window.updateAylikKarsilastirmaChart = function() {
         const seciliDonem = document.getElementById('talepDonemSelect')?.value || '22.09.2026';
         const kapsam = document.getElementById('talepKapsamSelect')?.value || 'DAHIL';
         const donemVerisi = data.filter(d => d.donem === seciliDonem);
+
+        // Kıyaslanacak Geçmiş Dönem Listesini Hazırla (Seçili dönemden küçük olanlar)
+        const parseTarihDegeri = (str) => {
+            const pts = str.split(".");
+            if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
+            return 0;
+        };
+        const tumDonemler = [...new Set(data.map(d => d.donem))].sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
+        const gecmisDonemler = tumDonemler.filter(d => d !== seciliDonem);
+
+        const kiyasSelect = document.getElementById('talepTrendKiyasDonemSelect');
+        if (kiyasSelect) {
+            kiyasSelect.innerHTML = gecmisDonemler.map(d => `<option value="${d}">${d}</option>`).join('');
+            if (gecmisDonemler.length > 0) kiyasSelect.value = gecmisDonemler[0];
+        }
 
         if (!sadeceBransGuncelle) {
             const kurumSelect = document.getElementById('talepKurumSelect');
@@ -3316,6 +3376,7 @@ window.updateAylikKarsilastirmaChart = function() {
 
         const tekilBransSayisi = new Set(filtered.map(d => d.klinik)).size;
 
+        // KPI Kartları
         const kpi = document.getElementById('talepKpiAlani');
         if (kpi) {
             const enCok = liste[0] || { brans: '-', adet: 0, oran: 0, kurum: '-' };
@@ -3346,6 +3407,7 @@ window.updateAylikKarsilastirmaChart = function() {
             `;
         }
 
+        // Tablo Satırları
         const tbody = document.getElementById('talepTabloBody');
         if (tbody) {
             if (liste.length === 0) {
@@ -3363,6 +3425,7 @@ window.updateAylikKarsilastirmaChart = function() {
             }
         }
 
+        // Anlık Grafik
         let chartLabels = [];
         let chartData = [];
         let chartLabelText = "";
@@ -3421,6 +3484,148 @@ window.updateAylikKarsilastirmaChart = function() {
                                 autoSkip: false
                             } 
                         }
+                    }
+                }
+            });
+        }
+
+        // Trend Panelini Güncelle
+        window.guncelleTrendPaneli();
+    };
+
+    // =========================================================================
+    // DÖNEMSEL TREND VE DEĞİŞİM MATRİSİNİ HESAPLAYAN MOTOR
+    // =========================================================================
+    window.guncelleTrendPaneli = function() {
+        const data = mhrsTalepRawData || [];
+        if (data.length === 0) return;
+
+        const guncelDonem = document.getElementById('talepDonemSelect')?.value || '22.09.2026';
+        const kiyasDonem = document.getElementById('talepTrendKiyasDonemSelect')?.value;
+        const kapsam = document.getElementById('talepKapsamSelect')?.value || 'DAHIL';
+        const seciliKurum = document.getElementById('talepKurumSelect')?.value || 'ALL';
+
+        if (!kiyasDonem || kiyasDonem === guncelDonem) {
+            document.getElementById('talepTrendFarkBody').innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Karşılaştırma yapılacak geçmiş bir dönem bulunamadı.</td></tr>';
+            return;
+        }
+
+        // Başlıkları Güncelle
+        const thD1 = document.getElementById('thTrendDonem1');
+        const thD2 = document.getElementById('thTrendDonem2');
+        const altBaslik = document.getElementById('trendKiyaslamaBaslik');
+        if (thD1) thD1.innerText = `${kiyasDonem}`;
+        if (thD2) thD2.innerText = `${guncelDonem}`;
+        if (altBaslik) altBaslik.innerHTML = `<b>${kiyasDonem}</b> ile <b>${guncelDonem}</b> haftalık talep değişim analizi`;
+
+        // İki Dönemin Verilerini Filtrele (Kurum seçimi varsa ona göre de sınırla)
+        let dataDonem1 = data.filter(d => d.donem === kiyasDonem);
+        let dataDonem2 = data.filter(d => d.donem === guncelDonem);
+
+        if (seciliKurum !== 'ALL') {
+            dataDonem1 = (kapsam === 'DAHIL') ? dataDonem1.filter(d => d.kurumKonsolide === seciliKurum) : dataDonem1.filter(d => d.kurumTekil === seciliKurum);
+            dataDonem2 = (kapsam === 'DAHIL') ? dataDonem2.filter(d => d.kurumKonsolide === seciliKurum) : dataDonem2.filter(d => d.kurumTekil === seciliKurum);
+        }
+
+        // Branş Sayılarını Çıkar
+        const bransMap1 = {};
+        const bransMap2 = {};
+        dataDonem1.forEach(r => { bransMap1[r.klinik] = (bransMap1[r.klinik] || 0) + 1; });
+        dataDonem2.forEach(r => { bransMap2[r.klinik] = (bransMap2[r.klinik] || 0) + 1; });
+
+        // İki dönemdeki tüm tekil branşları topla
+        const tumBranslar = [...new Set([...Object.keys(bransMap1), ...Object.keys(bransMap2)])];
+
+        const farkMatrisi = tumBranslar.map(b => {
+            const v1 = bransMap1[b] || 0;
+            const v2 = bransMap2[b] || 0;
+            const fark = v2 - v1;
+            const oran = v1 > 0 ? ((fark / v1) * 100).toFixed(1) : (v2 > 0 ? "+100.0" : "0.0");
+            return { brans: b, v1, v2, fark, oran: parseFloat(oran) };
+        });
+
+        // En çok artıştan azalışa göre sırala (Önce en çok talep patlaması yaşayanlar)
+        farkMatrisi.sort((a, b) => b.fark - a.fark);
+
+        // Tabloyu Doldur
+        const tbody = document.getElementById('talepTrendFarkBody');
+        if (tbody) {
+            tbody.innerHTML = farkMatrisi.map(item => {
+                let badge = '<span class="badge bg-secondary">Stabil</span>';
+                let farkColor = 'text-muted';
+
+                if (item.fark > 0) {
+                    badge = '<span class="badge bg-danger-subtle text-danger border border-danger fw-bold"><i class="bi bi-arrow-up-right"></i> Artış</span>';
+                    farkColor = 'text-danger fw-bold';
+                } else if (item.fark < 0) {
+                    badge = '<span class="badge bg-success-subtle text-success border border-success fw-bold"><i class="bi bi-arrow-down-right"></i> Düşüş</span>';
+                    farkColor = 'text-success fw-bold';
+                }
+
+                const farkIsaret = item.fark > 0 ? `+${item.fark.toLocaleString('tr-TR')}` : item.fark.toLocaleString('tr-TR');
+                const oranIsaret = item.oran > 0 ? `+${item.oran}%` : `${item.oran}%`;
+
+                return `
+                    <tr>
+                        <td><b>${item.brans}</b></td>
+                        <td class="text-center">${item.v1.toLocaleString('tr-TR')}</td>
+                        <td class="text-center fw-bold text-dark">${item.v2.toLocaleString('tr-TR')}</td>
+                        <td class="text-center ${farkColor}">${farkIsaret}</td>
+                        <td class="text-center ${farkColor}">${oranIsaret}</td>
+                        <td class="text-center">${badge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Yan Yana Çift Bar Grafiği (Top 10 Branş)
+        // İki dönemin kümülatif en büyük ilk 10 branşını seç
+        const top10Branslar = [...farkMatrisi].sort((a, b) => (b.v1 + b.v2) - (a.v1 + a.v2)).slice(0, 10);
+        const chartLabels = top10Branslar.map(t => t.brans.length > 20 ? t.brans.substring(0, 18) + '...' : t.brans);
+        const data1Values = top10Branslar.map(t => t.v1);
+        const data2Values = top10Branslar.map(t => t.v2);
+
+        const ctx = document.getElementById('talepTrendKiyasChart')?.getContext('2d');
+        if (ctx) {
+            if (window.talepTrendKiyasChartNesnesi) window.talepTrendKiyasChartNesnesi.destroy();
+            window.talepTrendKiyasChartNesnesi = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: `${kiyasDonem}`,
+                            data: data1Values,
+                            backgroundColor: '#94a3b8',
+                            borderColor: '#64748b',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        },
+                        {
+                            label: `${guncelDonem}`,
+                            data: data2Values,
+                            backgroundColor: '#4f46e5',
+                            borderColor: '#4338ca',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            grid: { display: false },
+                            ticks: { font: { size: 9, weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" }, autoSkip: false }
+                        },
+                        y: { 
+                            grid: { color: 'rgba(0, 0, 0, 0.05)', borderDash: [4, 4] },
+                            ticks: { precision: 0 }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: 'bold' } } }
                     }
                 }
             });
