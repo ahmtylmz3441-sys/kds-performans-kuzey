@@ -2998,8 +2998,13 @@ window.updateAylikKarsilastirmaChart = function() {
     function temizleMetinKurumAdi(hamAd) {
         if (!hamAd) return "BİLİNMEYEN KURUM";
         let ad = hamAd.toString().trim();
-        ad = ad.replace(/^İSTANBUL\s*-\s*\([^)]+\)\s*-\s*([A-ZÇĞİÖŞÜa-zçğıöşü\s]+-\s*)?/i, "").trim();
-        ad = ad.replace(/^-\s*/, "").trim();
+
+        // 1. Sadece ve sadece en baştaki "İSTANBUL", "(ANADOLU)" veya "(AVRUPA)" kalıbını sil:
+        ad = ad.replace(/^İSTANBUL\s*\(?ANADOLU\)?\s*[-–—]?\s*/i, "").trim();
+        ad = ad.replace(/^İSTANBUL\s*[-–—]\s*\(?ANADOLU\)?\s*[-–—]?\s*/i, "").trim();
+        ad = ad.replace(/^[-–—]\s*/, "").trim();
+
+        // 2. Türkçe kurallarına uygun BÜYÜK HARFE çevir (i -> İ, ı -> I):
         return ad.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
     }
 
