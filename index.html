@@ -3222,13 +3222,19 @@ window.updateAylikKarsilastirmaChart = function() {
                         </h6>
                         <small class="text-muted" id="trendKiyaslamaBaslik">Önceki Hafta vs Güncel Hafta Karşılaştırması</small>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="small fw-bold text-secondary">Kıyaslanacak Geçmiş Dönem:</span>
-                        <select id="talepTrendKiyasDonemSelect" class="form-select form-select-sm shadow-sm" style="width: 140px;" onchange="window.guncelleTrendPaneli()">
-                            <!-- Otomatik Önceki Hafta Gelecek -->
-                        </select>
-                    </div>
-                </div>
+                    <!-- YENİ İKİ FİLTRELİ DÖNEM SEÇİMİ: -->
+<div class="d-flex align-items-center gap-2 flex-wrap">
+    <div class="d-flex align-items-center gap-1">
+        <span class="small fw-bold text-secondary">1. Dönem:</span>
+        <select id="talepTrendDonem1Select" class="form-select form-select-sm shadow-sm" style="width: 130px;" onchange="window.guncelleTrendPaneli()">
+        </select>
+    </div>
+    <div class="d-flex align-items-center gap-1">
+        <span class="small fw-bold text-secondary">2. Dönem:</span>
+        <select id="talepTrendDonem2Select" class="form-select form-select-sm shadow-sm" style="width: 130px;" onchange="window.guncelleTrendPaneli()">
+        </select>
+    </div>
+</div>
 
                 <div class="row g-4">
                     <!-- Sol: Karşılaştırmalı Yan Yana Çift Bar Grafiği -->
@@ -3493,34 +3499,56 @@ window.updateAylikKarsilastirmaChart = function() {
         window.guncelleTrendPaneli();
     };
 
-    // =========================================================================
-    // DÖNEMSEL TREND VE DEĞİŞİM MATRİSİNİ HESAPLAYAN MOTOR
+// =========================================================================
+    // DÖNEMSEL TREND VE DEĞİŞİM MATRİSİNİ HESAPLAYAN MOTOR (ÇİFT FİLTRELİ)
     // =========================================================================
     window.guncelleTrendPaneli = function() {
         const data = mhrsTalepRawData || [];
         if (data.length === 0) return;
 
-        const guncelDonem = document.getElementById('talepDonemSelect')?.value || '22.09.2026';
-        const kiyasDonem = document.getElementById('talepTrendKiyasDonemSelect')?.value;
+        const parseTarihDegeri = (str) => {
+            const pts = (str || '').split(".");
+            if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
+            return 0;
+        };
+
+        const tumDonemler = [...new Set(data.map(d => d.donem))].filter(d => /^\d{2}\.\d{2}\.\d{4}$/.test(d)).sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
+
+        const d1Select = document.getElementById('talepTrendDonem1Select');
+        const d2Select = document.getElementById('talepTrendDonem2Select');
+
+        // İlk açılışta dropdown'ları doldur (D1 = Eski hafta, D2 = Güncel hafta)
+        if (d1Select && d1Select.options.length === 0) {
+            d1Select.innerHTML = tumDonemler.map(d => `<option value="${d}">${d}</option>`).join('');
+            d2Select.innerHTML = tumDonemler.map(d => `<option value="${d}">${d}</option>`).join('');
+
+            if (tumDonemler.length >= 2) {
+                d1Select.value = tumDonemler[1]; // Önceki hafta
+                d2Select.value = tumDonemler[0]; // En güncel hafta
+            } else if (tumDonemler.length === 1) {
+                d1Select.value = tumDonemler[0];
+                d2Select.value = tumDonemler[0];
+            }
+        }
+
+        const donem1 = d1Select?.value;
+        const donem2 = d2Select?.value;
         const kapsam = document.getElementById('talepKapsamSelect')?.value || 'DAHIL';
         const seciliKurum = document.getElementById('talepKurumSelect')?.value || 'ALL';
 
-        if (!kiyasDonem || kiyasDonem === guncelDonem) {
-            document.getElementById('talepTrendFarkBody').innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Karşılaştırma yapılacak geçmiş bir dönem bulunamadı.</td></tr>';
-            return;
-        }
+        if (!donem1 || !donem2) return;
 
         // Başlıkları Güncelle
         const thD1 = document.getElementById('thTrendDonem1');
         const thD2 = document.getElementById('thTrendDonem2');
         const altBaslik = document.getElementById('trendKiyaslamaBaslik');
-        if (thD1) thD1.innerText = `${kiyasDonem}`;
-        if (thD2) thD2.innerText = `${guncelDonem}`;
-        if (altBaslik) altBaslik.innerHTML = `<b>${kiyasDonem}</b> ile <b>${guncelDonem}</b> haftalık talep değişim analizi`;
+        if (thD1) thD1.innerText = `${donem1}`;
+        if (thD2) thD2.innerText = `${donem2}`;
+        if (altBaslik) altBaslik.innerHTML = `<b>${donem1}</b> ile <b>${donem2}</b> dönemleri arası branş talep değişim analizi`;
 
-        // İki Dönemin Verilerini Filtrele (Kurum seçimi varsa ona göre de sınırla)
-        let dataDonem1 = data.filter(d => d.donem === kiyasDonem);
-        let dataDonem2 = data.filter(d => d.donem === guncelDonem);
+        // İki Dönemin Verilerini Filtrele
+        let dataDonem1 = data.filter(d => d.donem === donem1);
+        let dataDonem2 = data.filter(d => d.donem === donem2);
 
         if (seciliKurum !== 'ALL') {
             dataDonem1 = (kapsam === 'DAHIL') ? dataDonem1.filter(d => d.kurumKonsolide === seciliKurum) : dataDonem1.filter(d => d.kurumTekil === seciliKurum);
@@ -3533,7 +3561,6 @@ window.updateAylikKarsilastirmaChart = function() {
         dataDonem1.forEach(r => { bransMap1[r.klinik] = (bransMap1[r.klinik] || 0) + 1; });
         dataDonem2.forEach(r => { bransMap2[r.klinik] = (bransMap2[r.klinik] || 0) + 1; });
 
-        // İki dönemdeki tüm tekil branşları topla
         const tumBranslar = [...new Set([...Object.keys(bransMap1), ...Object.keys(bransMap2)])];
 
         const farkMatrisi = tumBranslar.map(b => {
@@ -3544,42 +3571,45 @@ window.updateAylikKarsilastirmaChart = function() {
             return { brans: b, v1, v2, fark, oran: parseFloat(oran) };
         });
 
-        // En çok artıştan azalışa göre sırala (Önce en çok talep patlaması yaşayanlar)
+        // En çok artıştan azalışa göre sırala
         farkMatrisi.sort((a, b) => b.fark - a.fark);
 
         // Tabloyu Doldur
         const tbody = document.getElementById('talepTrendFarkBody');
         if (tbody) {
-            tbody.innerHTML = farkMatrisi.map(item => {
-                let badge = '<span class="badge bg-secondary">Stabil</span>';
-                let farkColor = 'text-muted';
+            if (farkMatrisi.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Kriterlere uygun karşılaştırma verisi bulunamadı.</td></tr>';
+            } else {
+                tbody.innerHTML = farkMatrisi.map(item => {
+                    let badge = '<span class="badge bg-secondary">Stabil</span>';
+                    let farkColor = 'text-muted';
 
-                if (item.fark > 0) {
-                    badge = '<span class="badge bg-danger-subtle text-danger border border-danger fw-bold"><i class="bi bi-arrow-up-right"></i> Artış</span>';
-                    farkColor = 'text-danger fw-bold';
-                } else if (item.fark < 0) {
-                    badge = '<span class="badge bg-success-subtle text-success border border-success fw-bold"><i class="bi bi-arrow-down-right"></i> Düşüş</span>';
-                    farkColor = 'text-success fw-bold';
-                }
+                    if (item.fark > 0) {
+                        badge = '<span class="badge bg-danger-subtle text-danger border border-danger fw-bold"><i class="bi bi-arrow-up-right"></i> Artış</span>';
+                        farkColor = 'text-danger fw-bold';
+                    } else if (item.fark < 0) {
+                        badge = '<span class="badge bg-success-subtle text-success border border-success fw-bold"><i class="bi bi-arrow-down-right"></i> Düşüş</span>';
+                        farkColor = 'text-success fw-bold';
+                    }
 
-                const farkIsaret = item.fark > 0 ? `+${item.fark.toLocaleString('tr-TR')}` : item.fark.toLocaleString('tr-TR');
-                const oranIsaret = item.oran > 0 ? `+${item.oran}%` : `${item.oran}%`;
+                    const farkIsaret = item.fark > 0 ? `+${item.fark.toLocaleString('tr-TR')}` : item.fark.toLocaleString('tr-TR');
+                    const oranIsaret = item.oran > 0 ? `+${item.oran}%` : `${item.oran}%`;
 
-                return `
-                    <tr>
-                        <td><b>${item.brans}</b></td>
-                        <td class="text-center">${item.v1.toLocaleString('tr-TR')}</td>
-                        <td class="text-center fw-bold text-dark">${item.v2.toLocaleString('tr-TR')}</td>
-                        <td class="text-center ${farkColor}">${farkIsaret}</td>
-                        <td class="text-center ${farkColor}">${oranIsaret}</td>
-                        <td class="text-center">${badge}</td>
-                    </tr>
-                `;
-            }).join('');
+                    return `
+                        <tr>
+                            <td><b>${item.brans}</b></td>
+                            <td class="text-center">${item.v1.toLocaleString('tr-TR')}</td>
+                            <td class="text-center fw-bold text-dark">${item.v2.toLocaleString('tr-TR')}</td>
+                            <td class="text-center ${farkColor}">${farkIsaret}</td>
+                            <td class="text-center ${farkColor}">${oranIsaret}</td>
+                            <td class="text-center">${badge}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
         }
 
         // Yan Yana Çift Bar Grafiği (Top 10 Branş)
-        // İki dönemin kümülatif en büyük ilk 10 branşını seç
         const top10Branslar = [...farkMatrisi].sort((a, b) => (b.v1 + b.v2) - (a.v1 + a.v2)).slice(0, 10);
         const chartLabels = top10Branslar.map(t => t.brans.length > 20 ? t.brans.substring(0, 18) + '...' : t.brans);
         const data1Values = top10Branslar.map(t => t.v1);
@@ -3594,7 +3624,7 @@ window.updateAylikKarsilastirmaChart = function() {
                     labels: chartLabels,
                     datasets: [
                         {
-                            label: `${kiyasDonem}`,
+                            label: `${donem1}`,
                             data: data1Values,
                             backgroundColor: '#94a3b8',
                             borderColor: '#64748b',
@@ -3602,7 +3632,7 @@ window.updateAylikKarsilastirmaChart = function() {
                             borderRadius: 4
                         },
                         {
-                            label: `${guncelDonem}`,
+                            label: `${donem2}`,
                             data: data2Values,
                             backgroundColor: '#4f46e5',
                             borderColor: '#4338ca',
