@@ -3091,12 +3091,31 @@ window.updateAylikKarsilastirmaChart = function() {
                     if (donemDegeri.includes(" ")) donemDegeri = donemDegeri.split(" ")[0].trim();
 
                     if (hamKurum && klinik && !hamKurum.toUpperCase().includes("KURUM ADI")) {
-                        const meta = mhrsKurumlarMap[hamKurum] || {
+                        // ESNEK EŞLEŞTİRİCİ: Birebir tutmazsa boşluk/tire farkına bakmadan eşleştir
+                    let meta = mhrsKurumlarMap[hamKurum];
+                    
+                    if (!meta) {
+                        const normHam = hamKurum.replace(/[\s\-_]+/g, '').toUpperCase();
+                        const bulunanKey = Object.keys(mhrsKurumlarMap).find(k => {
+                            const normK = k.replace(/[\s\-_]+/g, '').toUpperCase();
+                            return normK === normHam || normHam.includes(normK) || normK.includes(normHam);
+                        });
+                        if (bulunanKey) {
+                            meta = mhrsKurumlarMap[bulunanKey];
+                        }
+                    }
+
+                    if (!meta) {
+                        const isEkBina = hamKurum.toUpperCase().includes("POLİKLİNİĞİ") || 
+                                         hamKurum.toUpperCase().includes("EK HİZMET") || 
+                                         hamKurum.toUpperCase().includes("SEMT");
+                        meta = {
                             sinif: "0",
-                            isAnaKurum: true,
+                            isAnaKurum: !isEkBina,
                             temizAd: temizleMetinKurumAdi(hamKurum),
                             anaKurumAdi: temizleMetinKurumAdi(hamKurum)
                         };
+                    }
 
                         mhrsTalepRawData.push({
                             hamKurum: hamKurum,
