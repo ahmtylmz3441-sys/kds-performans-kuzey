@@ -4364,8 +4364,15 @@ if (currentMhrsSubTab === 'H') {
                         // ==================== HASTANE SATIRLARI ====================
                         return `
                             <tr>
-                            <th class="text-center text-white" style="width: 60px;">Yıl</th>
-<th class="text-center text-white" style="width: 80px;">Ay</th>
+                            <!-- 1. Yıl Sütunu: Kesin Koyu Renk ve Otomatik Yıl -->
+<td class="text-center fw-bold" style="color: #0f172a !important; font-size: 11px;">
+    ${getVal(item, 'yil') || getVal(item, 'Yıl') || selYil || '2026'}
+</td>
+
+<!-- 2. Ay Sütunu: Kesin Koyu Renk ve Otomatik Ay -->
+<td class="text-center fw-bold" style="color: #0f172a !important; font-size: 11px;">
+    ${getVal(item, 'ay') || getVal(item, 'Ay') || selAy || 'TEMMUZ'}
+</td>
                                 <td><b>${getVal(item, 'kurum_adi')}</b></td>
                                 <td>${getVal(item, 'brans')}</td>
                                 <td class="text-center">${m.hekim}</td>
@@ -4403,8 +4410,15 @@ if (currentMhrsSubTab === 'H') {
                         // ==================== ADSM / ADSH SATIRLARI ====================
                         return `
                             <tr>
-                            <th class="text-center text-white" style="width: 60px;">Yıl</th>
-<th class="text-center text-white" style="width: 80px;">Ay</th>
+                            <!-- 1. Yıl Sütunu: Kesin Koyu Renk ve Otomatik Yıl -->
+<td class="text-center fw-bold" style="color: #0f172a !important; font-size: 11px;">
+    ${getVal(item, 'yil') || getVal(item, 'Yıl') || selYil || '2026'}
+</td>
+
+<!-- 2. Ay Sütunu: Kesin Koyu Renk ve Otomatik Ay -->
+<td class="text-center fw-bold" style="color: #0f172a !important; font-size: 11px;">
+    ${getVal(item, 'ay') || getVal(item, 'Ay') || selAy || 'TEMMUZ'}
+</td>
                                 <td><b>${getVal(item, 'kurum_adi')}</b></td>
                                 <td>${getVal(item, 'brans')}</td>
                                 <td class="text-center">${m.adsm_uzman_doktora || 0}</td>
