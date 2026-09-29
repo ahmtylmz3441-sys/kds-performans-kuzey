@@ -3979,6 +3979,25 @@ function getMhrsRowMetrics(item, type) {
             hekim: parseNum(getVal(item, 'aktif_klinisyen_uzman_sayisi')) + parseNum(getVal(item, 'aktif_calisan_uzman_doktoralı_sayisi')),
             asistan: parseNum(getVal(item, 'asistan_sayisi')),
             oda: parseNum(getVal(item, 'toplam_aktif_poliklinik_oda_sayisi')),
+
+            // HASTANE ÖZEL SÜTUNLARI (J, L, N, O, V, W, X, Z)
+            cetvel_hekim: parseNum(getVal(item, 'cetvel_acilan_hekim_sayisi')) || parseNum(getVal(item, 'cetvel_acan_hekim_sayisi')),
+            mhrs_oda: parseNum(getVal(item, 'mhrsye_acilan_poliklinik_oda_sayisi')),
+            oda_ilk_kap: parseNum(getVal(item, 'oda_basi_ilk_muayene_gunluk_kapasite')),
+            oda_dev_kap: parseNum(getVal(item, 'oda_basi_devam_eden_muayene_gunluk_kapasite')),
+            ayaktan_aylik: parseNum(getVal(item, 'ayaktan_muayene_aylik')),
+            kontrol_aylik: parseNum(getVal(item, 'kontrol_muayene_aylik')),
+            konsultasyon_aylik: parseNum(getVal(item, 'konsultasyon_muayene_aylik')),
+            gereken_kap: parseNum(getVal(item, 'acilmasi_gereken_kapasite')),
+
+            // ADSM/ADSH ÖZEL SÜTUNLARI (H - W Arası)
+            adsm_uzman_doktora: parseNum(getVal(item, 'aktif_calisan_uzman_doktoralı_sayisi')),
+            adsm_hekim_haric: parseNum(getVal(item, 'aktif_calisan_hekim_sayisi_uzman_haric')),
+            adsm_toplam_unit: parseNum(getVal(item, 'toplam_unit_sayisi')),
+            adsm_mhrs_unit: parseNum(getVal(item, 'mhrsye_acilan_unit_sayisi')),
+            adsm_unit_aciklama: getVal(item, 'unit_sayisi_aciklama') || '-',
+            adsm_hbys: parseNum(getVal(item, 'poliklinik_randevu_hbys')),
+
             ayaktan: 0,
             toplam_muayene: ilk_ge + dev_ge,
             gunler: '-',
@@ -4219,22 +4238,86 @@ function getMhrsRowMetrics(item, type) {
     const headerEl = document.getElementById('mhrsTableHeader');
     if (headerEl) {
         if (currentMhrsVeriTipi === 'MESAİ_İÇİ') {
-            headerEl.innerHTML = `
-                <tr>
-                    <th>Kurum Adı</th>
-                    <th>Branş</th>
-                    <th class="text-center">Aktif Hekim / Uzman</th>
-                    <th class="text-center">Asistan</th>
-                    <th class="text-center">Toplam Poliklinik Oda</th>
-                    <th class="text-center">Açılan Kapasite</th>
-                    <th class="text-center">Alınan Randevu</th>
-                    <th class="text-center">Gerçekleşen Muayene</th>
-                    <th class="text-center">Genel Doluluk (%)</th>
-                    <th class="text-center">İlk Muayene Doluluk (%)</th>
-                    <th class="text-center">Devam Eden Doluluk (%)</th>
-                    <th class="text-center">Randevu Sadakat (%)</th>
-                </tr>
-            `;
+if (currentMhrsSubTab === 'H') {
+                // ==================== HASTANE TABLO BAŞLIKLARI ====================
+                headerEl.innerHTML = `
+                    <tr>
+                        <th>Kurum Adı</th>
+                        <th>Branş</th>
+                        <th class="text-center">Aktif Hekim/Uzman</th>
+                        <th class="text-center">Asistan</th>
+                        <th class="text-center">Toplam Pol. Oda</th>
+                        <th class="text-center" style="background-color:#1e293b;">Cetvel Açan Hekim</th>
+                        <th class="text-center" style="background-color:#1e293b;">MHRS Açılan Oda</th>
+                        
+                        <th class="text-center">Oda Başı İlk Kap. (Günlük)</th>
+                        <th class="text-center">Oda Başı Devam Kap. (Günlük)</th>
+                        <th class="text-center">İlk Muayene Açılan Kap.</th>
+                        <th class="text-center">Devam Eden Açılan Kap.</th>
+                        <th class="text-center fw-bold bg-primary text-white">Toplam Açılan Kapasite</th>
+                        
+                        <th class="text-center">İlk Muayene Alınan</th>
+                        <th class="text-center">Devam Eden Alınan</th>
+                        <th class="text-center fw-bold bg-warning text-dark">Toplam Alınan Randevu</th>
+                        
+                        <th class="text-center">İlk Muayene Gerçekleşen</th>
+                        <th class="text-center">Devam Eden Gerçekleşen</th>
+                        <th class="text-center fw-bold bg-success text-white">Toplam Gerçekleşen Muayene</th>
+                        
+                        <th class="text-center">Ayaktan Muayene (Aylık)</th>
+                        <th class="text-center">Kontrol Muayene (Aylık)</th>
+                        <th class="text-center">Konsültasyon (Aylık)</th>
+                        <th class="text-center fw-bold text-danger">Açılması Gereken Kapasite</th>
+                        
+                        <!-- Resim 2'deki Değişmez Oranlar -->
+                        <th class="text-center text-primary">Genel Doluluk (%)</th>
+                        <th class="text-center text-info">İlk Muayene Doluluk (%)</th>
+                        <th class="text-center text-secondary">Devam Eden Doluluk (%)</th>
+                        <th class="text-center text-success">Randevu Sadakat (%)</th>
+                    </tr>
+                `;
+            } else {
+                // ==================== ADSM / ADSH TABLO BAŞLIKLARI (H - W SÜTUNLARI) ====================
+                headerEl.innerHTML = `
+                    <tr>
+                        <th>Kurum Adı</th>
+                        <th>Branş</th>
+                        <th class="text-center">Uzman / Doktoralı Hekim</th>
+                        <th class="text-center">Hekim Sayısı (Uzman Hariç)</th>
+                        <th class="text-center">Cetvel Açan Hekim</th>
+                        <th class="text-center" style="background-color:#1e293b;">Toplam Ünit Sayısı</th>
+                        <th class="text-center" style="background-color:#1e293b;">MHRS Açılan Ünit</th>
+                        <th class="text-center">Ünit Açıklama</th>
+                        
+                        <!-- Kapasiteler -->
+                        <th class="text-center">İlk Muayene Açılan Kap.</th>
+                        <th class="text-center">Devam Eden Açılan Kap.</th>
+                        <th class="text-center fw-bold bg-primary text-white">Toplam Açılan Kapasite</th>
+                        
+                        <!-- Randevular -->
+                        <th class="text-center">İlk Muayene Alınan</th>
+                        <th class="text-center">Devam Eden Alınan</th>
+                        <th class="text-center fw-bold bg-warning text-dark">Toplam Alınan Randevu</th>
+                        
+                        <!-- Gerçekleşenler -->
+                        <th class="text-center">İlk Muayene Gerçekleşen</th>
+                        <th class="text-center">Devam Eden Gerçekleşen</th>
+                        <th class="text-center fw-bold bg-success text-white">Toplam Gerçekleşen Muayene</th>
+                        
+                        <!-- Muayene Tipleri (HBYS Dahil) -->
+                        <th class="text-center">Ayaktan Muayene</th>
+                        <th class="text-center">HBYS Poliklinik Randevu</th>
+                        <th class="text-center">Kontrol Muayene</th>
+                        <th class="text-center">Konsültasyon</th>
+                        
+                        <!-- Resim 2'deki Değişmez Oranlar -->
+                        <th class="text-center text-primary">Genel Doluluk (%)</th>
+                        <th class="text-center text-info">İlk Muayene Doluluk (%)</th>
+                        <th class="text-center text-secondary">Devam Eden Doluluk (%)</th>
+                        <th class="text-center text-success">Randevu Sadakat (%)</th>
+                    </tr>
+                `;
+            }
         } else {
             // MESAİ DIŞI / MESAİ KAYDIRMA için özelleştirilmiş tablo başlıkları
             headerEl.innerHTML = `
@@ -4273,22 +4356,80 @@ function getMhrsRowMetrics(item, type) {
                     const ilk_doluluk_orani = m.ilk_ac > 0 ? (m.ilk_al / m.ilk_ac) * 100 : 0;
                     const dev_doluluk_orani = m.dev_ac > 0 ? (m.dev_al / m.dev_ac) * 100 : 0;
 
-                    return `
-                        <tr>
-                            <td><b>${getVal(item, 'kurum_adi')}</b></td>
-                            <td>${getVal(item, 'brans')}</td>
-                            <td class="text-center">${m.hekim}</td>
-                            <td class="text-center">${m.asistan}</td>
-                            <td class="text-center">${m.oda}</td>
-                            <td class="text-center">${m.acilan.toLocaleString('tr-TR')}</td>
-                            <td class="text-center">${m.alinan.toLocaleString('tr-TR')}</td>
-                            <td class="text-center">${m.gerceklesen.toLocaleString('tr-TR')}</td>
-                            <td class="text-center fw-bold text-primary">${doluluk_orani.toFixed(1)}%</td>
-                            <td class="text-center fw-bold text-info">${ilk_doluluk_orani.toFixed(1)}%</td>
-                            <td class="text-center fw-bold text-secondary">${dev_doluluk_orani.toFixed(1)}%</td>
-                            <td class="text-center fw-bold text-success">${gerceklesme_orani.toFixed(1)}%</td>
-                        </tr>
-                    `;
+                    if (currentMhrsSubTab === 'H') {
+                        // ==================== HASTANE SATIRLARI ====================
+                        return `
+                            <tr>
+                                <td><b>${getVal(item, 'kurum_adi')}</b></td>
+                                <td>${getVal(item, 'brans')}</td>
+                                <td class="text-center">${m.hekim}</td>
+                                <td class="text-center">${m.asistan}</td>
+                                <td class="text-center">${m.oda}</td>
+                                <td class="text-center fw-bold">${m.cetvel_hekim || 0}</td>
+                                <td class="text-center fw-bold">${m.mhrs_oda || 0}</td>
+                                
+                                <td class="text-center text-muted">${m.oda_ilk_kap || 0}</td>
+                                <td class="text-center text-muted">${m.oda_dev_kap || 0}</td>
+                                <td class="text-center">${m.ilk_ac.toLocaleString('tr-TR')}</td>
+                                <td class="text-center">${m.dev_ac.toLocaleString('tr-TR')}</td>
+                                <td class="text-center fw-bold text-primary bg-light">${m.acilan.toLocaleString('tr-TR')}</td>
+                                
+                                <td class="text-center">${m.ilk_al.toLocaleString('tr-TR')}</td>
+                                <td class="text-center">${m.dev_al.toLocaleString('tr-TR')}</td>
+                                <td class="text-center fw-bold text-warning bg-light">${m.alinan.toLocaleString('tr-TR')}</td>
+                                
+                                <td class="text-center">${m.ilk_ge.toLocaleString('tr-TR')}</td>
+                                <td class="text-center">${m.dev_ge.toLocaleString('tr-TR')}</td>
+                                <td class="text-center fw-bold text-success bg-light">${m.gerceklesen.toLocaleString('tr-TR')}</td>
+                                
+                                <td class="text-center text-secondary">${m.ayaktan_aylik ? m.ayaktan_aylik.toLocaleString('tr-TR') : 0}</td>
+                                <td class="text-center text-secondary">${m.kontrol_aylik ? m.kontrol_aylik.toLocaleString('tr-TR') : 0}</td>
+                                <td class="text-center text-secondary">${m.konsultasyon_aylik ? m.konsultasyon_aylik.toLocaleString('tr-TR') : 0}</td>
+                                <td class="text-center fw-bold text-danger">${m.gereken_kap ? m.gereken_kap.toLocaleString('tr-TR') : 0}</td>
+                                
+                                <td class="text-center fw-bold text-primary">${doluluk_orani.toFixed(1)}%</td>
+                                <td class="text-center fw-bold text-info">${ilk_doluluk_orani.toFixed(1)}%</td>
+                                <td class="text-center fw-bold text-secondary">${dev_doluluk_orani.toFixed(1)}%</td>
+                                <td class="text-center fw-bold text-success">${gerceklesme_orani.toFixed(1)}%</td>
+                            </tr>
+                        `;
+                    } else {
+                        // ==================== ADSM / ADSH SATIRLARI ====================
+                        return `
+                            <tr>
+                                <td><b>${getVal(item, 'kurum_adi')}</b></td>
+                                <td>${getVal(item, 'brans')}</td>
+                                <td class="text-center">${m.adsm_uzman_doktora || 0}</td>
+                                <td class="text-center">${m.adsm_hekim_haric || 0}</td>
+                                <td class="text-center fw-bold">${m.cetvel_hekim || 0}</td>
+                                <td class="text-center fw-bold">${m.adsm_toplam_unit || 0}</td>
+                                <td class="text-center fw-bold text-primary">${m.adsm_mhrs_unit || 0}</td>
+                                <td class="text-center small text-muted">${m.adsm_unit_aciklama}</td>
+                                
+                                <td class="text-center">${m.ilk_ac.toLocaleString('tr-TR')}</td>
+                                <td class="text-center">${m.dev_ac.toLocaleString('tr-TR')}</td>
+                                <td class="text-center fw-bold text-primary bg-light">${m.acilan.toLocaleString('tr-TR')}</td>
+                                
+                                <td class="text-center">${m.ilk_al.toLocaleString('tr-TR')}</td>
+                                <td class="text-center">${m.dev_al.toLocaleString('tr-TR')}</td>
+                                <td class="text-center fw-bold text-warning bg-light">${m.alinan.toLocaleString('tr-TR')}</td>
+                                
+                                <td class="text-center">${m.ilk_ge.toLocaleString('tr-TR')}</td>
+                                <td class="text-center">${m.dev_ge.toLocaleString('tr-TR')}</td>
+                                <td class="text-center fw-bold text-success bg-light">${m.gerceklesen.toLocaleString('tr-TR')}</td>
+                                
+                                <td class="text-center text-secondary">${m.ayaktan_aylik ? m.ayaktan_aylik.toLocaleString('tr-TR') : 0}</td>
+                                <td class="text-center text-secondary">${m.adsm_hbys ? m.adsm_hbys.toLocaleString('tr-TR') : 0}</td>
+                                <td class="text-center text-secondary">${m.kontrol_aylik ? m.kontrol_aylik.toLocaleString('tr-TR') : 0}</td>
+                                <td class="text-center text-secondary">${m.konsultasyon_aylik ? m.konsultasyon_aylik.toLocaleString('tr-TR') : 0}</td>
+                                
+                                <td class="text-center fw-bold text-primary">${doluluk_orani.toFixed(1)}%</td>
+                                <td class="text-center fw-bold text-info">${ilk_doluluk_orani.toFixed(1)}%</td>
+                                <td class="text-center fw-bold text-secondary">${dev_doluluk_orani.toFixed(1)}%</td>
+                                <td class="text-center fw-bold text-success">${gerceklesme_orani.toFixed(1)}%</td>
+                            </tr>
+                        `;
+                    }
                 } else {
                     // MESAİ DIŞI / MESAİ KAYDIRMA için satır çizimi
                     const ayaktan_orani = m.toplam_muayene > 0 ? (m.ayaktan / m.toplam_muayene) * 100 : 0;
