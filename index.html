@@ -2998,6 +2998,8 @@ window.updateAylikKarsilastirmaChart = function() {
     let mhrsTalepRawData = [];
     let mhrsKapasiteRawData = [];
     let mhrsKurumlarMap = {};
+    let mhrsBransHMap = {};      // BRANŞ_H (Ana Dal / Yan Dal) Hafızası
+    let mhrsGuncelOdaMap = {};   // H_MESAİ_İÇİ En Güncel Oda Sayıları Hafızası
 
     function temizleMetinKurumAdi(hamAd) {
         if (!hamAd) return "BİLİNMEYEN KURUM";
@@ -3008,7 +3010,39 @@ window.updateAylikKarsilastirmaChart = function() {
         return ad.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
     }
 
-    // 3 Sekmeyi Birden Canlı Çeken ve Eşleştiren Fonksiyon
+    // Bakanlık MHRS Formülü: Katsayı * Oda Sayısı * 5 Gün (Haftalık)
+    function hesaplaAcilmasiGerekenKapasite(kurumAdi, bransAdi) {
+        if (!bransAdi) return 0;
+        const bUp = bransAdi.trim().toUpperCase();
+
+        // 1. En güncel poliklinik oda sayısını haritadan bul
+        let oda = mhrsGuncelOdaMap[`${kurumAdi}___${bransAdi}`] || 0;
+        if (oda <= 0) return 0;
+
+        // 2. Katsayı Tespiti (Verdiğiniz Formülün Birebir Karşılığı)
+        let katsayi = 32; // Varsayılan: Yan Dal (32)
+
+        if (bUp.includes("DERİ VE ZÜHREVİ") || bUp.includes("CİLDİYE") || bUp.includes("DERMATOLOJİ")) {
+            katsayi = 84;
+        } else if (bUp === "RUH SAĞLIĞI VE HASTALIKLARI" || bUp.includes("PSİKİYATRİ")) {
+            katsayi = 28;
+        } else if (bUp.includes("ÇOCUK VE ERGEN RUH") || bUp.includes("ÇOCUK PSİKİYATRİ")) {
+            katsayi = 16;
+        } else {
+            // BRANŞ_H sayfasındaki Ana Dal / Yan Dal türüne bak
+            const dalTuru = mhrsBransHMap[bUp] || "";
+            if (dalTuru.toLowerCase().includes("ana dal")) {
+                katsayi = 42;
+            } else {
+                katsayi = 32;
+            }
+        }
+
+        // 3. Haftalık Hesaplama (Katsayı * Oda * 5 Gün)
+        return Math.round(katsayi * oda * 5);
+    }
+
+    // 5 Sekmeyi Birden Canlı Çeken ve Eşleştiren Fonksiyon
     window.initMhrsTalepView = async function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
@@ -3021,8 +3055,8 @@ window.updateAylikKarsilastirmaChart = function() {
         container.innerHTML = `
             <div class="text-center py-5">
                 <div class="spinner-border text-warning" role="status"></div>
-                <div class="mt-3 text-dark fw-bold fs-5">Talep ve Kapasite Verileri Eşleştiriliyor...</div>
-                <div class="text-muted small">talep_veri, kurumlar ve kapasiteler sekmeleri indiriliyor, lütfen bekleyiniz...</div>
+                <div class="mt-3 text-dark fw-bold fs-5">Talep, Kapasite ve Oda Sayıları Eşleştiriliyor...</div>
+                <div class="text-muted small">talep_veri, kurumlar, kapasiteler, BRANŞ_H ve oda verileri indiriliyor, lütfen bekleyiniz...</div>
             </div>
         `;
 
@@ -3030,20 +3064,59 @@ window.updateAylikKarsilastirmaChart = function() {
             const urlTalep = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MHRS_TALEP_CONFIG.sheetTalep)}`;
             const urlKurum = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MHRS_TALEP_CONFIG.sheetKurum)}`;
             const urlKapasite = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(MHRS_TALEP_CONFIG.sheetKapasite)}`;
+            
+            // MHRS dosyasından BRANŞ_H ve H_MESAİ_İÇİ çekimi:
+            const mhrsDosyaId = '1QhpIfSB6jd44_0J36ltXK3Wb5zq5-KbfYMgNB-zv9UA';
+            const urlBransH = `https://docs.google.com/spreadsheets/d/${mhrsDosyaId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('BRANŞ_H')}`;
+            const urlHMesai = `https://docs.google.com/spreadsheets/d/${mhrsDosyaId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('H_MESAİ_İÇİ')}`;
 
-            const [resTalep, resKurum, resKapasite] = await Promise.all([
+            const [resTalep, resKurum, resKapasite, resBransH, resHMesai] = await Promise.all([
                 fetch(urlTalep),
                 fetch(urlKurum),
-                fetch(urlKapasite)
+                fetch(urlKapasite),
+                fetch(urlBransH).catch(() => null),
+                fetch(urlHMesai).catch(() => null)
             ]);
 
-            if (!resTalep.ok || !resKurum.ok) throw new Error("Google Sheets sekmelerine ulaşılamadı. Paylaşım izinlerini kontrol edin.");
+            const txtTalep = await resTalep.text();
+            const txtKurum = await resKurum.text();
+            const txtKapasite = resKapasite.ok ? await resKapasite.text() : "";
+            const txtBransH = (resBransH && resBransH.ok) ? await resBransH.text() : "";
+            const txtHMesai = (resHMesai && resHMesai.ok) ? await resHMesai.text() : "";
 
-            const [txtTalep, txtKurum, txtKapasite] = await Promise.all([
-                resTalep.text(),
-                resKurum.text(),
-                resKapasite.ok ? resKapasite.text() : ""
-            ]);
+            // BRANŞ_H Haritasını Doldur
+            mhrsBransHMap = {};
+            if (txtBransH) {
+                const rowsB = parseCSV(txtBransH);
+                for (let i = 1; i < rowsB.length; i++) {
+                    const bAdi = (rowsB[i][0] || '').trim().toUpperCase();
+                    const dalTuru = (rowsB[i][1] || '').trim();
+                    if (bAdi) mhrsBransHMap[bAdi] = dalTuru;
+                }
+            }
+
+            // H_MESAİ_İÇİ Odalarını Doldur
+            mhrsGuncelOdaMap = {};
+            if (txtHMesai) {
+                const rowsH = parseCSV(txtHMesai);
+                if (rowsH.length > 1) {
+                    const hHeaders = rowsH[0].map(h => (h || '').toString().toLowerCase().trim().replace(/[\s_]+/g, '_'));
+                    const idxKurum = hHeaders.findIndex(h => h.includes('kurum'));
+                    const idxBrans = hHeaders.findIndex(h => h.includes('brans') || h.includes('klinik'));
+                    const idxOda = hHeaders.findIndex(h => h.includes('toplam_aktif_poliklinik_oda_sayisi'));
+
+                    for (let i = 1; i < rowsH.length; i++) {
+                        const r = rowsH[i];
+                        const kAd = temizleMetinKurumAdi(r[idxKurum] || '');
+                        const bAd = (r[idxBrans] || '').trim();
+                        const odaVal = parseFloat((r[idxOda] || '0').toString().replace(',', '.')) || 0;
+
+                        if (kAd && bAd) {
+                            mhrsGuncelOdaMap[`${kAd}___${bAd}`] = odaVal;
+                        }
+                    }
+                }
+            }
 
             // 1. KURUMLAR SEKMESİNİ İŞLE
             const rowsKurum = parseCSV(txtKurum);
@@ -3277,6 +3350,7 @@ window.updateAylikKarsilastirmaChart = function() {
                                         <th class="text-center" style="width: 85px;">İlk Muayene Kap.</th>
                                         <th class="text-center" style="width: 85px;">Devam Eden Kap.</th>
                                         <th class="text-center" style="width: 90px; background-color: #1e293b;">Toplam Kapasite</th>
+                                        <th class="text-center text-warning" style="width: 100px; background-color: #0f172a;">Açılması Gereken Kap. (Haftalık)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="talepTabloBody"></tbody>
@@ -3529,23 +3603,33 @@ window.updateAylikKarsilastirmaChart = function() {
             `;
         }
 
-        // Tablo Satırları (3 Kapasite Sütunu Dahil)
+        // Tablo Satırları (Açılması Gereken Kapasite Dahil)
         const tbody = document.getElementById('talepTabloBody');
         if (tbody) {
             if (liste.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Seçilen kriterlere uygun talep/kapasite kaydı bulunamadı.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">Seçilen kriterlere uygun talep/kapasite kaydı bulunamadı.</td></tr>`;
             } else {
-                tbody.innerHTML = liste.map((item, idx) => `
-                    <tr>
-                        <td class="text-center fw-bold text-secondary">${idx + 1}</td>
-                        <td class="fw-bold text-dark"><small>${item.kurum}</small></td>
-                        <td><b>${item.brans}</b></td>
-                        <td class="text-center fw-bold text-warning">${item.talep.toLocaleString('tr-TR')}</td>
-                        <td class="text-center text-secondary">${item.ilkKap > 0 ? item.ilkKap.toLocaleString('tr-TR') : '-'}</td>
-                        <td class="text-center text-secondary">${item.devamKap > 0 ? item.devamKap.toLocaleString('tr-TR') : '-'}</td>
-                        <td class="text-center fw-bold text-dark bg-light">${item.toplamKap > 0 ? item.toplamKap.toLocaleString('tr-TR') : '-'}</td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = liste.map((item, idx) => {
+                    // Formülü her satır için canlı çalıştır:
+                    const gerekenHaftalik = hesaplaAcilmasiGerekenKapasite(item.kurum, item.brans);
+
+                    return `
+                        <tr>
+                            <td class="text-center fw-bold text-secondary">${idx + 1}</td>
+                            <td class="fw-bold text-dark"><small>${item.kurum}</small></td>
+                            <td><b>${item.brans}</b></td>
+                            <td class="text-center fw-bold text-warning">${item.talep.toLocaleString('tr-TR')}</td>
+                            <td class="text-center text-secondary">${item.ilkKap > 0 ? item.ilkKap.toLocaleString('tr-TR') : '-'}</td>
+                            <td class="text-center text-secondary">${item.devamKap > 0 ? item.devamKap.toLocaleString('tr-TR') : '-'}</td>
+                            <td class="text-center fw-bold text-dark bg-light">${item.toplamKap > 0 ? item.toplamKap.toLocaleString('tr-TR') : '-'}</td>
+                            
+                            <!-- 4. ADIM: HESAPLANAN AÇILMASI GEREKEN KAPASİTE -->
+                            <td class="text-center fw-bold text-primary" style="background-color: #f8fafc;">
+                                ${gerekenHaftalik > 0 ? gerekenHaftalik.toLocaleString('tr-TR') : '-'}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             }
         }
 
