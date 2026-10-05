@@ -3012,25 +3012,60 @@ window.updateAylikKarsilastirmaChart = function() {
 
     // Bakanlık MHRS Formülü: Katsayı * Oda Sayısı * 5 Gün (Haftalık)
     function hesaplaAcilmasiGerekenKapasite(kurumAdi, bransAdi) {
-        if (!bransAdi) return 0;
-        const bUp = bransAdi.trim().toUpperCase();
+        if (!kurumAdi || !bransAdi) return 0;
 
-        // 1. En güncel poliklinik oda sayısını haritadan bul
-        let oda = mhrsGuncelOdaMap[`${kurumAdi}___${bransAdi}`] || 0;
+        const cleanStr = (s) => (s || '').toString().replace(/[\s\-_.,()]+/g, '').toUpperCase();
+        const normKurum = cleanStr(kurumAdi);
+        const normBrans = cleanStr(bransAdi);
+
+        // 1. Oda Sayısını Bul (Esnek ve Toleranslı Arama)
+        let oda = 0;
+        
+        // Önce doğrudan anahtara bak
+        if (mhrsGuncelOdaMap[`${kurumAdi}___${bransAdi}`]) {
+            oda = mhrsGuncelOdaMap[`${kurumAdi}___${bransAdi}`];
+        } else {
+            // Harf harf tutmadıysa, içindeki kelimelerden yakala:
+            const bulunanKey = Object.keys(mhrsGuncelOdaMap).find(k => {
+                const [kKurum, kBrans] = k.split("___");
+                const cK = cleanStr(kKurum);
+                const cB = cleanStr(kBrans);
+                
+                const kurumTuttu = (cK === normKurum || cK.includes(normKurum) || normKurum.includes(cK));
+                const bransTuttu = (cB === normBrans || cB.includes(normBrans) || normBrans.includes(cB));
+                
+                return kurumTuttu && bransTuttu;
+            });
+
+            if (bulunanKey) {
+                oda = mhrsGuncelOdaMap[bulunanKey];
+            }
+        }
+
+        // Eğer o poliklinik için oda sayısı bulunamadıysa varsayılan 0
         if (oda <= 0) return 0;
 
-        // 2. Katsayı Tespiti (Verdiğiniz Formülün Birebir Karşılığı)
+        // 2. Katsayı Tespiti (Verdiğiniz Excel Formülünün Birebir Karşılığı)
         let katsayi = 32; // Varsayılan: Yan Dal (32)
 
-        if (bUp.includes("DERİ VE ZÜHREVİ") || bUp.includes("CİLDİYE") || bUp.includes("DERMATOLOJİ")) {
+        const bUp = bransAdi.trim().toUpperCase();
+
+        if (bUp.includes("DERİ") || bUp.includes("ZÜHREVİ") || bUp.includes("CİLDİYE") || bUp.includes("DERMATOLOJİ")) {
             katsayi = 84;
         } else if (bUp === "RUH SAĞLIĞI VE HASTALIKLARI" || bUp.includes("PSİKİYATRİ")) {
             katsayi = 28;
         } else if (bUp.includes("ÇOCUK VE ERGEN RUH") || bUp.includes("ÇOCUK PSİKİYATRİ")) {
             katsayi = 16;
         } else {
-            // BRANŞ_H sayfasındaki Ana Dal / Yan Dal türüne bak
-            const dalTuru = mhrsBransHMap[bUp] || "";
+            // BRANŞ_H Sekmesindeki Ana Dal / Yan Dal Türüne Bak
+            let dalTuru = mhrsBransHMap[bUp] || "";
+            
+            // Eğer tam adıyla bulamadıysa esnek ara
+            if (!dalTuru) {
+                const bulunanDalKey = Object.keys(mhrsBransHMap).find(dk => cleanStr(dk) === normBrans || normBrans.includes(cleanStr(dk)));
+                if (bulunanDalKey) dalTuru = mhrsBransHMap[bulunanDalKey];
+            }
+
             if (dalTuru.toLowerCase().includes("ana dal")) {
                 katsayi = 42;
             } else {
@@ -3038,10 +3073,9 @@ window.updateAylikKarsilastirmaChart = function() {
             }
         }
 
-        // 3. Haftalık Hesaplama (Katsayı * Oda * 5 Gün)
+        // 3. Haftalık Hesaplama (Katsayı * Oda Sayısı * 5 Gün)
         return Math.round(katsayi * oda * 5);
     }
-
     // 5 Sekmeyi Birden Canlı Çeken ve Eşleştiren Fonksiyon
     window.initMhrsTalepView = async function() {
         const container = document.getElementById('mhrsDashboardContent');
