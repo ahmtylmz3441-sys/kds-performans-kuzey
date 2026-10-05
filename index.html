@@ -3129,7 +3129,7 @@ window.updateAylikKarsilastirmaChart = function() {
                 }
             }
 
-            // H_MESAİ_İÇİ Odalarını Doldur
+            // H_MESAİ_İÇİ Odalarını Doldur (SADECE EN GÜNCEL AYIN K SÜTUNUNU ALIR)
             mhrsGuncelOdaMap = {};
             if (txtHMesai) {
                 const rowsH = parseCSV(txtHMesai);
@@ -3138,15 +3138,35 @@ window.updateAylikKarsilastirmaChart = function() {
                     const idxKurum = hHeaders.findIndex(h => h.includes('kurum'));
                     const idxBrans = hHeaders.findIndex(h => h.includes('brans') || h.includes('klinik'));
                     const idxOda = hHeaders.findIndex(h => h.includes('toplam_aktif_poliklinik_oda_sayisi'));
+                    const idxAy = hHeaders.findIndex(h => h.includes('ay')); // C sütunu
+
+                    // Türkçe Ay Sıralaması Ağırlığı
+                    const ayAgirlik = {
+                        "OCAK": 1, "ŞUBAT": 2, "SUBAT": 2, "MART": 3, "NİSAN": 4, "NISAN": 4, 
+                        "MAYIS": 5, "HAZİRAN": 6, "HAZIRAN": 6, "TEMMUZ": 7, "AĞUSTOS": 8, "AGUSTOS": 8, 
+                        "EYLÜL": 9, "EYLUL": 9, "EKİM": 10, "EKIM": 10, "KASIM": 11, "ARALIK": 12
+                    };
+
+                    const tempEnGuncelAy = {};
 
                     for (let i = 1; i < rowsH.length; i++) {
                         const r = rowsH[i];
                         const kAd = temizleMetinKurumAdi(r[idxKurum] || '');
                         const bAd = (r[idxBrans] || '').trim();
                         const odaVal = parseFloat((r[idxOda] || '0').toString().replace(',', '.')) || 0;
+                        
+                        const hamAy = (r[idxAy] || '').toString().toUpperCase().trim();
+                        const puanAy = ayAgirlik[hamAy] || 0;
 
                         if (kAd && bAd) {
-                            mhrsGuncelOdaMap[`${kAd}___${bAd}`] = odaVal;
+                            const key = `${kAd}___${bAd}`;
+                            const eskiPuan = tempEnGuncelAy[key] || 0;
+
+                            // Sadece daha güncel bir aysa oda sayısını güncelle
+                            if (puanAy >= eskiPuan) {
+                                tempEnGuncelAy[key] = puanAy;
+                                mhrsGuncelOdaMap[key] = odaVal;
+                            }
                         }
                     }
                 }
