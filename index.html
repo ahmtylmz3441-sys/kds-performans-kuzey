@@ -3010,44 +3010,82 @@ window.updateAylikKarsilastirmaChart = function() {
         return ad.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
     }
 
-    // Bakanlık MHRS Formülü: Katsayı * Oda Sayısı * 5 Gün (Haftalık)
+// Bakanlık MHRS Formülü: Katsayı * Oda Sayısı * 5 Gün (Haftalık)
     function hesaplaAcilmasiGerekenKapasite(kurumAdi, bransAdi) {
         if (!kurumAdi || !bransAdi) return 0;
 
-        const cleanStr = (s) => (s || '').toString().replace(/[\s\-_.,()]+/g, '').toUpperCase();
-        const normKurum = cleanStr(kurumAdi);
-        const normBrans = cleanStr(bransAdi);
+        // Verdiğiniz Resmi MHRS Listesine Göre Kurum Kimliği Belirleyici
+        const resmiKurumKoduBul = (ad) => {
+            const s = (ad || '').toString().toUpperCase()
+                .replace(/İ/g, 'I').replace(/Ğ/g, 'G').replace(/Ü/g, 'U')
+                .replace(/Ş/g, 'S').replace(/Ö/g, 'O').replace(/Ç/g, 'C')
+                .replace(/[^A-Z0-9]/gi, '');
 
-        // 1. Oda Sayısını Bul (Esnek ve Toleranslı Arama)
+            if (s.includes("FATIHSULTAN") || s.includes("FSM")) return "FSM";
+            if (s.includes("SANCAKTEPE") || s.includes("VARANK")) return "SANCAKTEPE";
+            if (s.includes("UMRANIYE")) return "UMRANIYE";
+            if (s.includes("GOZTEPE") || s.includes("SULEYMANYALCIN")) return "GOZTEPE";
+            if (s.includes("HAYDARPASA") || s.includes("NUMUNE")) return "HAYDARPASA";
+            if (s.includes("SIYAMIERSEK") || s.includes("ERSEK")) return "SIYAMI_ERSEK";
+            if (s.includes("SULTAN2") || s.includes("ABDULHAMID")) return "ABDULHAMID";
+            if (s.includes("BEYKOZ") && (s.includes("DEVLET") || s.includes("DH"))) return "BEYKOZ_DH";
+            if (s.includes("BEYKOZ") && (s.includes("DIS") || s.includes("ADSM"))) return "BEYKOZ_ADSM";
+            if (s.includes("CEKMEKOY")) return "CEKMEKOY";
+            if (s.includes("USKUDAR") && (s.includes("DEVLET") || s.includes("DH"))) return "USKUDAR_DH";
+            if (s.includes("USKUDAR") && (s.includes("DIS") || s.includes("ADSM"))) return "USKUDAR_ADSM";
+            if (s.includes("ZEYNEPKAMIL")) return "ZEYNEP_KAMIL";
+            if (s.includes("ERENKOY") && s.includes("FIZIK")) return "ERENKOY_FTR";
+            if (s.includes("ERENKOY") && (s.includes("RUH") || s.includes("SINIR"))) return "ERENKOY_RSH";
+            if (s.includes("SILE")) return "SILE";
+            if (s.includes("FERIHAOZ")) return "FERIHA_OZ";
+            if (s.includes("ATASEHIR")) return "ATASEHIR_ADSH";
+            
+            return s;
+        };
+
+        // Branş Adını Sadeleştiren Fonksiyon
+        const bransiSadelestir = (b) => {
+            return (b || '').toString().toUpperCase()
+                .replace(/İ/g, 'I').replace(/Ğ/g, 'G').replace(/Ü/g, 'U')
+                .replace(/Ş/g, 'S').replace(/Ö/g, 'O').replace(/Ç/g, 'C')
+                .replace(/[^A-Z0-9]/gi, '');
+        };
+
+        const hedefKurumKodu = resmiKurumKoduBul(kurumAdi);
+        const hedefBrans = bransiSadelestir(bransAdi);
+
+        // 1. Oda Sayısını Bul
         let oda = 0;
-        
-        // Önce doğrudan anahtara bak
-        if (mhrsGuncelOdaMap[`${kurumAdi}___${bransAdi}`]) {
-            oda = mhrsGuncelOdaMap[`${kurumAdi}___${bransAdi}`];
-        } else {
-            // Harf harf tutmadıysa, içindeki kelimelerden yakala:
-            const bulunanKey = Object.keys(mhrsGuncelOdaMap).find(k => {
-                const [kKurum, kBrans] = k.split("___");
-                const cK = cleanStr(kKurum);
-                const cB = cleanStr(kBrans);
-                
-                const kurumTuttu = (cK === normKurum || cK.includes(normKurum) || normKurum.includes(cK));
-                const bransTuttu = (cB === normBrans || cB.includes(normBrans) || normBrans.includes(cB));
-                
-                return kurumTuttu && bransTuttu;
-            });
 
-            if (bulunanKey) {
-                oda = mhrsGuncelOdaMap[bulunanKey];
-            }
+        const bulunanKey = Object.keys(mhrsGuncelOdaMap).find(k => {
+            const parts = k.split("___");
+            if (parts.length < 2) return false;
+
+            const kKurumKodu = resmiKurumKoduBul(parts[0]);
+            const kBrans = bransiSadelestir(parts[1]);
+
+            // Aynı Hastane mi?
+            if (kKurumKodu !== hedefKurumKodu) return false;
+
+            // Aynı Branş mı?
+            if (kBrans === hedefBrans || kBrans.includes(hedefBrans) || hedefBrans.includes(kBrans)) return true;
+
+            // Özel birleşik branşlar kontrolü:
+            if (hedefBrans.includes("KALP") && hedefBrans.includes("DAMAR") && kBrans.includes("KALP") && kBrans.includes("DAMAR")) return true;
+            if (hedefBrans.includes("COCUK") && hedefBrans.includes("GASTRO") && kBrans.includes("COCUK") && kBrans.includes("GASTRO")) return true;
+            if (hedefBrans.includes("KULAK") && kBrans.includes("KULAK")) return true;
+
+            return false;
+        });
+
+        if (bulunanKey) {
+            oda = mhrsGuncelOdaMap[bulunanKey];
         }
 
-        // Eğer o poliklinik için oda sayısı bulunamadıysa varsayılan 0
         if (oda <= 0) return 0;
 
-        // 2. Katsayı Tespiti (Verdiğiniz Excel Formülünün Birebir Karşılığı)
+        // 2. Katsayı Tespiti (Verdiğiniz Formülün Birebir Karşılığı)
         let katsayi = 32; // Varsayılan: Yan Dal (32)
-
         const bUp = bransAdi.trim().toUpperCase();
 
         if (bUp.includes("DERİ") || bUp.includes("ZÜHREVİ") || bUp.includes("CİLDİYE") || bUp.includes("DERMATOLOJİ")) {
@@ -3057,16 +3095,16 @@ window.updateAylikKarsilastirmaChart = function() {
         } else if (bUp.includes("ÇOCUK VE ERGEN RUH") || bUp.includes("ÇOCUK PSİKİYATRİ")) {
             katsayi = 16;
         } else {
-            // BRANŞ_H Sekmesindeki Ana Dal / Yan Dal Türüne Bak
+            // BRANŞ_H Sekmesindeki A:B Eşleşmesine Bak
             let dalTuru = mhrsBransHMap[bUp] || "";
-            
-            // Eğer tam adıyla bulamadıysa esnek ara
+
             if (!dalTuru) {
-                const bulunanDalKey = Object.keys(mhrsBransHMap).find(dk => cleanStr(dk) === normBrans || normBrans.includes(cleanStr(dk)));
-                if (bulunanDalKey) dalTuru = mhrsBransHMap[bulunanDalKey];
+                const dalKey = Object.keys(mhrsBransHMap).find(dk => bransiSadelestir(dk) === hedefBrans || hedefBrans.includes(bransiSadelestir(dk)));
+                if (dalKey) dalTuru = mhrsBransHMap[dalKey];
             }
 
-            if (dalTuru.toLowerCase().includes("ana dal")) {
+            // Kalp Damar, Göz, Genel Cerrahi, Ortopedi vb. Ana Dal'dır (42)
+            if (dalTuru.toLowerCase().includes("ana dal") || bUp.includes("KALP VE DAMAR") || bUp.includes("GENEL CERRAHİ") || bUp.includes("GÖZ")) {
                 katsayi = 42;
             } else {
                 katsayi = 32;
