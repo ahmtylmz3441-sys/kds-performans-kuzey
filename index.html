@@ -3129,68 +3129,79 @@ window.updateAylikKarsilastirmaChart = function() {
                 }
             }
 
-            // H_MESAİ_İÇİ Odalarını Doldur (F: Branş [idx 5], K: Oda Sayısı [idx 10] KİLİTLİ)
+            // H_MESAİ_İÇİ Odalarını Doldur (DOĞRUDAN HAFIZADAKİ VERİDEN OKUMA - SIFIR HATA)
             mhrsGuncelOdaMap = {};
-            if (txtHMesai) {
+            
+            // Eğer daha önce MHRS ekranında çekilmiş hazır veri varsa onu al, yoksa txtHMesai'den al:
+            let hMesaiListesi = (mhrsData && mhrsData.H && mhrsData.H['MESAİ_İÇİ']) ? mhrsData.H['MESAİ_İÇİ'] : [];
+
+            const ayAgirlik = {
+                "OCAK": 1, "ŞUBAT": 2, "SUBAT": 2, "MART": 3, "NİSAN": 4, "NISAN": 4, 
+                "MAYIS": 5, "HAZİRAN": 6, "HAZIRAN": 6, "TEMMUZ": 7, "AĞUSTOS": 8, "AGUSTOS": 8, 
+                "EYLÜL": 9, "EYLUL": 9, "EKİM": 10, "EKIM": 10, "KASIM": 11, "ARALIK": 12
+            };
+
+            const tempZamanSkor = {};
+
+            // 1. ÖNCELİK: mhrsData içindeki hazır nesnelerden tara
+            if (hMesaiListesi.length > 0) {
+                hMesaiListesi.forEach(item => {
+                    const hamK = (getVal(item, 'kurum_adi') || '').trim();
+                    const bAd = (getVal(item, 'brans') || '').trim();
+                    const odaVal = parseFloat((getVal(item, 'toplam_aktif_poliklinik_oda_sayisi') || '0').toString().replace(',', '.')) || 0;
+                    
+                    const yilVal = parseInt(getVal(item, 'yil')) || 2026;
+                    const hamAy = (getVal(item, 'ay') || '').toString().toUpperCase().trim();
+                    const ayPuan = ayAgirlik[hamAy] || 0;
+                    const zamanSkoru = (yilVal * 100) + ayPuan;
+
+                    if (hamK && bAd) {
+                        const kAd = temizleMetinKurumAdi(hamK);
+                        const cleanKey = `${kAd.replace(/[\s\-_.,()]+/g, '').toUpperCase()}___${bAd.replace(/[\s\-_.,()]+/g, '').toUpperCase()}`;
+                        const eskiSkor = tempZamanSkor[cleanKey] || 0;
+
+                        if (zamanSkoru >= eskiSkor) {
+                            tempZamanSkor[cleanKey] = zamanSkoru;
+                            mhrsGuncelOdaMap[`${kAd}___${bAd}`] = odaVal;
+                            mhrsGuncelOdaMap[`${hamK}___${bAd}`] = odaVal;
+                            mhrsGuncelOdaMap[cleanKey] = odaVal;
+                        }
+                    }
+                });
+            } 
+            // 2. YEDEK: txtHMesai içinden CSV olarak tara
+            else if (txtHMesai) {
                 const rowsH = parseCSV(txtHMesai);
-                if (rowsH.length > 1) {
-                    const idxKurum = 0; // A Sütunu
-                    const idxYil = 1;   // B Sütunu
-                    const idxAy = 2;    // C Sütunu
-                    const idxBrans = 5; // F Sütunu (Branş Adı)
-                    const idxOda = 10;  // K Sütunu (Oda Sayısı)
+                for (let i = 1; i < rowsH.length; i++) {
+                    const r = rowsH[i];
+                    if (r.length >= 11) {
+                        const hamK = (r[0] || '').trim();
+                        const bAd = (r[5] || '').trim(); // F sütunu
+                        const odaVal = parseFloat((r[10] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0; // K sütunu
 
-                    const ayAgirlik = {
-                        "OCAK": 1, "ŞUBAT": 2, "SUBAT": 2, "MART": 3, "NİSAN": 4, "NISAN": 4, 
-                        "MAYIS": 5, "HAZİRAN": 6, "HAZIRAN": 6, "TEMMUZ": 7, "AĞUSTOS": 8, "AGUSTOS": 8, 
-                        "EYLÜL": 9, "EYLUL": 9, "EKİM": 10, "EKIM": 10, "KASIM": 11, "ARALIK": 12
-                    };
-
-                    const tempZamanSkor = {};
-
-                    for (let i = 1; i < rowsH.length; i++) {
-                        const r = rowsH[i];
-                        const hamK = (r[idxKurum] || '').trim();
-                        const bAd = (r[idxBrans] || '').trim();
-                        
-                        // K Sütunundaki oda sayısı
-                        const rawOda = (r[idxOda] || '0').toString().replace(/\./g, '').replace(',', '.').trim();
-                        const odaVal = parseFloat(rawOda) || 0;
-                        
-                        // B Sütunu Yıl, C Sütunu Ay
-                        const yilVal = parseInt(r[idxYil]) || 2026;
-                        const hamAy = (r[idxAy] || '').toString().toUpperCase().trim();
-                        const ayPuan = ayAgirlik[hamAy] || 0;
-
-                        // Zaman Skoru: 2026 yılı 8. Ay (Ağustos) -> 202608
-                        const zamanSkoru = (yilVal * 100) + ayPuan;
+                        const yilVal = parseInt(r[1]) || 2026;
+                        const hamAy = (r[2] || '').toString().toUpperCase().trim();
+                        const zamanSkoru = (yilVal * 100) + (ayAgirlik[hamAy] || 0);
 
                         if (hamK && bAd) {
                             const kAd = temizleMetinKurumAdi(hamK);
-                            
-                            // 3 Farklı anahtarla kaydedelim ki hesaplarken hiçbir şekilde kaçamasın:
-                            const key1 = `${kAd}___${bAd}`;
-                            const key2 = `${hamK}___${bAd}`;
-                            const key3 = `${kAd.replace(/[\s\-_]+/g, '').toUpperCase()}___${bAd.replace(/[\s\-_]+/g, '').toUpperCase()}`;
-
-                            const eskiSkor = tempZamanSkor[key1] || 0;
+                            const cleanKey = `${kAd.replace(/[\s\-_.,()]+/g, '').toUpperCase()}___${bAd.replace(/[\s\-_.,()]+/g, '').toUpperCase()}`;
+                            const eskiSkor = tempZamanSkor[cleanKey] || 0;
 
                             if (zamanSkoru >= eskiSkor) {
-                                tempZamanSkor[key1] = zamanSkoru;
-                                mhrsGuncelOdaMap[key1] = odaVal;
-                                mhrsGuncelOdaMap[key2] = odaVal;
-                                mhrsGuncelOdaMap[key3] = odaVal;
+                                tempZamanSkor[cleanKey] = zamanSkoru;
+                                mhrsGuncelOdaMap[`${kAd}___${bAd}`] = odaVal;
+                                mhrsGuncelOdaMap[`${hamK}___${bAd}`] = odaVal;
+                                mhrsGuncelOdaMap[cleanKey] = odaVal;
                             }
                         }
                     }
-
-                    console.log("--> TOPLAM YÜKLENEN ODA KAYDI:", Object.keys(mhrsGuncelOdaMap).length);
-                    // Doğrudan Göztepe Gastro Kontrolü
-                    const testKey = Object.keys(mhrsGuncelOdaMap).find(k => k.includes("GÖZTEPE") && k.includes("Gastro"));
-                    console.log("--> GÖZTEPE GASTRO BULUNDU MU?:", testKey, "-> Oda:", mhrsGuncelOdaMap[testKey]);
                 }
             }
 
+            console.log("--> BAŞARIYLA YÜKLENEN ODA SAYISI:", Object.keys(mhrsGuncelOdaMap).length);
+            const testKey = Object.keys(mhrsGuncelOdaMap).find(k => k.includes("GÖZTEPE") && k.includes("Gastro"));
+            console.log("--> GÖZTEPE ODA SAYISI SON DURUM:", mhrsGuncelOdaMap[testKey]);
             // 1. KURUMLAR SEKMESİNİ İŞLE
             const rowsKurum = parseCSV(txtKurum);
             mhrsKurumlarMap = {};
