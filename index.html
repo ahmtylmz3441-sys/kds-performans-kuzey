@@ -3902,12 +3902,26 @@ window.switchMhrsSubTab = function(tabName) {
                 }
             }
 
-            const parseTarihDegeri = (str) => {
-                const pts = str.split(".");
-                if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
-                return 0;
-            };
-            aksiyonDonemListesi = [...donemSet].sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
+           // YENİ HALİ (HEM AYLARI HEM TARİHLERİ ALIR):
+const ayAgirlik = {
+    "OCAK": 1, "ŞUBAT": 2, "SUBAT": 2, "MART": 3, "NİSAN": 4, "NISAN": 4, 
+    "MAYIS": 5, "HAZİRAN": 6, "HAZIRAN": 6, "TEMMUZ": 7, "AĞUSTOS": 8, "AGUSTOS": 8, 
+    "EYLÜL": 9, "EYLUL": 9, "EKİM": 10, "EKIM": 10, "KASIM": 11, "ARALIK": 12
+};
+
+const parseDonemSirasi = (str) => {
+    if (!str) return 0;
+    const sUp = str.toUpperCase().trim();
+    // Eğer Aysa ağırlığını al (Örn: EKİM -> 10 * 100000000)
+    if (ayAgirlik[sUp]) return ayAgirlik[sUp] * 1000000000;
+    // Eğer Tarihse zaman değerini al
+    const pts = str.split(".");
+    if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
+    return 0;
+};
+
+// Hem ayları hem tarihleri alır ve en günceli en başa dizer:
+aksiyonDonemListesi = [...donemSet].filter(d => d && d.length >= 2).sort((a, b) => parseDonemSirasi(b) - parseDonemSirasi(a));
 
             // 4. POLİKLİNİK ODA SAYILARI (A: Kurum, B: Branş, C: Aktif Oda, D: MHRS Açılan Oda)
             const rowsOda = parseCSV(txtOda);
@@ -4096,7 +4110,10 @@ window.switchMhrsSubTab = function(tabName) {
             const kap = donemKapasiteMap[kapKey] || { ilk: 0, devam: 0, toplam: 0 };
 
             const katsayi = getBakanlikKatsayisi(item.brans);
-            const acilmasiGereken = Math.round(katsayi * item.aktifOda * 5);
+            // YENİ AKILLI SATIR:
+// Eğer dönem "EKİM", "KASIM" gibi bir aysa 22 İŞ GÜNÜ, haftalık tarihse 5 GÜN ile çarpar!
+const gunCarpani = /^\d{2}\.\d{2}\.\d{4}$/.test(seciliDonem) ? 5 : 22;
+const acilmasiGereken = Math.round(katsayi * item.aktifOda * 5); // ya da direkt aylık görmek için: Math.round(katsayi * item.aktifOda * gunCarpani);
             const fark = kap.toplam - acilmasiGereken;
 
             return {
