@@ -794,19 +794,18 @@
                         <button class="btn btn-sm btn-warning text-white fw-semibold px-3 py-2" style="border-radius:10px;" onclick="initMhrsDashboard()"><i class="bi bi-arrow-clockwise"></i> Verileri Canlı Yenile</button>
                     </div>
 
-                    <!-- İç Sekmeler -->
-                    <ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
-                        <li style="flex:1;">
-                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-mhrs-h-btn" onclick="window.switchMhrsSubTab('H')">🏥 Hastane</button>
-                        </li>
-                        <li style="flex:1;">
-                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-a-btn" onclick="window.switchMhrsSubTab('A')">🏛️ ADSM/ADSH</button>
-                        </li>
-                        <li style="flex:1;">
-                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-talep-btn" onclick="window.switchMhrsSubTab('TALEP')">📋 Talep Sayıları</button>
-                        </li>
-                    </ul>
-                    <li style="flex:1;">
+                    <!-- İç Sekmeler (4 Eşit Buton - Tek Satırda) -->
+<ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
+    <li style="flex: 1;">
+        <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-mhrs-h-btn" onclick="window.switchMhrsSubTab('H')">🏥 Hastane</button>
+    </li>
+    <li style="flex: 1;">
+        <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-a-btn" onclick="window.switchMhrsSubTab('A')">🏛️ ADSM/ADSH</button>
+    </li>
+    <li style="flex: 1;">
+        <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-talep-btn" onclick="window.switchMhrsSubTab('TALEP')">📋 Talep Sayıları</button>
+    </li>
+    <li style="flex: 1;">
         <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-mhrs-aksiyon-btn" onclick="window.switchMhrsSubTab('AKSIYON')">🚀 Gelecek Dönem Aksiyon</button>
     </li>
 </ul>
@@ -3758,7 +3757,7 @@ window.switchMhrsSubTab = function(tabName) {
         }
     };
     // =========================================================================
-    // GELECEK DÖNEM AKSİYON & KAPASİTE PLANLAMA MASASI MODÜLÜ
+    // GELECEK DÖNEM AKSİYON & KAPASİTE PLANLAMA MASASI MODÜLÜ (DÖNEM DESTEKLİ)
     // =========================================================================
     const MHRS_AKSIYON_CONFIG = {
         spreadsheetId: '16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw',
@@ -3770,8 +3769,9 @@ window.switchMhrsSubTab = function(tabName) {
 
     let aksiyonOdaRawData = [];
     let aksiyonBransHMap = {};
-    let aksiyonKapasiteMap = {};
+    let aksiyonKapasiteRawData = []; // Tüm dönemlerin kapasiteleri
     let aksiyonKurumlarMap = {};
+    let aksiyonDonemListesi = [];
 
     function temizleAksiyonKurumAdi(hamAd) {
         if (!hamAd) return "BİLİNMEYEN KURUM";
@@ -3858,34 +3858,40 @@ window.switchMhrsSubTab = function(tabName) {
             }
 
             // 3. KAPASİTELER (A: Kurum, B: Aksiyon, C: Klinik, D: Değer, E: Dönem)
-            aksiyonKapasiteMap = {};
+            aksiyonKapasiteRawData = [];
+            const donemSet = new Set();
             if (txtKap) {
                 const rowsKap = parseCSV(txtKap);
-                // En son/güncel dönemi bul
-                const donemler = [...new Set(rowsKap.slice(1).map(r => (r[4] || '').trim()))].filter(Boolean);
-                const enGuncelDonem = donemler[donemler.length - 1];
-
                 for (let i = 1; i < rowsKap.length; i++) {
                     const r = rowsKap[i];
                     const hamK = (r[0] || '').trim();
                     const aks = (r[1] || '').trim().toUpperCase();
                     const kl = (r[2] || '').trim();
                     const val = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
-                    const dnm = (r[4] || '').trim();
+                    let dnm = (r[4] || '').trim();
+                    if (dnm.includes(" ")) dnm = dnm.split(" ")[0].trim();
 
-                    if (hamK && kl && dnm === enGuncelDonem) {
+                    if (hamK && kl && dnm) {
+                        donemSet.add(dnm);
                         const meta = aksiyonKurumlarMap[hamK] || { temizAd: temizleAksiyonKurumAdi(hamK), anaKurumAdi: temizleAksiyonKurumAdi(hamK) };
-                        const key = `${meta.anaKurumAdi}___${kl}`;
-                        if (!aksiyonKapasiteMap[key]) aksiyonKapasiteMap[key] = { ilk: 0, devam: 0, toplam: 0 };
-
-                        if (aks === 'MUAYENE') aksiyonKapasiteMap[key].ilk += val;
-                        else if (aks.includes('DEVAM')) aksiyonKapasiteMap[key].devam += val;
-                        else aksiyonKapasiteMap[key].ilk += val;
-
-                        aksiyonKapasiteMap[key].toplam += val;
+                        aksiyonKapasiteRawData.push({
+                            kurumKonsolide: meta.anaKurumAdi,
+                            kurumTekil: meta.temizAd,
+                            brans: kl,
+                            aksiyon: aks,
+                            kapasite: val,
+                            donem: dnm
+                        });
                     }
                 }
             }
+
+            const parseTarihDegeri = (str) => {
+                const pts = str.split(".");
+                if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
+                return 0;
+            };
+            aksiyonDonemListesi = [...donemSet].sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
 
             // 4. POLİKLİNİK ODA SAYILARI (A: Kurum, B: Branş, C: Aktif Oda, D: MHRS Açılan Oda)
             const rowsOda = parseCSV(txtOda);
@@ -3953,19 +3959,26 @@ window.switchMhrsSubTab = function(tabName) {
         if (!container) return;
 
         const kurumlar = [...new Set(aksiyonOdaRawData.map(d => d.kurumKonsolide))].sort();
+        const enGuncelDonem = aksiyonDonemListesi[0] || "22.09.2026";
 
         container.innerHTML = `
-            <!-- Filtre Çubuğu -->
+            <!-- Filtre Çubuğu (DÖNEM FİLTRESİ DAHİL) -->
             <div class="p-3 bg-light rounded border mb-4 shadow-sm">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-5">
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-secondary mb-1">📅 Rapor Dönemi</label>
+                        <select id="aksiyonDonemSelect" class="form-select form-select-sm shadow-sm" onchange="window.updateAksiyonTable()">
+                            ${aksiyonDonemListesi.map(d => `<option value="${d}" ${d === enGuncelDonem ? 'selected' : ''}>${d}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label small fw-bold text-secondary mb-1">🏥 Kurum Seçiniz</label>
                         <select id="aksiyonKurumSelect" class="form-select form-select-sm shadow-sm" onchange="window.updateAksiyonTable()">
                             <option value="ALL">🌍 TÜM BÖLGE (TÜM KURUMLAR)</option>
                             ${kurumlar.map(k => `<option value="${k}">${k}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small fw-bold text-secondary mb-1">🩺 Branş Ara</label>
                         <input type="text" id="aksiyonBransInput" class="form-control form-control-sm shadow-sm" placeholder="Branş adı yazın..." onkeyup="window.updateAksiyonTable()">
                     </div>
@@ -3985,7 +3998,7 @@ window.switchMhrsSubTab = function(tabName) {
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-calendar-check text-primary me-2"></i>Gelecek Dönem Kapasite Planlama & Aksiyon Masası</h6>
-                        <small class="text-muted">Aktif Oda, Açılan Kapasite ve Bakanlık Katsayısına Göre Açılması Gereken Haftalık Kapasite</small>
+                        <small class="text-muted" id="aksiyonTabloAltBaslik">Aktif Oda, Açılan Kapasite ve Bakanlık Katsayısına Göre Açılması Gereken Haftalık Kapasite</small>
                     </div>
                     <button class="btn btn-sm btn-outline-success fw-bold" style="border-radius:8px;" onclick="window.exportTableToExcel('aksiyonTablosu', 'Gelecek_Donem_Aksiyon_Masasi')">
                         <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
@@ -4005,7 +4018,7 @@ window.switchMhrsSubTab = function(tabName) {
                                 <th class="text-center">DEVAM EDEN KAPASİTE</th>
                                 <th class="text-center fw-bold bg-secondary text-white">TOPLAM KAPASİTE</th>
                                 <th class="text-center fw-bold bg-primary text-white">AÇILMASI GEREKEN KAPASİTE</th>
-                                <th class="text-center fw-bold text-center" style="background-color: #0f172a;">KAPASİTE AÇIĞI / FAZLASI</th>
+                                <th class="text-center fw-bold" style="background-color: #0f172a;">KAPASİTE AÇIĞI / FAZLASI</th>
                             </tr>
                         </thead>
                         <tbody id="aksiyonTableBody"></tbody>
@@ -4017,11 +4030,29 @@ window.switchMhrsSubTab = function(tabName) {
         window.updateAksiyonTable();
     };
 
-    // Tabloyu ve Hesaplamaları Güncelleyen Motor
+    // Tabloyu ve Hesaplamaları Güncelleyen Motor (Dönem Korumalı)
     window.updateAksiyonTable = function() {
+        const seciliDonem = document.getElementById('aksiyonDonemSelect')?.value || (aksiyonDonemListesi[0] || '22.09.2026');
         const seciliKurum = document.getElementById('aksiyonKurumSelect')?.value || 'ALL';
         const arama = (document.getElementById('aksiyonBransInput')?.value || '').toLowerCase().trim();
 
+        const altBaslik = document.getElementById('aksiyonTabloAltBaslik');
+        if (altBaslik) altBaslik.innerHTML = `Seçili Dönem: <b>${seciliDonem}</b> | Aktif Oda, Açılan Kapasite ve Bakanlık Katsayısına Göre Haftalık Kapasite`;
+
+        // 1. Seçili döneme ait kapasiteleri haritaya dök
+        const donemKapasiteMap = {};
+        aksiyonKapasiteRawData.filter(d => d.donem === seciliDonem).forEach(k => {
+            const key = `${k.kurumKonsolide}___${k.brans}`;
+            if (!donemKapasiteMap[key]) donemKapasiteMap[key] = { ilk: 0, devam: 0, toplam: 0 };
+
+            if (k.aksiyon === 'MUAYENE') donemKapasiteMap[key].ilk += k.kapasite;
+            else if (k.aksiyon.includes('DEVAM')) donemKapasiteMap[key].devam += k.kapasite;
+            else donemKapasiteMap[key].ilk += k.kapasite;
+
+            donemKapasiteMap[key].toplam += k.kapasite;
+        });
+
+        // 2. Oda verilerini kurum filtresine göre süz
         let filtered = aksiyonOdaRawData;
         if (seciliKurum !== 'ALL') {
             filtered = filtered.filter(d => d.kurumKonsolide === seciliKurum);
@@ -4040,7 +4071,7 @@ window.switchMhrsSubTab = function(tabName) {
 
         let satirlar = Object.values(odaGrupMap).map(item => {
             const kapKey = `${item.kurum}___${item.brans}`;
-            const kap = aksiyonKapasiteMap[kapKey] || { ilk: 0, devam: 0, toplam: 0 };
+            const kap = donemKapasiteMap[kapKey] || { ilk: 0, devam: 0, toplam: 0 };
 
             // Formül: Katsayı * Aktif Oda Sayısı * 5 Gün (Haftalık)
             const katsayi = getBakanlikKatsayisi(item.brans);
@@ -4065,7 +4096,7 @@ window.switchMhrsSubTab = function(tabName) {
             satirlar = satirlar.filter(s => s.brans.toLowerCase().includes(arama) || s.kurum.toLowerCase().includes(arama));
         }
 
-        // En büyük kapasite açığı olandan küçüğe sırala (Açık olanlar en üstte)
+        // En büyük kapasite açığı olandan küçüğe sırala
         satirlar.sort((a, b) => a.fark - b.fark);
 
         // Toplam KPI Hesaplamaları
@@ -4090,7 +4121,7 @@ window.switchMhrsSubTab = function(tabName) {
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
                         <div class="text-secondary small fw-bold">AÇILAN MEVCUT KAPASİTE</div>
                         <div class="fs-3 fw-bold text-primary">${tToplamKap.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">İlk Muayene + Takip Toplamı</div>
+                        <div class="text-muted small">İlk Muayene + Takip Toplamı (${seciliDonem})</div>
                     </div>
                 </div>
                 <div class="col-md-3">
