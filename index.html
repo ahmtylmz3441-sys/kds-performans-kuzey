@@ -4071,6 +4071,10 @@ window.switchMhrsSubTab = function(tabName) {
         const seciliKurum = document.getElementById('aksiyonKurumSelect')?.value || 'ALL';
         const arama = (document.getElementById('aksiyonBransInput')?.value || '').toLowerCase().trim();
 
+        // EKİM seçilmişse 22 ile, tarih seçilmişse 5 ile çarpar:
+        const isEkim = seciliDonem.toUpperCase().includes('EKİ') || seciliDonem.toUpperCase().includes('EKI');
+        const gunCarpani = isEkim ? 22 : 5;
+
         const altBaslik = document.getElementById('aksiyonTabloAltBaslik');
         if (altBaslik) altBaslik.innerHTML = `Seçili Kapasite Dönemi: <b>${seciliDonem}</b> | Bağlı Binalar Dahil Planlama`;
 
@@ -4107,7 +4111,7 @@ window.switchMhrsSubTab = function(tabName) {
             const kap = donemKapasiteMap[kapKey] || { ilk: 0, devam: 0, toplam: 0 };
 
             const katsayi = getBakanlikKatsayisi(item.brans);
-            const acilmasiGereken = Math.round(katsayi * item.aktifOda * 5);
+            const acilmasiGereken = Math.round(katsayi * item.aktifOda * gunCarpani);
             
             const kapasiteVarMi = (kap.toplam > 0);
             const fark = kapasiteVarMi ? (kap.toplam - acilmasiGereken) : null;
@@ -4159,7 +4163,7 @@ window.switchMhrsSubTab = function(tabName) {
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
                         <div class="text-secondary small fw-bold">AÇILMASI GEREKEN KAPASİTE</div>
                         <div class="fs-3 fw-bold text-indigo" style="color:#4f46e5;">${tGerekenKap.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">Bakanlık Haftalık Hedefi</div>
+                        <div class="text-muted small">Bakanlık ${isEkim ? 'Aylık (22 İş Günü)' : 'Haftalık (5 Gün)'} Hedefi</div>
                     </div>
                 </div>
                 <div class="col-md-3">
