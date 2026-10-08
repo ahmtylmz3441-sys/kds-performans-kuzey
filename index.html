@@ -3756,8 +3756,8 @@ window.switchMhrsSubTab = function(tabName) {
             });
         }
     };
-    // =========================================================================
-    // GELECEK DÖNEM AKSİYON MODÜLÜ (TAM KONSOLİDE & HASSAS FORMÜL MOTORU)
+// =========================================================================
+    // GELECEK DÖNEM AKSİYON MODÜLÜ (SADECE KAPASİTELER VE ODA SAYILARI KİLİTLİ)
     // =========================================================================
     const MHRS_AKSIYON_CONFIG = {
         spreadsheetId: '16EbjMUUA1a2wJD0pFgIZeOl2SCqibiNUYRldU5r1zKw',
@@ -3782,7 +3782,6 @@ window.switchMhrsSubTab = function(tabName) {
         return ad.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
     }
 
-    // Metinleri harf harf eşleştirmek için temizleyen yardımcı
     const normText = (s) => (s || '')
         .toString()
         .replace(/İ/g, 'I').replace(/ı/g, 'I').replace(/Ğ/g, 'G').replace(/ğ/g, 'G')
@@ -3791,20 +3790,16 @@ window.switchMhrsSubTab = function(tabName) {
         .replace(/[^A-Z0-9]/gi, '')
         .toUpperCase();
 
+    // Sadece Kapasiteler, Odalar, Branş_H ve Kurumları Çeken Fonksiyon
     window.initMhrsAksiyonView = async function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
-
-        if (aksiyonOdaRawData.length > 0) {
-            window.renderAksiyonLayout();
-            return;
-        }
 
         container.innerHTML = `
             <div class="text-center py-5">
                 <div class="spinner-border text-primary" role="status"></div>
                 <div class="mt-3 text-dark fw-bold fs-5">Gelecek Dönem Aksiyon Masası Hazırlanıyor...</div>
-                <div class="text-muted small">Oda sayıları, bağlı ek binalar ve kapasiteler konsolide ediliyor...</div>
+                <div class="text-muted small">Kapasiteler ve oda verileri taranıyor...</div>
             </div>
         `;
 
@@ -3817,20 +3812,22 @@ window.switchMhrsSubTab = function(tabName) {
             const [resOda, resBransH, resKap, resKurum] = await Promise.all([
                 fetch(urlOda),
                 fetch(urlBransH),
-                fetch(urlKapasite).catch(() => null),
+                fetch(urlKapasite),
                 fetch(urlKurum).catch(() => null)
             ]);
 
-            if (!resOda.ok || !resBransH.ok) throw new Error("Gerekli sekmelere ulaşılamadı. Lütfen paylaşım izinlerini kontrol edin.");
+            if (!resOda.ok || !resBransH.ok || !resKap.ok) {
+                throw new Error("Gerekli sekmelere ulaşılamadı. Lütfen paylaşım izinlerini kontrol edin.");
+            }
 
             const [txtOda, txtBransH, txtKap, txtKurum] = await Promise.all([
                 resOda.text(),
                 resBransH.text(),
-                resKap && resKap.ok ? resKap.text() : "",
+                resKap.text(),
                 resKurum && resKurum.ok ? resKurum.text() : ""
             ]);
 
-            // 1. KURUMLAR EŞLEŞTİRMESİ (Sınıf 1..20 ve Ana Kurum 'A' Tespiti)
+            // 1. KURUMLAR EŞLEŞTİRMESİ
             aksiyonKurumlarMap = {};
             const sinifAnaAd = {};
             if (txtKurum) {
@@ -3853,12 +3850,11 @@ window.switchMhrsSubTab = function(tabName) {
                         temizAd: temiz,
                         anaKurumAdi: sinifAnaAd[sinif] || temiz
                     };
-                    // Temiz adıyla da kaydet
                     aksiyonKurumlarMap[temiz] = aksiyonKurumlarMap[hamAd];
                 }
             }
 
-            // 2. BRANŞ_H (A: Uzmanlık Alanı, B: Sınıflandırma - Ana Dal / Yan Dal)
+            // 2. BRANŞ_H (A: Uzmanlık, B: Sınıflandırma)
             aksiyonBransHMap = {};
             const rowsB = parseCSV(txtBransH);
             for (let i = 1; i < rowsB.length; i++) {
@@ -3870,64 +3866,55 @@ window.switchMhrsSubTab = function(tabName) {
                 }
             }
 
-            // 3. KAPASİTELER (A: Kurum, B: Aksiyon, C: Klinik, D: Değer, E: Dönem)
+            // 3. KAPASİTELER SEKMESİ (DÖNEMLER SADECE BURADAN GELECEK!)
             aksiyonKapasiteRawData = [];
             const donemSet = new Set();
-            if (txtKap) {
-                const rowsKap = parseCSV(txtKap);
-                for (let i = 1; i < rowsKap.length; i++) {
-                    const r = rowsKap[i];
-                    const hamK = (r[0] || '').trim();
-                    const aks = (r[1] || '').trim().toUpperCase();
-                    const kl = (r[2] || '').trim();
-                    const val = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
-                    let dnm = (r[4] || '').trim();
-                    if (dnm.includes(" ")) dnm = dnm.split(" ")[0].trim();
+            const rowsKap = parseCSV(txtKap);
 
-                    if (hamK && kl && dnm) {
-                        donemSet.add(dnm);
-                        const meta = aksiyonKurumlarMap[hamK] || aksiyonKurumlarMap[temizleAksiyonKurumAdi(hamK)] || {
-                            anaKurumAdi: temizleAksiyonKurumAdi(hamK),
-                            temizAd: temizleAksiyonKurumAdi(hamK)
-                        };
-                        aksiyonKapasiteRawData.push({
-                            kurumKonsolide: meta.anaKurumAdi,
-                            kurumTekil: meta.temizAd,
-                            brans: kl,
-                            aksiyon: aks,
-                            kapasite: val,
-                            donem: dnm
-                        });
-                    }
+            for (let i = 1; i < rowsKap.length; i++) {
+                const r = rowsKap[i];
+                const hamK = (r[0] || '').trim();
+                const aks = (r[1] || '').trim().toUpperCase();
+                const kl = (r[2] || '').trim();
+                const val = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
+                
+                // E Sütunu (Dönem: "EKİM", "KASIM", "05.10.2026" vb.)
+                let dnm = (r[4] || '').toString().trim();
+                if (dnm.includes(" ")) dnm = dnm.split(" ")[0].trim();
+
+                if (dnm && !dnm.toUpperCase().includes("DÖNEM") && !dnm.toUpperCase().includes("DONEM")) {
+                    donemSet.add(dnm); // SADECE KAPASİTELERDEKİ DÖNEMLER EKLENİR!
+                }
+
+                if (hamK && kl && dnm) {
+                    const meta = aksiyonKurumlarMap[hamK] || aksiyonKurumlarMap[temizleAksiyonKurumAdi(hamK)] || {
+                        anaKurumAdi: temizleAksiyonKurumAdi(hamK),
+                        temizAd: temizleAksiyonKurumAdi(hamK)
+                    };
+                    aksiyonKapasiteRawData.push({
+                        kurumKonsolide: meta.anaKurumAdi,
+                        kurumTekil: meta.temizAd,
+                        brans: kl,
+                        aksiyon: aks,
+                        kapasite: val,
+                        donem: dnm
+                    });
                 }
             }
 
-           // YENİ HALİ (HEM AYLARI HEM TARİHLERİ ALIR):
-const ayAgirlik = {
-    "OCAK": 1, "ŞUBAT": 2, "SUBAT": 2, "MART": 3, "NİSAN": 4, "NISAN": 4, 
-    "MAYIS": 5, "HAZİRAN": 6, "HAZIRAN": 6, "TEMMUZ": 7, "AĞUSTOS": 8, "AGUSTOS": 8, 
-    "EYLÜL": 9, "EYLUL": 9, "EKİM": 10, "EKIM": 10, "KASIM": 11, "ARALIK": 12
-};
+            // Kapasitelerden gelen dönemleri sırala (EKİM gibi aylar en başa)
+            aksiyonDonemListesi = Array.from(donemSet).sort((a, b) => {
+                const aIsAy = !a.includes(".");
+                const bIsAy = !b.includes(".");
+                if (aIsAy && !bIsAy) return -1;
+                if (!aIsAy && bIsAy) return 1;
+                return b.localeCompare(a);
+            });
 
-const parseDonemSirasi = (str) => {
-    if (!str) return 0;
-    const sUp = str.toUpperCase().trim();
-    // Eğer Aysa ağırlığını al (Örn: EKİM -> 10 * 100000000)
-    if (ayAgirlik[sUp]) return ayAgirlik[sUp] * 1000000000;
-    // Eğer Tarihse zaman değerini al
-    const pts = str.split(".");
-    if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
-    return 0;
-};
-
-// Hem ayları hem tarihleri alır ve en günceli en başa dizer:
-aksiyonDonemListesi = [...donemSet].filter(d => d && d.length >= 2).sort((a, b) => parseDonemSirasi(b) - parseDonemSirasi(a));
-
-            // 4. POLİKLİNİK ODA SAYILARI (A: Kurum, B: Branş, C: Aktif Oda, D: MHRS Açılan Oda)
+            // 4. POLİKLİNİK ODA SAYILARI (A: Kurum, B: Branş, C: Aktif Oda, D: MHRS Oda)
             const rowsOda = parseCSV(txtOda);
-            if (rowsOda.length <= 1) throw new Error("poliklinik_oda_sayilari sekmesinde veri bulunamadı!");
-
             aksiyonOdaRawData = [];
+
             for (let i = 1; i < rowsOda.length; i++) {
                 const r = rowsOda[i];
                 const hamK = (r[0] || '').trim();
@@ -3943,7 +3930,7 @@ aksiyonDonemListesi = [...donemSet].filter(d => d && d.length >= 2).sort((a, b) 
 
                     aksiyonOdaRawData.push({
                         kurumTekil: meta.temizAd,
-                        kurumKonsolide: meta.anaKurumAdi, // Ana Binaya Bağla
+                        kurumKonsolide: meta.anaKurumAdi,
                         brans: brans,
                         aktifOda: aktifOda,
                         mhrsOda: mhrsOda
@@ -3959,62 +3946,56 @@ aksiyonDonemListesi = [...donemSet].filter(d => d && d.length >= 2).sort((a, b) 
                 <div class="alert alert-danger p-4 my-3 text-center" style="border-radius:14px;">
                     <h5 class="fw-bold"><i class="bi bi-x-circle-fill text-danger me-2"></i>Aksiyon Verisi Alınamadı</h5>
                     <p class="mb-2">${err.message}</p>
-                    <button class="btn btn-sm btn-outline-danger mt-2" onclick="aksiyonOdaRawData=[]; window.initMhrsAksiyonView()">Tekrar Dene</button>
+                    <button class="btn btn-sm btn-outline-danger mt-2" onclick="window.initMhrsAksiyonView()">Tekrar Dene</button>
                 </div>
             `;
         }
     };
 
-    // Bakanlık Katsayı Motoru (Formülünüzün Birebir Karşılığı)
     function getBakanlikKatsayisi(bransAdi) {
         if (!bransAdi) return 32;
         const bUp = bransAdi.trim().toUpperCase();
         const nB = normText(bransAdi);
 
-        // 1. Özel İstisna Branşlar
         if (bUp.includes("DERİ") || bUp.includes("ZÜHREVİ") || bUp.includes("CİLDİYE") || bUp.includes("DERMATOLOJİ")) return 84;
         if (bUp === "RUH SAĞLIĞI VE HASTALIKLARI" || bUp.includes("PSİKİYATRİ")) return 28;
         if (bUp.includes("ÇOCUK VE ERGEN RUH") || bUp.includes("ÇOCUK PSİKİYATRİ")) return 16;
 
-        // 2. BRANŞ_H Sekmesindeki Değer
         let dalTuru = aksiyonBransHMap[bUp] || aksiyonBransHMap[nB] || "";
-
         if (!dalTuru) {
-            // Eşleşme arayüzü (Göz, Dahiliye, Ortopedi, KBB vb.)
             const bulunanKey = Object.keys(aksiyonBransHMap).find(k => k === nB || nB.includes(k) || k.includes(nB));
             if (bulunanKey) dalTuru = aksiyonBransHMap[bulunanKey];
         }
 
         if (dalTuru.toLowerCase().includes("ana dal") || bUp.includes("GÖZ") || bUp.includes("GENEL CERRAHİ") || bUp.includes("KALP VE DAMAR") || bUp.includes("İÇ HASTALIKLARI") || bUp.includes("ORTOPEDİ")) {
-            return 42; // Ana Dal
+            return 42;
         }
 
-        return 32; // Yan Dal
+        return 32;
     }
 
-    // Arayüzü Çizen Motor
+    // Arayüzü Çizen Motor (SADECE KAPASİTELER DÖNEMLERİYLE BESLENİR)
     window.renderAksiyonLayout = function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
 
-        // Sadece Konsolide Ana Kurumları Listele
         const kurumlar = [...new Set(aksiyonOdaRawData.map(d => d.kurumKonsolide))].sort();
-        const enGuncelDonem = aksiyonDonemListesi[0] || "22.09.2026";
+        const varsayilanDonem = aksiyonDonemListesi[0] || "EKİM";
 
         container.innerHTML = `
-            <!-- Filtre Çubuğu -->
             <div class="p-3 bg-light rounded border mb-4 shadow-sm">
                 <div class="row g-3 align-items-end">
+                    <!-- SADECE KAPASİTELER SEKME DÖNEMLERİ -->
                     <div class="col-md-3">
-                        <label class="form-label small fw-bold text-secondary mb-1">📅 Rapor Dönemi</label>
+                        <label class="form-label small fw-bold text-secondary mb-1">📅 Kapasite Dönemi</label>
                         <select id="aksiyonDonemSelect" class="form-select form-select-sm shadow-sm" onchange="window.updateAksiyonTable()">
-                            ${aksiyonDonemListesi.map(d => `<option value="${d}" ${d === enGuncelDonem ? 'selected' : ''}>${d}</option>`).join('')}
+                            ${aksiyonDonemListesi.map(d => `<option value="${d}" ${d === varsayilanDonem ? 'selected' : ''}>${d}</option>`).join('')}
                         </select>
                     </div>
                     <div class="col-md-5">
-                        <label class="form-label small fw-bold text-secondary mb-1">🏥 Ana Kurum Seçiniz (Bağlı Ek Binalar Dahil)</label>
+                        <label class="form-label small fw-bold text-secondary mb-1">🏥 Ana Kurum Seçiniz (Konsolide)</label>
                         <select id="aksiyonKurumSelect" class="form-select form-select-sm shadow-sm" onchange="window.updateAksiyonTable()">
-                            <option value="ALL">🌍 TÜM BÖLGE (TÜM ANA KURUMLAR KONSOLİDE)</option>
+                            <option value="ALL">🌍 TÜM BÖLGE (TÜM ANA KURUMLAR)</option>
                             ${kurumlar.map(k => `<option value="${k}">${k}</option>`).join('')}
                         </select>
                     </div>
@@ -4025,15 +4006,13 @@ aksiyonDonemListesi = [...donemSet].filter(d => d && d.length >= 2).sort((a, b) 
                 </div>
             </div>
 
-            <!-- Üst KPI Kartları -->
             <div class="row g-3 mb-4" id="aksiyonKpiKartlari"></div>
 
-            <!-- Aksiyon Tablosu -->
             <div class="border rounded p-3 bg-white shadow-sm mb-4" style="border-radius:14px !important; border-top: 4px solid #4f46e5 !important;">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-calendar-check text-primary me-2"></i>Gelecek Dönem Kapasite Planlama & Aksiyon Masası</h6>
-                        <small class="text-muted" id="aksiyonTabloAltBaslik">Aktif Oda, Açılan Kapasite ve Bakanlık Formülüne Göre Açılması Gereken Haftalık Kapasite</small>
+                        <small class="text-muted" id="aksiyonTabloAltBaslik">Aktif Oda, Açılan Kapasite ve Bakanlık Formülüne Göre Açılması Gereken Kapasite</small>
                     </div>
                     <button class="btn btn-sm btn-outline-success fw-bold" style="border-radius:8px;" onclick="window.exportTableToExcel('aksiyonTablosu', 'Gelecek_Donem_Aksiyon_Masasi')">
                         <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
@@ -4065,16 +4044,15 @@ aksiyonDonemListesi = [...donemSet].filter(d => d && d.length >= 2).sort((a, b) 
         window.updateAksiyonTable();
     };
 
-    // Tabloyu ve Konsolide Hesaplamaları Güncelleyen Motor
     window.updateAksiyonTable = function() {
-        const seciliDonem = document.getElementById('aksiyonDonemSelect')?.value || (aksiyonDonemListesi[0] || '22.09.2026');
+        const seciliDonem = document.getElementById('aksiyonDonemSelect')?.value || (aksiyonDonemListesi[0] || 'EKİM');
         const seciliKurum = document.getElementById('aksiyonKurumSelect')?.value || 'ALL';
         const arama = (document.getElementById('aksiyonBransInput')?.value || '').toLowerCase().trim();
 
         const altBaslik = document.getElementById('aksiyonTabloAltBaslik');
-        if (altBaslik) altBaslik.innerHTML = `Seçili Dönem: <b>${seciliDonem}</b> | Bağlı Binalar Dahil Konsolide Planlama`;
+        if (altBaslik) altBaslik.innerHTML = `Seçili Kapasite Dönemi: <b>${seciliDonem}</b> | Bağlı Binalar Dahil Planlama`;
 
-        // 1. Seçili döneme ait kapasiteleri konsolide topla (KurumKonsolide + Branş)
+        // SADECE SEÇİLEN KAPASİTE DÖNEMİNİ AL (Örn: "EKİM")
         const donemKapasiteMap = {};
         aksiyonKapasiteRawData.filter(d => d.donem === seciliDonem).forEach(k => {
             const key = `${k.kurumKonsolide}___${k.brans}`;
@@ -4087,13 +4065,11 @@ aksiyonDonemListesi = [...donemSet].filter(d => d && d.length >= 2).sort((a, b) 
             donemKapasiteMap[key].toplam += k.kapasite;
         });
 
-        // 2. Oda verilerini kurum filtresine göre süz
         let filtered = aksiyonOdaRawData;
         if (seciliKurum !== 'ALL') {
             filtered = filtered.filter(d => d.kurumKonsolide === seciliKurum);
         }
 
-        // 3. Konsolide Toplama (Ana bina ve ek binaların odalarını aynı branş altında topla)
         const odaGrupMap = {};
         filtered.forEach(r => {
             const key = `${r.kurumKonsolide}___${r.brans}`;
@@ -4104,17 +4080,15 @@ aksiyonDonemListesi = [...donemSet].filter(d => d && d.length >= 2).sort((a, b) 
             odaGrupMap[key].mhrsOda += r.mhrsOda;
         });
 
-        // 4. Formül Hesaplama: Katsayı * (Konsolide Aktif Oda) * 5 Gün
         let satirlar = Object.values(odaGrupMap).map(item => {
             const kapKey = `${item.kurum}___${item.brans}`;
             const kap = donemKapasiteMap[kapKey] || { ilk: 0, devam: 0, toplam: 0 };
 
             const katsayi = getBakanlikKatsayisi(item.brans);
-            // YENİ AKILLI SATIR:
-// Eğer dönem "EKİM", "KASIM" gibi bir aysa 22 İŞ GÜNÜ, haftalık tarihse 5 GÜN ile çarpar!
-const gunCarpani = /^\d{2}\.\d{2}\.\d{4}$/.test(seciliDonem) ? 5 : 22;
-const acilmasiGereken = Math.round(katsayi * item.aktifOda * 5); // ya da direkt aylık görmek için: Math.round(katsayi * item.aktifOda * gunCarpani);
-            const fark = kap.toplam - acilmasiGereken;
+            const acilmasiGereken = Math.round(katsayi * item.aktifOda * 5);
+            
+            const kapasiteVarMi = (kap.toplam > 0);
+            const fark = kapasiteVarMi ? (kap.toplam - acilmasiGereken) : null;
 
             return {
                 kurum: item.kurum,
@@ -4125,26 +4099,23 @@ const acilmasiGereken = Math.round(katsayi * item.aktifOda * 5); // ya da direkt
                 devamKap: kap.devam,
                 toplamKap: kap.toplam,
                 acilmasiGereken: acilmasiGereken,
-                fark: fark
+                fark: fark,
+                kapasiteVarMi: kapasiteVarMi
             };
         });
 
-        // Arama Filtresi
         if (arama) {
             satirlar = satirlar.filter(s => s.brans.toLowerCase().includes(arama) || s.kurum.toLowerCase().includes(arama));
         }
 
-        // Kapasite açığı en çok olandan sırala
-        satirlar.sort((a, b) => a.fark - b.fark);
+        satirlar.sort((a, b) => (a.fark !== null ? a.fark : 999999) - (b.fark !== null ? b.fark : 999999));
 
-        // Toplam KPI Hesaplamaları
         const tAktifOda = satirlar.reduce((s, v) => s + v.aktifOda, 0);
         const tMhrsOda = satirlar.reduce((s, v) => s + v.mhrsOda, 0);
         const tToplamKap = satirlar.reduce((s, v) => s + v.toplamKap, 0);
         const tGerekenKap = satirlar.reduce((s, v) => s + v.acilmasiGereken, 0);
         const tFark = tToplamKap - tGerekenKap;
 
-        // KPI Kartlarını Bas
         const kpiEl = document.getElementById('aksiyonKpiKartlari');
         if (kpiEl) {
             kpiEl.innerHTML = `
@@ -4159,7 +4130,7 @@ const acilmasiGereken = Math.round(katsayi * item.aktifOda * 5); // ya da direkt
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
                         <div class="text-secondary small fw-bold">AÇILAN MEVCUT KAPASİTE</div>
                         <div class="fs-3 fw-bold text-primary">${tToplamKap.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">İlk Muayene + Takip Toplamı (${seciliDonem})</div>
+                        <div class="text-muted small">Seçili Dönem Toplamı (${seciliDonem})</div>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -4181,20 +4152,21 @@ const acilmasiGereken = Math.round(katsayi * item.aktifOda * 5); // ya da direkt
             `;
         }
 
-        // Tabloyu Doldur
         const tbody = document.getElementById('aksiyonTableBody');
         if (tbody) {
             if (satirlar.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Kriterlere uygun poliklinik planlama kaydı bulunamadı.</td></tr>';
             } else {
                 tbody.innerHTML = satirlar.map((r, idx) => {
-                    let farkBadge = '';
-                    if (r.fark < 0) {
-                        farkBadge = `<span class="badge bg-danger-subtle text-danger border border-danger fw-bold">${r.fark.toLocaleString('tr-TR')} (Açık)</span>`;
-                    } else if (r.fark > 0) {
-                        farkBadge = `<span class="badge bg-success-subtle text-success border border-success fw-bold">+${r.fark.toLocaleString('tr-TR')} (Fazla)</span>`;
-                    } else {
-                        farkBadge = `<span class="badge bg-secondary">0 (Tam Hedef)</span>`;
+                    let farkBadge = '<span class="text-muted">-</span>';
+                    if (r.kapasiteVarMi && r.fark !== null) {
+                        if (r.fark < 0) {
+                            farkBadge = `<span class="badge bg-danger-subtle text-danger border border-danger fw-bold">${r.fark.toLocaleString('tr-TR')} (Açık)</span>`;
+                        } else if (r.fark > 0) {
+                            farkBadge = `<span class="badge bg-success-subtle text-success border border-success fw-bold">+${r.fark.toLocaleString('tr-TR')} (Fazla)</span>`;
+                        } else {
+                            farkBadge = `<span class="badge bg-secondary">0 (Tam Hedef)</span>`;
+                        }
                     }
 
                     return `
