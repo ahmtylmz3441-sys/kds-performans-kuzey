@@ -3866,10 +3866,17 @@ window.switchMhrsSubTab = function(tabName) {
                 }
             }
 
-            // 3. KAPASİTELER SEKMESİ (DÖNEMLER SADECE BURADAN GELECEK!)
+// 3. KAPASİTELER SEKMESİ (TAM DİNAMİK VE DOĞRUDAN DÖNEM TESPİTİ)
             aksiyonKapasiteRawData = [];
             const donemSet = new Set();
             const rowsKap = parseCSV(txtKap);
+
+            console.log("--> KAPASİTELER TOPLAM SATIR SAYISI:", rowsKap.length);
+            if (rowsKap.length > 1) {
+                console.log("--> KAPASİTELER 1. SATIR BAŞLIKLARI:", rowsKap[0]);
+                console.log("--> KAPASİTELER 2. SATIR VERİLERİ:", rowsKap[1]);
+                console.log("--> KAPASİTELER EN SON SATIR VERİSİ:", rowsKap[rowsKap.length - 1]);
+            }
 
             for (let i = 1; i < rowsKap.length; i++) {
                 const r = rowsKap[i];
@@ -3878,12 +3885,25 @@ window.switchMhrsSubTab = function(tabName) {
                 const kl = (r[2] || '').trim();
                 const val = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
                 
-                // E Sütunu (Dönem: "EKİM", "KASIM", "05.10.2026" vb.)
-                let dnm = (r[4] || '').toString().trim();
-                if (dnm.includes(" ")) dnm = dnm.split(" ")[0].trim();
+                // Satırdaki tüm hücreleri tara: İçinde "EKİM", "KASIM" veya tarih geçen hücreyi yakala!
+                let dnm = "";
+                for (let c = 0; c < r.length; c++) {
+                    const cellVal = (r[c] || '').toString().trim();
+                    const upVal = cellVal.toUpperCase();
+                    if (upVal === "EKİM" || upVal === "EKIM" || upVal === "KASIM" || upVal === "EYLÜL" || /^\d{2}\.\d{2}\.\d{4}$/.test(cellVal)) {
+                        dnm = cellVal;
+                        break;
+                    }
+                }
 
-                if (dnm && !dnm.toUpperCase().includes("DÖNEM") && !dnm.toUpperCase().includes("DONEM")) {
-                    donemSet.add(dnm); // SADECE KAPASİTELERDEKİ DÖNEMLER EKLENİR!
+                // Eğer özel taramada bulamadıysa varsayılan E sütununu (index 4) al:
+                if (!dnm) {
+                    dnm = (r[4] || '').toString().trim();
+                    if (dnm.includes(" ")) dnm = dnm.split(" ")[0].trim();
+                }
+
+                if (dnm && !dnm.toUpperCase().includes("DÖNEM")) {
+                    donemSet.add(dnm);
                 }
 
                 if (hamK && kl && dnm) {
@@ -3902,14 +3922,16 @@ window.switchMhrsSubTab = function(tabName) {
                 }
             }
 
-            // Kapasitelerden gelen dönemleri sırala (EKİM gibi aylar en başa)
+            // DÖNEM LİSTESİ:
             aksiyonDonemListesi = Array.from(donemSet).sort((a, b) => {
-                const aIsAy = !a.includes(".");
-                const bIsAy = !b.includes(".");
-                if (aIsAy && !bIsAy) return -1;
-                if (!aIsAy && bIsAy) return 1;
+                const aUp = a.toUpperCase();
+                const bUp = b.toUpperCase();
+                if (aUp.includes("EKİ") || aUp.includes("EKI")) return -1;
+                if (bUp.includes("EKİ") || bUp.includes("EKI")) return 1;
                 return b.localeCompare(a);
             });
+
+            console.log("--> BULUNAN TÜM DÖNEMLER LİSTESİ:", aksiyonDonemListesi);
 
             // 4. POLİKLİNİK ODA SAYILARI (A: Kurum, B: Branş, C: Aktif Oda, D: MHRS Oda)
             const rowsOda = parseCSV(txtOda);
