@@ -3976,23 +3976,52 @@ window.switchMhrsSubTab = function(tabName) {
 
     function getBakanlikKatsayisi(bransAdi) {
         if (!bransAdi) return 32;
-        const bUp = bransAdi.trim().toUpperCase();
-        const nB = normText(bransAdi);
 
-        if (bUp.includes("DERİ") || bUp.includes("ZÜHREVİ") || bUp.includes("CİLDİYE") || bUp.includes("DERMATOLOJİ")) return 84;
-        if (bUp === "RUH SAĞLIĞI VE HASTALIKLARI" || bUp.includes("PSİKİYATRİ")) return 28;
-        if (bUp.includes("ÇOCUK VE ERGEN RUH") || bUp.includes("ÇOCUK PSİKİYATRİ")) return 16;
+        // Türkçe karakterleri ve boşlukları tamamen normalize eden temizleyici:
+        const temizle = (s) => (s || '')
+            .toString()
+            .replace(/İ/g, 'I').replace(/i/g, 'I')
+            .replace(/Ğ/g, 'G').replace(/ğ/g, 'G')
+            .replace(/Ü/g, 'U').replace(/ü/g, 'U')
+            .replace(/Ş/g, 'S').replace(/ş/g, 'S')
+            .replace(/Ö/g, 'O').replace(/ö/g, 'O')
+            .replace(/Ç/g, 'C').replace(/ç/g, 'C')
+            .replace(/[^A-Z0-9]/gi, '')
+            .toUpperCase();
 
-        let dalTuru = aksiyonBransHMap[bUp] || aksiyonBransHMap[nB] || "";
+        const nB = temizle(bransAdi);
+
+        // 1. ŞART: Deri ve Zührevi Hastalıklar (Cildiye / Dermatoloji) -> 84
+        if (nB.includes("DERIVEZUHREVI") || nB.includes("ZUHREVI") || nB.includes("CILDIYE") || nB.includes("DERMATOLOJI")) {
+            return 84;
+        }
+
+        // 2. ŞART: Çocuk ve Ergen Ruh Sağlığı ve Hastalıkları -> 16
+        // (Ruh sağlığından önce kontrol edilmeli ki "Ruh Sağlığı" ile karışmasın)
+        if (nB.includes("COCUKVEERGENRUH") || nB.includes("COCUKPSIKIYATRI") || (nB.includes("COCUK") && nB.includes("RUH"))) {
+            return 16;
+        }
+
+        // 3. ŞART: Ruh Sağlığı ve Hastalıkları (Erişkin Psikiyatri) -> 28
+        if (nB.includes("RUHSAGLIGI") || nB.includes("PSIKIYATRI")) {
+            return 28;
+        }
+
+        // 4. ŞART: BRANŞ_H Sekmesinden DÜŞEYARA (Ana Dal ise 42, değilse 32)
+        let dalTuru = aksiyonBransHMap[bransAdi.trim().toUpperCase()] || aksiyonBransHMap[nB] || "";
+        
+        // Tam eşleşmezse anahtar listesi içinde ara
         if (!dalTuru) {
-            const bulunanKey = Object.keys(aksiyonBransHMap).find(k => k === nB || nB.includes(k) || k.includes(nB));
+            const bulunanKey = Object.keys(aksiyonBransHMap).find(k => temizle(k) === nB || nB.includes(temizle(k)) || temizle(k).includes(nB));
             if (bulunanKey) dalTuru = aksiyonBransHMap[bulunanKey];
         }
 
-        if (dalTuru.toLowerCase().includes("ana dal") || bUp.includes("GÖZ") || bUp.includes("GENEL CERRAHİ") || bUp.includes("KALP VE DAMAR") || bUp.includes("İÇ HASTALIKLARI") || bUp.includes("ORTOPEDİ")) {
+        const dalTuruNorm = temizle(dalTuru);
+        if (dalTuruNorm.includes("ANADAL")) {
             return 42;
         }
 
+        // 5. ŞART: Geriye kalan tüm Yan Dallar -> 32
         return 32;
     }
 
