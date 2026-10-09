@@ -4279,18 +4279,19 @@ window.switchMhrsSubTab = function(tabName) {
         if (kiyasDonem && baslikEl) {
             baslikEl.innerHTML = `<b>${seciliDonem}</b> ile <b>${kiyasDonem}</b> dönemleri branş kapasite kıyası (${seciliKurum === 'ALL' ? 'Tüm Kurumlar' : seciliKurum})`;
 
-            // 2. Dönemin Kapasitelerini Al
-            const kiyasKapasiteMap = {};
-            aksiyonKapasiteRawData.filter(d => d.donem === kiyasDonem).forEach(k => {
-                if (seciliKurum !== 'ALL' && k.kurumKonsolide !== seciliKurum) return;
-                kiyasKapasiteMap[k.brans] = (kiyasKapasiteMap[k.brans] || 0) + k.kapasite;
-            });
+            // Ortak Hesaplama Yardımcısı (İki dönemi de birebir aynı süzgeçten geçirir):
+            const getKapasiteMap = (dnm) => {
+                const map = {};
+                aksiyonKapasiteRawData.filter(d => d.donem === dnm).forEach(k => {
+                    if (seciliKurum !== 'ALL' && k.kurumKonsolide !== seciliKurum) return;
+                    if (arama && !k.brans.toLowerCase().includes(arama) && !k.kurumKonsolide.toLowerCase().includes(arama)) return;
+                    map[k.brans] = (map[k.brans] || 0) + k.kapasite;
+                });
+                return map;
+            };
 
-            // 1. Dönemin Kapasitelerini Al
-            const donem1Map = {};
-            satirlar.forEach(s => {
-                donem1Map[s.brans] = (donem1Map[s.brans] || 0) + s.toplamKap;
-            });
+            const donem1Map = getKapasiteMap(seciliDonem);
+            const kiyasKapasiteMap = getKapasiteMap(kiyasDonem);
 
             const tumKiyasBranslar = [...new Set([...Object.keys(donem1Map), ...Object.keys(kiyasKapasiteMap)])];
             
@@ -4303,13 +4304,18 @@ window.switchMhrsSubTab = function(tabName) {
             })).sort((a, b) => b.toplam - a.toplam).slice(0, 10);
 
             // Fark rozetini hesapla
-            const totalD1 = Object.values(donem1Map).reduce((a, b) => a + b, 0);
-            const totalD2 = Object.values(kiyasKapasiteMap).reduce((a, b) => a + b, 0);
-            const fark = totalD2 - totalD1;
-            if (badgeEl) {
-                badgeEl.className = `badge ${fark >= 0 ? 'bg-success' : 'bg-danger'} text-white px-2 py-1 small`;
-                badgeEl.innerText = `Toplam Fark: ${fark >= 0 ? '+' : ''}${fark.toLocaleString('tr-TR')} Kapasite`;
+        const totalD1 = Object.values(donem1Map).reduce((a, b) => a + b, 0);
+        const totalD2 = Object.values(kiyasKapasiteMap).reduce((a, b) => a + b, 0);
+        const fark = totalD2 - totalD1;
+        if (badgeEl) {
+            if (fark === 0) {
+                badgeEl.className = 'badge bg-secondary text-white px-2 py-1 small';
+                badgeEl.innerText = 'Toplam Fark: 0 Kapasite (Aynı Dönem)';
+            } else {
+                badgeEl.className = `badge ${fark > 0 ? 'bg-success' : 'bg-danger'} text-white px-2 py-1 small`;
+                badgeEl.innerText = `Toplam Fark: ${fark > 0 ? '+' : ''}${fark.toLocaleString('tr-TR')} Kapasite`;
             }
+        }
 
             const ctxKiyas = document.getElementById('aksiyonDonemKiyasCanvas')?.getContext('2d');
             if (ctxKiyas) {
