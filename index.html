@@ -3881,6 +3881,11 @@ window.switchMhrsSubTab = function(tabName) {
             for (let i = 1; i < rowsKap.length; i++) {
                 const r = rowsKap[i];
                 const hamK = (r[0] || '').trim();
+                // ADSM / ADSH Kurumlarını ve Diş Hastanelerini Aksiyon Modülünden Dışla:
+                const upHamK = hamK.toUpperCase();
+                if (upHamK.includes("AĞIZ VE DİŞ") || upHamK.includes("AGIZ VE DIS") || upHamK.includes("ADSM") || upHamK.includes("ADSH")) {
+                    continue; // Bu satırı atla, listeye ekleme
+                }
                 const aks = (r[1] || '').trim().toUpperCase();
                 const kl = (r[2] || '').trim();
                 const val = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
@@ -3940,6 +3945,11 @@ window.switchMhrsSubTab = function(tabName) {
             for (let i = 1; i < rowsOda.length; i++) {
                 const r = rowsOda[i];
                 const hamK = (r[0] || '').trim();
+                // ADSM / ADSH Kurumlarını ve Diş Hastanelerini Aksiyon Modülünden Dışla:
+                const upHamK = hamK.toUpperCase();
+                if (upHamK.includes("AĞIZ VE DİŞ") || upHamK.includes("AGIZ VE DIS") || upHamK.includes("ADSM") || upHamK.includes("ADSH")) {
+                    continue; // Bu satırı atla, listeye ekleme
+                }
                 const brans = (r[1] || '').trim();
                 const aktifOda = parseFloat((r[2] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
                 const mhrsOda = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
