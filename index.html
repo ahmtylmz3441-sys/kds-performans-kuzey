@@ -4029,7 +4029,27 @@ window.switchMhrsSubTab = function(tabName) {
             </div>
 
             <div class="row g-3 mb-4" id="aksiyonKpiKartlari"></div>
-
+<!-- DÖNEM KARŞILAŞTIRMA GRAFİK BLOĞU -->
+            <div class="border rounded p-3 bg-white shadow-sm mb-4" style="border-radius:14px !important; border-top: 4px solid #10b981 !important;">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-bar-chart-line-fill text-success me-2"></i>Dönemler Arası Kapasite Karşılaştırma Grafiği (Top 10 Branş)
+                        </h6>
+                        <small class="text-muted" id="aksiyonKiyasGrafikBaslik">İki dönem arasında açılan toplam kapasiteler</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small fw-bold text-secondary">Kıyas Dönemi:</span>
+                        <select id="aksiyonKiyasDonemSelect" class="form-select form-select-sm shadow-sm" style="width: 140px;" onchange="window.updateAksiyonTable()">
+                            ${aksiyonDonemListesi.map((d, idx) => `<option value="${d}" ${idx === 1 ? 'selected' : ''}>${d}</option>`).join('')}
+                        </select>
+                        <span class="badge bg-light text-dark border px-2 py-1 small" id="aksiyonKiyasFarkBadge">Hesaplanıyor...</span>
+                    </div>
+                </div>
+                <div style="height: 320px; position: relative;">
+                    <canvas id="aksiyonDonemKiyasCanvas"></canvas>
+                </div>
+            </div>
             <div class="border rounded p-3 bg-white shadow-sm mb-4" style="border-radius:14px !important; border-top: 4px solid #4f46e5 !important;">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
@@ -4210,6 +4230,81 @@ window.switchMhrsSubTab = function(tabName) {
                         </tr>
                     `;
                 }).join('');
+            }
+        }
+        // =========================================================================
+        // DÖNEM KARŞILAŞTIRMA GRAFİĞİ MOTORU
+        // =========================================================================
+        const kiyasDonem = document.getElementById('aksiyonKiyasDonemSelect')?.value;
+        const baslikEl = document.getElementById('aksiyonKiyasGrafikBaslik');
+        const badgeEl = document.getElementById('aksiyonKiyasFarkBadge');
+
+        if (kiyasDonem && baslikEl) {
+            baslikEl.innerHTML = `<b>${seciliDonem}</b> ile <b>${kiyasDonem}</b> dönemleri branş kapasite kıyası (${seciliKurum === 'ALL' ? 'Tüm Kurumlar' : seciliKurum})`;
+
+            // 2. Dönemin Kapasitelerini Al
+            const kiyasKapasiteMap = {};
+            aksiyonKapasiteRawData.filter(d => d.donem === kiyasDonem).forEach(k => {
+                if (seciliKurum !== 'ALL' && k.kurumKonsolide !== seciliKurum) return;
+                kiyasKapasiteMap[k.brans] = (kiyasKapasiteMap[k.brans] || 0) + k.kapasite;
+            });
+
+            // 1. Dönemin Kapasitelerini Al
+            const donem1Map = {};
+            satirlar.forEach(s => {
+                donem1Map[s.brans] = (donem1Map[s.brans] || 0) + s.toplamKap;
+            });
+
+            const tumKiyasBranslar = [...new Set([...Object.keys(donem1Map), ...Object.keys(kiyasKapasiteMap)])];
+            
+            // En çok kapasite açılan 10 branşı seç
+            const siraliKiyas = tumKiyasBranslar.map(b => ({
+                brans: b,
+                val1: donem1Map[b] || 0,
+                val2: kiyasKapasiteMap[b] || 0,
+                toplam: (donem1Map[b] || 0) + (kiyasKapasiteMap[b] || 0)
+            })).sort((a, b) => b.toplam - a.toplam).slice(0, 10);
+
+            // Fark rozetini hesapla
+            const totalD1 = Object.values(donem1Map).reduce((a, b) => a + b, 0);
+            const totalD2 = Object.values(kiyasKapasiteMap).reduce((a, b) => a + b, 0);
+            const fark = totalD2 - totalD1;
+            if (badgeEl) {
+                badgeEl.className = `badge ${fark >= 0 ? 'bg-success' : 'bg-danger'} text-white px-2 py-1 small`;
+                badgeEl.innerText = `Toplam Fark: ${fark >= 0 ? '+' : ''}${fark.toLocaleString('tr-TR')} Kapasite`;
+            }
+
+            const ctxKiyas = document.getElementById('aksiyonDonemKiyasCanvas')?.getContext('2d');
+            if (ctxKiyas) {
+                if (charts.aksiyonDonemKiyas) charts.aksiyonDonemKiyas.destroy();
+                charts.aksiyonDonemKiyas = new Chart(ctxKiyas, {
+                    type: 'bar',
+                    data: {
+                        labels: siraliKiyas.map(k => k.brans.length > 20 ? k.brans.substring(0, 18) + '...' : k.brans),
+                        datasets: [
+                            {
+                                label: `${seciliDonem} Kapasitesi`,
+                                data: siraliKiyas.map(k => k.val1),
+                                backgroundColor: '#94a3b8',
+                                borderRadius: 4
+                            },
+                            {
+                                label: `${kiyasDonem} Kapasitesi`,
+                                data: siraliKiyas.map(k => k.val2),
+                                backgroundColor: '#4f46e5',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { grid: { color: 'rgba(0,0,0,0.05)' } }
+                        }
+                    }
+                });
             }
         }
     };
