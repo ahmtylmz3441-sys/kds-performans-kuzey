@@ -3977,57 +3977,50 @@ window.switchMhrsSubTab = function(tabName) {
     function getBakanlikKatsayisi(bransAdi) {
         if (!bransAdi) return 32;
 
-        // Türkçe karakterleri, boşlukları ve noktalama işaretlerini tamamen temizleyen fonksiyon
-        const temizle = (s) => (s || '')
-            .toString()
-            .replace(/İ/g, 'I').replace(/i/g, 'I')
-            .replace(/Ğ/g, 'G').replace(/ğ/g, 'G')
-            .replace(/Ü/g, 'U').replace(/ü/g, 'U')
-            .replace(/Ş/g, 'S').replace(/ş/g, 'S')
-            .replace(/Ö/g, 'O').replace(/ö/g, 'O')
-            .replace(/Ç/g, 'C').replace(/ç/g, 'C')
-            .replace(/[^A-Z0-9]/gi, '')
+        // Metni temizle ve standart Türkçe Büyük Harfe çevir
+        const b = bransAdi.toString().trim()
+            .replace(/i/g, "İ")
+            .replace(/ı/g, "I")
             .toUpperCase();
 
-        const nB = temizle(bransAdi);
-
-        // 1. ŞART: Deri ve Zührevi Hastalıklar (Cildiye / Dermatoloji) -> 84
-        if (nB.includes("DERI") || nB.includes("ZUHREVI") || nB.includes("CILDIYE") || nB.includes("DERMATO")) {
+        // 1. ŞART: Deri ve Zührevi Hastalıklar -> 84
+        if (b.includes("DERİ VE ZÜHREVİ") || b.includes("DERMATOLOJİ") || b.includes("CİLDİYE")) {
             return 84;
         }
 
         // 2. ŞART: Çocuk ve Ergen Ruh Sağlığı ve Hastalıkları -> 16
         // (Önce Çocuk kontrol edilir ki erişkin Ruh Sağlığı ile çakışmasın)
-        const isCocuk = nB.includes("COCUK") || nB.includes("ERGEN") || nB.includes("PEDİATR") || nB.includes("PEDIATR");
-        const isRuh = nB.includes("RUH") || nB.includes("PSIK") || nB.includes("SIKIYATR");
-
-        if (isCocuk && isRuh) {
+        if (b.includes("ÇOCUK") && (b.includes("RUH") || b.includes("PSİKİYATRİ"))) {
             return 16;
         }
 
-        // 3. ŞART: Ruh Sağlığı ve Hastalıkları (Erişkin Psikiyatri) -> 28
-        // "RUH", "PSİKİYATRİ", "PSİKİYATRİST" veya benzeri tüm erişkin varyasyonları yakalar:
-        if (isRuh && !isCocuk) {
+        // 3. ŞART: Ruh Sağlığı ve Hastalıkları (Erişkin) -> 28
+        // Google Sheets'teki tam adı veya Ruh Sağlığı / Psikiyatri varyasyonları:
+        if (b.includes("RUH SAĞLIĞI") || b.includes("PSİKİYATRİ")) {
             return 28;
         }
 
-        // 4. ŞART: BRANŞ_H Sekmesinden DÜŞEYARA (Ana Dal -> 42, Yan Dal -> 32)
-        let dalTuru = aksiyonBransHMap[bransAdi.trim().toUpperCase()] || aksiyonBransHMap[nB] || "";
+        // 4. ŞART: BRANŞ_H Sekmesinden DÜŞEYARA (Ana Dal ise 42, değilse 32)
+        let dalTuru = aksiyonBransHMap[b] || "";
         
+        // Birebir eşleşmezse haritadaki anahtarlarla kontrol et
         if (!dalTuru) {
-            const bulunanKey = Object.keys(aksiyonBransHMap).find(k => {
-                const cleanK = temizle(k);
-                return cleanK === nB || nB.includes(cleanK) || cleanK.includes(nB);
-            });
-            if (bulunanKey) dalTuru = aksiyonBransHMap[bulunanKey];
+            const keys = Object.keys(aksiyonBransHMap);
+            for (let i = 0; i < keys.length; i++) {
+                const kUpper = keys[i].toString().trim().replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
+                if (kUpper === b || b.includes(kUpper) || kUpper.includes(b)) {
+                    dalTuru = aksiyonBransHMap[keys[i]];
+                    break;
+                }
+            }
         }
 
-        const dalTuruNorm = temizle(dalTuru);
-        if (dalTuruNorm.includes("ANADAL")) {
+        // Eğer Ana Dal ise 42
+        if (dalTuru && dalTuru.toString().toUpperCase().includes("ANA")) {
             return 42;
         }
 
-        // 5. ŞART: Geriye kalan tüm Yan Dallar -> 32
+        // 5. ŞART: Geriye kalan tüm branşlar (Yan Dallar) -> 32
         return 32;
     }
     // Arayüzü Çizen Motor (SADECE KAPASİTELER DÖNEMLERİYLE BESLENİR)
