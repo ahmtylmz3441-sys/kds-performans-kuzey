@@ -883,7 +883,7 @@
                     <!-- İç Sekmeler -->
                     <ul class="nav nav-pills d-flex mb-3 border rounded overflow-hidden" style="padding: 0; list-style: none;">
                         <li style="flex:1;">
-                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-rapor-btn" onclick="window.switchETabloSubTab('rapor')">📋 Günlük Durum Raporu (Son Gün)</button>
+                            <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-rapor-btn" onclick="window.switchETabloSubTab('rapor')">📋 Günlük Durum Raporu</button>
                         </li>
                         <li style="flex:1;">
     <button class="sub-tab-btn" id="subtab-karsilastir-btn" onclick="window.switchETabloSubTab('karsilastir')">📊 Aylık Karşılaştırma</button>
@@ -2314,7 +2314,7 @@ function renderETabloActiveView() {
         return total;
     }
 
-    function renderRaporView() {
+function renderRaporView(secilenTarih = null) {
         const rows = googleSheetsData.rawDATA;
         if(!rows || rows.length <= 1) {
             document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Analiz edilecek ham DATA bulunamadı.</div>';
@@ -2327,15 +2327,39 @@ function renderETabloActiveView() {
             return;
         }
         
-        const maxDate = sortedDates[sortedDates.length - 1];
+        // Tarihleri en yeniden en eskiye sıralayalım (Dropdown için)
+        const reverseDates = [...sortedDates].reverse();
+        
+        // Eğer kullanıcı bir tarih seçmediyse varsayılan olarak en güncel tarihi al
+        const aktifTarih = secilenTarih || sortedDates[sortedDates.length - 1];
+
+        // Tarih seçeneklerini oluştur
+        const dateOptions = reverseDates.map(d => 
+            `<option value="${d}" ${d === aktifTarih ? 'selected' : ''}>${d}${d === sortedDates[sortedDates.length - 1] ? ' (En Güncel)' : ''}</option>`
+        ).join('');
         
         let tableHtml = `
-            <div class="alert alert-success py-2 small mb-3 d-flex justify-content-between align-items-center" style="border-radius:12px;">
-                <span><i class="bi bi-calendar-check"></i> Canlı Rapor Tarihi (Son Gün / MAK): <b>${maxDate}</b></span>
-                <span class="badge bg-dark">${HOSPITALS.length} Hastane Canlı Hesaplanıyor</span>
+            <!-- GÜNLÜK FİLTRE & BİLGİ ÇUBUĞU -->
+            <div class="p-3 bg-light rounded border mb-3 shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <label class="form-label small fw-bold text-secondary mb-0"><i class="bi bi-calendar-date text-success"></i> Rapor Tarihi Seçin:</label>
+                    <select id="krizGunlukTarihSelect" class="form-select form-select-sm shadow-sm" style="width: 190px; font-weight: 600;" onchange="renderRaporView(this.value)">
+                        ${dateOptions}
+                    </select>
+                    <span class="badge bg-success-subtle text-success border border-success px-2 py-1 small">
+                        <i class="bi bi-check2-circle"></i> ${aktifTarih} Verisi Gösteriliyor
+                    </span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-dark">${HOSPITALS.length} Hastane Konsolide</span>
+                    <button class="btn btn-sm btn-outline-success fw-bold" style="border-radius:8px;" onclick="window.exportTableToExcel('krizGunlukRaporTablo', 'Kriz_Koordinasyon_Gunluk_Rapor_${aktifTarih.replace(/\\./g, '_')}')">
+                        <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
+                    </button>
+                </div>
             </div>
+
             <div class="table-responsive">
-                <table class="table table-sm table-hover table-bordered bg-white align-middle" style="font-size: 11.5px;">
+                <table class="table table-sm table-hover table-bordered bg-white align-middle" id="krizGunlukRaporTablo" style="font-size: 11.5px;">
                     <thead class="table-dark">
                         <tr>
                             <th>HASTANE</th>
@@ -2357,18 +2381,18 @@ function renderETabloActiveView() {
         let totals = { yatak: 0, dolu: 0, bos: 0, bekleyen: 0, yatirilan: 0, disKurum: 0, taburcu: 0, ex: 0, taburcuEx: 0 };
         
         HOSPITALS.forEach(h => {
-            const yatak = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)"}]);
-            const bos = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)"}]);
+            const yatak = sumifs(rows, 4, [{colIdx: 1, val: aktifTarih}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)"}]);
+            const bos = sumifs(rows, 4, [{colIdx: 1, val: aktifTarih}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)"}]);
             
             const dolu = yatak - bos;
             const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(2).replace('.', ',') : "0,00";
             
-            const bekleyen = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"}]);
-            const yatirilan = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)"}]);
-            const disKurum = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)"}]);
+            const bekleyen = sumifs(rows, 4, [{colIdx: 1, val: aktifTarih}, {colIdx: 2, val: h}, {colIdx: 3, val: "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)"}]);
+            const yatirilan = sumifs(rows, 4, [{colIdx: 1, val: aktifTarih}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)"}]);
+            const disKurum = sumifs(rows, 4, [{colIdx: 1, val: aktifTarih}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)"}]);
             
-            const taburcu = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)"}]);
-            const ex = sumifs(rows, 4, [{colIdx: 1, val: maxDate}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)"}]);
+            const taburcu = sumifs(rows, 4, [{colIdx: 1, val: aktifTarih}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)"}]);
+            const ex = sumifs(rows, 4, [{colIdx: 1, val: aktifTarih}, {colIdx: 2, val: h}, {colIdx: 3, val: "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)"}]);
             const taburcuEx = taburcu + ex;
             
             totals.yatak += yatak;
@@ -2418,13 +2442,6 @@ function renderETabloActiveView() {
         tableHtml += `</tbody></table></div>`;
         document.getElementById('eTabloDashboardContent').innerHTML = tableHtml;
     }
-
-    function renderDATAAnalizView() {
-        const rows = googleSheetsData.rawDATA;
-        if(!rows || rows.length <= 1) {
-            document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Analiz edilecek ham DATA bulunamadı.</div>';
-            return;
-        }
         
         const hospOptions = HOSPITALS.map(h => `<option value="${h}">${h}</option>`).join('');
         const varOptions = VARIABLES.map(v => `<option value="${v}">${v}</option>`).join('');
