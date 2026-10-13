@@ -918,6 +918,15 @@
         <div id="modalIcerik"></div>
     </div>
 </div>
+    <!-- HASTANE SUNUM / BRİFİNG MODAL (SEÇİM VE OYNATICI) -->
+<div id="hastaneSunumModal" class="modal-overlay" onclick="window.sunumModalDisKlikKapat(event)">
+    <div class="modal-container" style="width: 1200px; max-width: 95%; max-height: 92vh; border-radius: 20px; padding: 24px;" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="window.kapatSunumModal()">&times;</button>
+        <div id="sunumModalIcerik">
+            <!-- Dinamik: Sunum Seçim Listesi veya Slayt Sahnesi -->
+        </div>
+    </div>
+</div>
 
 <!-- Şifre Değiştirme Modalı -->
 <div id="sifreDegistirModal" class="modal-overlay" onclick="window.sifreModalDisKlikKapat(event)">
@@ -6674,7 +6683,7 @@ if (currentMhrsSubTab === 'H') {
                 } else if (rawLink && rawLink !== '-') {
                     fotoUrl = rawLink;
                 }
-
+const sunumRaw = getCol(row, 'DU');
                 return {
                     id: idx,
                     hastaneAdi: kurumAdi,
@@ -6714,8 +6723,9 @@ if (currentMhrsSubTab === 'H') {
                     
                     ozellikliHizmetler: aktifHizmetler.join(', '),
                     lat: lat,
-                    lng: lng
-                };
+lng: lng,
+sunumMetni: sunumRaw
+};
             });
 
             renderHastaneKunyeGrid(hastaneKunyeListesi);
@@ -6764,6 +6774,9 @@ if (currentMhrsSubTab === 'H') {
                         <button class="btn btn-sm btn-outline-danger w-100 mt-3 fw-bold" style="border-radius:10px;">
                             <i class="bi bi-eye-fill me-1"></i> Detaylı Künyeyi Aç
                         </button>
+                        <button class="btn btn-sm w-100 mt-2 fw-bold text-white" style="border-radius:10px; background: #4f46e5;" onclick="event.stopPropagation(); window.acHastaneSunumModal(${h.id})">
+    <i class="bi bi-easel2-fill me-1"></i> Hastane Sunumları
+</button>
                     </div>
                 </div>
             </div>
@@ -6972,6 +6985,139 @@ window.kapatKunyeModal = function() {
 window.kunyeModalDisKlikKapat = function(e) {
     if (e.target.id === 'kunyeModal') kapatKunyeModal();
 };
+    // ---------- HASTANE SUNUM / BRİFİNG MOTORU ----------
+    window.acHastaneSunumModal = function(id) {
+        const h = hastaneKunyeListesi.find(item => item.id === id);
+        if (!h) return;
+
+        const hamMetin = (h.sunumMetni || '').trim();
+        const modalIcerik = document.getElementById('sunumModalIcerik');
+        const modalEl = document.getElementById('hastaneSunumModal');
+
+        // Drive Linkini Gömülü Önizleme Linkine Çevirici
+        const driveEmbedUrlYap = (link) => {
+            if (!link) return '';
+            const match = link.match(/\/d\/([a-zA-Z0-9_-]+)/) || link.match(/id=([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return `https://drive.google.com/file/d/${match[1]}/preview`;
+            }
+            return link;
+        };
+
+        // Eğer sunum eklenmemişse
+        if (!hamMetin || hamMetin === '-' || hamMetin.toLowerCase() === 'yok') {
+            modalIcerik.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="p-3 rounded-circle bg-warning-subtle text-warning d-inline-flex mb-3">
+                        <i class="bi bi-file-earmark-slides" style="font-size: 40px;"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark">${h.hastaneAdi}</h5>
+                    <p class="text-muted small mb-4">Bu hastane için henüz yüklenmiş bir brifing sunumu bulunmamaktadır.</p>
+                    <button class="btn btn-sm btn-secondary px-4 py-2" style="border-radius:10px;" onclick="window.kapatSunumModal()">Kapat</button>
+                </div>
+            `;
+            modalEl.classList.add('active');
+            return;
+        }
+
+        // Satırları ayrıştır (Alt alta ya da virgüllü sunumları al)
+        const satirlar = hamMetin.split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
+        const sunumlar = [];
+
+        satirlar.forEach((satir, idx) => {
+            if (satir.includes('*')) {
+                const parts = satir.split('*');
+                sunumlar.push({
+                    baslik: parts[0].trim() || `${idx + 1}. Sunum`,
+                    url: driveEmbedUrlYap(parts[1].trim())
+                });
+            } else if (satir.includes('http')) {
+                sunumlar.push({
+                    baslik: `${idx + 1}. Brifing Sunumu`,
+                    url: driveEmbedUrlYap(satir.trim())
+                });
+            }
+        });
+
+        // 1. AŞAMA: Sunum Seçim Ekranı
+        window.gosterSunumSecimMenusu = function() {
+            let html = `
+                <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="p-2 rounded-circle bg-primary-subtle text-primary border d-flex align-items-center justify-content-center" style="width:45px; height:45px;">
+                            <i class="bi bi-easel2-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">${h.hastaneAdi}</h5>
+                            <small class="text-muted">Brifing & Sunum Arşivi (${sunumlar.length} Sunum)</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+            `;
+
+            sunumlar.forEach((s, i) => {
+                html += `
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded-3 bg-light shadow-sm h-100 d-flex flex-column justify-content-between" style="border-radius:14px; transition:0.2s;">
+                            <div>
+                                <span class="badge bg-primary-subtle text-primary mb-2">Slayt / Sunum #${i + 1}</span>
+                                <h6 class="fw-bold text-dark mb-1">${s.baslik}</h6>
+                                <p class="text-muted small mb-3">PowerPoint / Google Slayt Sunumu</p>
+                            </div>
+                            <button class="btn btn-sm btn-primary w-100 fw-bold py-2" style="border-radius:10px; background:#4f46e5;" onclick="window.oynatSunum('${encodeURIComponent(s.baslik)}', '${s.url}')">
+                                <i class="bi bi-play-circle-fill me-1"></i> Sunumu Başlat
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            modalIcerik.innerHTML = html;
+        };
+
+        // 2. AŞAMA: Sinematik Slayt Oynatıcı
+        window.oynatSunum = function(baslikEnc, embedUrl) {
+            const baslik = decodeURIComponent(baslikEnc);
+            modalIcerik.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center pb-2 mb-3 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-outline-secondary px-3 py-1 fw-bold" style="border-radius:8px;" onclick="window.gosterSunumSecimMenusu()">
+                            <i class="bi bi-arrow-left"></i> Diğer Sunumlar
+                        </button>
+                        <span class="fw-bold text-dark ms-2">${baslik}</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="${embedUrl.replace('/preview', '/view')}" target="_blank" class="btn btn-sm btn-outline-primary" style="border-radius:8px;">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Yeni Sekmede Aç
+                        </a>
+                    </div>
+                </div>
+
+                <div style="width: 100%; height: 74vh; border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">
+                    <iframe src="${embedUrl}" style="width: 100%; height: 100%; border: none;" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+                </div>
+            `;
+        };
+
+        // Menüyü başlat ve modalı aç
+        window.gosterSunumSecimMenusu();
+        modalEl.classList.add('active');
+    };
+
+    window.kapatSunumModal = function() {
+        const modalEl = document.getElementById('hastaneSunumModal');
+        if (modalEl) {
+            modalEl.classList.remove('active');
+            document.getElementById('sunumModalIcerik').innerHTML = '';
+        }
+    };
+
+    window.sunumModalDisKlikKapat = function(e) {
+        if (e.target.id === 'hastaneSunumModal') window.kapatSunumModal();
+    };
     // ---------- BAŞLATMA ----------
     (async function init() {
         const activeUser = sessionStorage.getItem('khhb_auth_user');
