@@ -6271,6 +6271,7 @@ if (currentMhrsSubTab === 'H') {
 
     // ---------- SAYFA GEÇIŞLERI ----------
     window.gitSayfa = async function(sayfa, el) {
+        if (el) document.getElementById('page-title').innerText = el.innerText.trim();
         const loader = document.getElementById('page-loader');
         if (loader) loader.classList.add('active');
 
