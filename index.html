@@ -2596,7 +2596,12 @@ function renderAylikKarsilastirmaView() {
     }
 
     const mOptions = availableMonths.map((m) => `<option value="${m.key}">${m.label}</option>`).join('');
-    const vOptions = VARIABLES.map(v => `<option value="${v}">${v}</option>`).join('');
+    const extraVars = [
+        "Taburcu + Ex",
+        "Toplam Yatırılan Hasta Sayısı"
+    ];
+    const allVars = [...extraVars, ...VARIABLES];
+    const vOptions = allVars.map(v => `<option value="${v}">${v}</option>`).join('');
 
     let html = `
         <div class="p-3 bg-light rounded border mb-4 shadow-sm">
@@ -2692,7 +2697,21 @@ window.updateAylikKarsilastirmaChart = function() {
     // Belirli bir Ay-Yıl ve Hastane için toplam değeri hesaplayan yardımcı fonksiyon
     // Belirli bir Ay-Yıl ve Hastane için değeri hesaplayan Akıllı Fonksiyon
     const getMonthTotal = (monthKey, hospital, variable) => {
-        // Değişken türünü tespit et: 24 saatlik akış verisi mi yoksa anlık durum mu?
+        // 1. ÖZEL DEĞİŞKEN 1: Taburcu + Ex
+        if (variable === "Taburcu + Ex") {
+            const taburcu = getMonthTotal(monthKey, hospital, "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)");
+            const ex = getMonthTotal(monthKey, hospital, "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)");
+            return taburcu + ex;
+        }
+
+        // 2. ÖZEL DEĞİŞKEN 2: Toplam Yatırılan Hasta Sayısı (Kendi + Dış Kurum)
+        if (variable === "Toplam Yatırılan Hasta Sayısı") {
+            const kendi = getMonthTotal(monthKey, hospital, "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)");
+            const dis = getMonthTotal(monthKey, hospital, "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)");
+            return kendi + dis;
+        }
+
+        // Standart Değişken Hesaplaması
         const isFlowVariable = variable.includes("24 SAATLİK") || 
                                variable.includes("TABURCU") || 
                                variable.includes("EX") || 
@@ -2723,10 +2742,8 @@ window.updateAylikKarsilastirmaChart = function() {
                 const num = parseFloat(valStr?.toString().replace(/\./g, '').replace(',', '.').trim());
                 if (!isNaN(num)) {
                     if (isFlowVariable) {
-                        // Ex, Taburcu gibi veriler için kümülatif topla
                         sum += num;
                     } else {
-                        // Yatak sayısı gibi veriler için o ayın EN SON GÜNÜNDEKİ değeri bul
                         if (!latestDate || d >= latestDate) {
                             latestDate = d;
                             latestValue = num;
@@ -2736,7 +2753,6 @@ window.updateAylikKarsilastirmaChart = function() {
             }
         }
 
-        // Akış verisi ise toplamı, yatak sayısı ise son gün değerini döndür
         return isFlowVariable ? sum : latestValue;
     };
     const d1Values = [];
