@@ -4547,8 +4547,8 @@ window.switchMhrsSubTab = function(tabName) {
                     <div class="p-3 border rounded bg-white shadow-sm h-100" style="border-radius:14px !important;">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
-                                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-table text-success me-2"></i>Günlük Kapasite & Talep Matrisi</h6>
-                                <small class="text-muted" style="font-size:10.5px;">Açılan Kapasiteler, Randevular ve Karşılanan Talep Oranları</small>
+                                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-table text-success me-2"></i>Günlük Kapasite, Oda ve Planlama Matrisi</h6>
+                                <small class="text-muted" style="font-size:10.5px;">Aktif Oda, Açılan Kapasite, Açılabilecek Kapasite ve Fark Analizi</small>
                             </div>
                             <button class="btn btn-sm btn-outline-success fw-bold" style="border-radius:8px;" onclick="window.exportTableToExcel('gkTablosu', 'Gunluk_Kapasite_Raporu')">
                                 <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
@@ -4561,13 +4561,15 @@ window.switchMhrsSubTab = function(tabName) {
                                         <th style="width: 30px;" class="text-center">#</th>
                                         <th>Kurum / Yerleşke</th>
                                         <th>Klinik / Branş</th>
-                                        <th class="text-center" style="width: 75px;">İlk Muayene</th>
-                                        <th class="text-center" style="width: 75px;">Devam Eden</th>
-                                        <th class="text-center bg-primary text-white" style="width: 80px;">Toplam Kap.</th>
-                                        <th class="text-center bg-warning text-white" style="width: 80px;">Alınan Randevu</th>
-                                        <th class="text-center text-primary" style="width: 75px;">Doluluk (%)</th>
-                                        <th class="text-center text-danger" style="width: 75px;">Bekleyen Talep</th>
-                                        <th class="text-center text-success" style="width: 80px;">Karşılama (%)</th>
+                                        <th class="text-center" style="width: 65px;">Aktif Oda</th>
+                                        <th class="text-center" style="width: 70px;">İlk Muayene</th>
+                                        <th class="text-center" style="width: 70px;">Devam Eden</th>
+                                        <th class="text-center bg-secondary text-white" style="width: 75px;">Toplam Kap.</th>
+                                        <th class="text-center bg-primary text-white" style="width: 80px;">Açılabilecek Kap.</th>
+                                        <th class="text-center" style="background-color: #0f172a; width: 85px;">Kapasite Farkı</th>
+                                        <th class="text-center bg-warning text-white" style="width: 75px;">Randevu</th>
+                                        <th class="text-center text-primary" style="width: 65px;">Doluluk %</th>
+                                        <th class="text-center text-danger" style="width: 70px;">Talep</th>
                                     </tr>
                                 </thead>
                                 <tbody id="gkTableBody"></tbody>
@@ -4579,52 +4581,6 @@ window.switchMhrsSubTab = function(tabName) {
         `;
 
         window.updateGunlukKapasiteFiltreler(false);
-    };
-
-    window.updateGunlukKapasiteFiltreler = function(sadeceBransGuncelle = false) {
-        const seciliDonem = document.getElementById('gkDonemSelect')?.value || '';
-        const kapsam = document.getElementById('gkKapsamSelect')?.value || 'DAHIL';
-        const donemVerisi = mhrsGunlukKapasiteRawData.filter(d => d.donem === seciliDonem);
-
-        if (!sadeceBransGuncelle) {
-            const kurumSelect = document.getElementById('gkKurumSelect');
-            let kurumListesi = [];
-
-            if (kapsam === 'DAHIL') {
-                kurumListesi = [...new Set(donemVerisi.map(d => d.kurumKonsolide))].sort();
-            } else {
-                kurumListesi = [...new Set(donemVerisi.map(d => d.kurumTekil))].sort();
-            }
-
-            if (kurumSelect) {
-                kurumSelect.innerHTML = `
-                    <option value="ALL">🌍 TÜMÜ (${kurumListesi.length} Kurum)</option>
-                    ${kurumListesi.map(k => `<option value="${k}">${k}</option>`).join('')}
-                `;
-            }
-        }
-
-        const seciliKurum = document.getElementById('gkKurumSelect')?.value || 'ALL';
-        let kurumFiltreli = donemVerisi;
-        if (seciliKurum !== 'ALL') {
-            kurumFiltreli = (kapsam === 'DAHIL')
-                ? donemVerisi.filter(d => d.kurumKonsolide === seciliKurum)
-                : donemVerisi.filter(d => d.kurumTekil === seciliKurum);
-        }
-
-        const tekilBranslar = [...new Set(kurumFiltreli.map(d => d.klinik))].sort();
-        const bransSelect = document.getElementById('gkBransSelect');
-        const oncekiBrans = bransSelect?.value || 'ALL';
-
-        if (bransSelect) {
-            bransSelect.innerHTML = `
-                <option value="ALL">🩺 TÜM BRANŞLAR (${tekilBranslar.length} Branş)</option>
-                ${tekilBranslar.map(b => `<option value="${b}">${b}</option>`).join('')}
-            `;
-            if (tekilBranslar.includes(oncekiBrans)) bransSelect.value = oncekiBrans;
-        }
-
-        window.updateGunlukKapasiteDashboard();
     };
 
     window.updateGunlukKapasiteDashboard = function() {
@@ -4643,7 +4599,17 @@ window.switchMhrsSubTab = function(tabName) {
             filteredKapasite = filteredKapasite.filter(d => d.klinik === seciliBrans);
         }
 
-        // 1. EN GÜNCEL TALEP VERİSİNİ AL (Kullanıcının talep ettiği gibi otomatik en son dönemi baz al)
+        // 1. ODA VERİLERİNİ EŞLEŞTİR (aksiyonOdaRawData üzerinden)
+        const odaMap = {};
+        (aksiyonOdaRawData || []).forEach(o => {
+            const kName = (kapsam === 'DAHIL') ? o.kurumKonsolide : o.kurumTekil;
+            const key = `${kName}___${o.brans}`;
+            if (!odaMap[key]) odaMap[key] = { aktifOda: 0, mhrsOda: 0 };
+            odaMap[key].aktifOda += o.aktifOda;
+            odaMap[key].mhrsOda += o.mhrsOda;
+        });
+
+        // 2. EN GÜNCEL TALEP VERİSİNİ HARİTALANDIR
         const talepDonemleri = [...new Set((mhrsTalepRawData || []).map(d => d.donem))];
         const parseTarihDegeri = (str) => {
             const pts = (str || '').split(".");
@@ -4653,7 +4619,6 @@ window.switchMhrsSubTab = function(tabName) {
         talepDonemleri.sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
         const enSonTalepDonemi = talepDonemleri[0] || '';
 
-        // İlgili en son talep kayıtlarını haritalandır
         const talepMap = {};
         (mhrsTalepRawData || []).filter(d => d.donem === enSonTalepDonemi).forEach(r => {
             const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
@@ -4661,7 +4626,7 @@ window.switchMhrsSubTab = function(tabName) {
             talepMap[key] = (talepMap[key] || 0) + 1;
         });
 
-        // 2. KAPASİTE VE RANDEVULARI KONSOLİDE ET
+        // 3. KAPASİTE VE RANDEVULARI KONSOLİDE ET
         const grupMap = {};
         filteredKapasite.forEach(r => {
             const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
@@ -4678,30 +4643,35 @@ window.switchMhrsSubTab = function(tabName) {
             grupMap[key].randevu += r.randevu;
         });
 
-        // 3. LİSTEYİ OLUŞTUR VE SIRALA
+        // 4. LİSTEYİ OLUŞTUR VE AÇILABİLECEK KAPASİTE & FARK HESAPLA
         const satirlar = Object.values(grupMap).map(item => {
             const key = `${item.kurum}___${item.brans}`;
             const talepSayisi = talepMap[key] || 0;
+            const oda = odaMap[key] || { aktifOda: 0, mhrsOda: 0 };
+            
+            // Günlük Açılabilecek Kapasite (Bakanlık Katsayısı * Aktif Oda * 1 Gün)
+            const katsayi = getBakanlikKatsayisi(item.brans);
+            const acilabilecekKap = Math.round(katsayi * oda.aktifOda);
+            const fark = acilabilecekKap > 0 ? (item.topKap - acilabilecekKap) : null;
             const dolulukOrani = item.topKap > 0 ? (item.randevu / item.topKap) * 100 : 0;
-            const karsilamaOrani = talepSayisi > 0 ? (item.topKap / talepSayisi) * 100 : 0;
 
             return {
                 ...item,
+                aktifOda: oda.aktifOda,
+                mhrsOda: oda.mhrsOda,
+                acilabilecekKap: acilabilecekKap,
+                fark: fark,
                 talep: talepSayisi,
-                doluluk: dolulukOrani,
-                karsilama: karsilamaOrani
+                doluluk: dolulukOrani
             };
         }).sort((a, b) => b.topKap - a.topKap);
 
         // TOPLAMLAR & KPI HESAPLARI
         const tKapasite = satirlar.reduce((s, v) => s + v.topKap, 0);
         const tRandevu = satirlar.reduce((s, v) => s + v.randevu, 0);
-        const tTalep = satirlar.reduce((s, v) => s + v.talep, 0);
+        const tGereken = satirlar.reduce((s, v) => s + v.acilabilecekKap, 0);
+        const tFark = tKapasite - tGereken;
         const genelDoluluk = tKapasite > 0 ? (tRandevu / tKapasite) * 100 : 0;
-        const genelKarsilama = tTalep > 0 ? (tKapasite / tTalep) * 100 : 0;
-
-        // En çok talep baskısı olan (talebi yüksek, kapasitesi yetersiz) branş
-        const enBaskili = [...satirlar].sort((a, b) => (b.talep - b.topKap) - (a.talep - a.topKap))[0] || { brans: '-', talep: 0, topKap: 0 };
 
         const kpi = document.getElementById('gkKpiAlani');
         if (kpi) {
@@ -4715,23 +4685,25 @@ window.switchMhrsSubTab = function(tabName) {
                 </div>
                 <div class="col-md-3">
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">ALINAN AKTİF RANDEVU</div>
+                        <div class="text-secondary small fw-bold">AÇILABİLECEK KAPASİTE</div>
+                        <div class="fs-3 fw-bold text-indigo" style="color:#4f46e5;">${tGereken.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small">Aktif Oda Hedefi (Günlük)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">KAPASİTE DENGESİ</div>
+                        <div class="fs-3 fw-bold ${tFark < 0 ? 'text-danger' : 'text-success'}">
+                            ${tFark > 0 ? `+${tFark.toLocaleString('tr-TR')}` : tFark.toLocaleString('tr-TR')}
+                        </div>
+                        <div class="text-muted small">${tFark < 0 ? '🚨 Kapasite Açığı Var' : '✅ Hedef Karşılandı'}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">ALINAN RANDEVU & DOLULUK</div>
                         <div class="fs-3 fw-bold text-success">${tRandevu.toLocaleString('tr-TR')}</div>
                         <div class="text-muted small">Genel Doluluk: <b>%${genelDoluluk.toFixed(1)}</b></div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">BEKLEYEN TALEP HAVUZU</div>
-                        <div class="fs-3 fw-bold text-warning">${tTalep.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">Talep Karşılama Oranı: <b>%${genelKarsilama.toFixed(1)}</b></div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">EN YÜKSEK TALEP BASKISI</div>
-                        <div class="fs-5 fw-bold text-danger text-truncate" title="${enBaskili.brans}">${enBaskili.brans}</div>
-                        <div class="text-muted small">${enBaskili.talep.toLocaleString('tr-TR')} Talep / <b>${enBaskili.topKap.toLocaleString('tr-TR')}</b> Kapasite</div>
                     </div>
                 </div>
             `;
@@ -4741,22 +4713,37 @@ window.switchMhrsSubTab = function(tabName) {
         const tbody = document.getElementById('gkTableBody');
         if (tbody) {
             if (satirlar.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Seçilen kriterlere uygun günlük kapasite kaydı bulunamadı.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">Seçilen kriterlere uygun günlük kapasite kaydı bulunamadı.</td></tr>';
             } else {
-                tbody.innerHTML = satirlar.map((r, idx) => `
-                    <tr>
-                        <td class="text-center fw-bold text-secondary">${idx + 1}</td>
-                        <td class="fw-bold text-dark"><small>${r.kurum}</small></td>
-                        <td><b>${r.brans}</b></td>
-                        <td class="text-center text-secondary">${r.ilkKap > 0 ? r.ilkKap.toLocaleString('tr-TR') : '-'}</td>
-                        <td class="text-center text-secondary">${r.devKap > 0 ? r.devKap.toLocaleString('tr-TR') : '-'}</td>
-                        <td class="text-center fw-bold text-primary bg-light">${r.topKap.toLocaleString('tr-TR')}</td>
-                        <td class="text-center fw-bold text-dark">${r.randevu.toLocaleString('tr-TR')}</td>
-                        <td class="text-center fw-bold text-primary">${r.doluluk.toFixed(1)}%</td>
-                        <td class="text-center fw-bold text-danger">${r.talep > 0 ? r.talep.toLocaleString('tr-TR') : '-'}</td>
-                        <td class="text-center fw-bold ${r.karsilama >= 100 ? 'text-success' : 'text-warning'}">${r.talep > 0 ? '%' + r.karsilama.toFixed(0) : '-'}</td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = satirlar.map((r, idx) => {
+                    let farkBadge = '<span class="text-muted">-</span>';
+                    if (r.fark !== null) {
+                        if (r.fark < 0) {
+                            farkBadge = `<span class="badge bg-danger-subtle text-danger border border-danger fw-bold">${r.fark.toLocaleString('tr-TR')} (Açık)</span>`;
+                        } else if (r.fark > 0) {
+                            farkBadge = `<span class="badge bg-success-subtle text-success border border-success fw-bold">+${r.fark.toLocaleString('tr-TR')} (Fazla)</span>`;
+                        } else {
+                            farkBadge = `<span class="badge bg-secondary">0 (Tam Hedef)</span>`;
+                        }
+                    }
+
+                    return `
+                        <tr>
+                            <td class="text-center fw-bold text-secondary">${idx + 1}</td>
+                            <td class="fw-bold text-dark"><small>${r.kurum}</small></td>
+                            <td><b>${r.brans}</b></td>
+                            <td class="text-center fw-bold">${r.aktifOda > 0 ? r.aktifOda : '-'}</td>
+                            <td class="text-center text-secondary">${r.ilkKap > 0 ? r.ilkKap.toLocaleString('tr-TR') : '-'}</td>
+                            <td class="text-center text-secondary">${r.devKap > 0 ? r.devKap.toLocaleString('tr-TR') : '-'}</td>
+                            <td class="text-center fw-bold text-dark bg-light">${r.topKap.toLocaleString('tr-TR')}</td>
+                            <td class="text-center fw-bold text-primary" style="background-color:#eef2ff;">${r.acilabilecekKap > 0 ? r.acilabilecekKap.toLocaleString('tr-TR') : '-'}</td>
+                            <td class="text-center">${farkBadge}</td>
+                            <td class="text-center fw-bold text-dark">${r.randevu.toLocaleString('tr-TR')}</td>
+                            <td class="text-center fw-bold text-primary">${r.doluluk.toFixed(1)}%</td>
+                            <td class="text-center fw-bold text-danger">${r.talep > 0 ? r.talep.toLocaleString('tr-TR') : '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
             }
         }
 
