@@ -4016,53 +4016,33 @@ window.switchMhrsSubTab = function(tabName) {
         }
     };
 
-    function getBakanlikKatsayisi(bransAdi) {
+function getBakanlikKatsayisi(bransAdi) {
         if (!bransAdi) return 32;
 
-        // Metni temizle ve standart Türkçe Büyük Harfe çevir
+        // Standartlaştırma (Büyük Harf & Boşluk Temizliği)
         const b = bransAdi.toString().trim()
             .replace(/i/g, "İ")
             .replace(/ı/g, "I")
             .toUpperCase();
 
-        // 1. ŞART: Deri ve Zührevi Hastalıklar -> 84
-        if (b.includes("DERİ VE ZÜHREVİ") || b.includes("DERMATOLOJİ") || b.includes("CİLDİYE")) {
-            return 42;
-        }
-
-        // 2. ŞART: Çocuk ve Ergen Ruh Sağlığı ve Hastalıkları -> 16
-        // (Önce Çocuk kontrol edilir ki erişkin Ruh Sağlığı ile çakışmasın)
-        if (b.includes("ÇOCUK") && (b.includes("RUH") || b.includes("PSİKİYATRİ"))) {
+        // 1. İSTİSNA: Çocuk ve Ergen Ruh Sağlığı ve Hastalıkları -> 16
+        if (b.includes("ÇOCUK VE ERGEN RUH SAĞLIĞI VE HASTALIKLARI")) {
             return 16;
         }
 
-        // 3. ŞART: Ruh Sağlığı ve Hastalıkları (Erişkin) -> 28
-        // Google Sheets'teki tam adı veya Ruh Sağlığı / Psikiyatri varyasyonları:
-        if (b.includes("RUH SAĞLIĞI") || b.includes("PSİKİYATRİ")) {
+        // 2. İSTİSNA: Ruh Sağlığı ve Hastalıkları -> 28
+        if (b.includes("RUH SAĞLIĞI VE HASTALIKLARI")) {
             return 28;
         }
 
-        // 4. ŞART: BRANŞ_H Sekmesinden DÜŞEYARA (Ana Dal ise 42, değilse 32)
-        let dalTuru = aksiyonBransHMap[b] || "";
-        
-        // Birebir eşleşmezse haritadaki anahtarlarla kontrol et
-        if (!dalTuru) {
-            const keys = Object.keys(aksiyonBransHMap);
-            for (let i = 0; i < keys.length; i++) {
-                const kUpper = keys[i].toString().trim().replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
-                if (kUpper === b || b.includes(kUpper) || kUpper.includes(b)) {
-                    dalTuru = aksiyonBransHMap[keys[i]];
-                    break;
-                }
-            }
-        }
+        // 3. BRANŞ_H SEKMESİNDEN DÜŞEYARA (Deri ve Zührevi Hastalıklar, İç Hastalıkları vb. Ana Dal ise 42)
+        let dalTuru = aksiyonBransHMap[b] || aksiyonBransHMap[normText(b)] || "";
 
-        // Eğer Ana Dal ise 42
         if (dalTuru && dalTuru.toString().toUpperCase().includes("ANA")) {
             return 42;
         }
 
-        // 5. ŞART: Geriye kalan tüm branşlar (Yan Dallar) -> 32
+        // Yan Dal veya tanımlanamayanlar -> 32
         return 32;
     }
     // Arayüzü Çizen Motor (SADECE KAPASİTELER DÖNEMLERİYLE BESLENİR)
@@ -4579,7 +4559,7 @@ window.switchMhrsSubTab = function(tabName) {
         window.updateGunlukKapasiteDashboard();
     };
 
-    window.updateGunlukKapasiteDashboard = function() {
+window.updateGunlukKapasiteDashboard = function() {
         const seciliDonem = document.getElementById('gkDonemSelect')?.value || '';
         const kapsam = document.getElementById('gkKapsamSelect')?.value || 'DAHIL';
         const seciliKurum = document.getElementById('gkKurumSelect')?.value || 'ALL';
@@ -4595,7 +4575,7 @@ window.switchMhrsSubTab = function(tabName) {
             filteredKapasite = filteredKapasite.filter(d => d.klinik === seciliBrans);
         }
 
-        // 1. ODA VERİLERİNİ EŞLEŞTİR (Metin temizleme toleranslı)
+        // 1. ODA HARİTASI
         const odaMap = {};
         (aksiyonOdaRawData || []).forEach(o => {
             const kName = (kapsam === 'DAHIL') ? o.kurumKonsolide : o.kurumTekil;
@@ -4605,7 +4585,7 @@ window.switchMhrsSubTab = function(tabName) {
             odaMap[normKey].mhrsOda += o.mhrsOda;
         });
 
-        // 2. EN GÜNCEL TALEP VERİSİNİ AL
+        // 2. EN GÜNCEL TALEP HARİTASI
         const talepDonemleri = [...new Set((mhrsTalepRawData || []).map(d => d.donem))];
         const parseTarihDegeri = (str) => {
             const pts = (str || '').split(".");
@@ -4639,22 +4619,26 @@ window.switchMhrsSubTab = function(tabName) {
             grupMap[key].randevu += r.randevu;
         });
 
-        // 4. SATIRLARI OLUŞTUR VE AÇILABİLECEK KAPASİTEYİ HESAPLA
+        // 4. TABLO SATIRLARI & YENİ ODA BAŞINA AÇILAN SÜTUNU HESAPLA
         const satirlar = Object.values(grupMap).map(item => {
             const normKey = `${normText(item.kurum)}___${normText(item.brans)}`;
             const talepSayisi = talepMap[normKey] || 0;
             const oda = odaMap[normKey] || { aktifOda: 0, mhrsOda: 0 };
 
-            // Günlük Katsayı * Aktif Oda (1 Günlük Hedef)
             const katsayi = getBakanlikKatsayisi(item.brans);
             const acilabilecekKap = Math.round(katsayi * oda.aktifOda);
             const fark = acilabilecekKap > 0 ? (item.topKap - acilabilecekKap) : null;
             const dolulukOrani = item.topKap > 0 ? (item.randevu / item.topKap) * 100 : 0;
+            
+            // YENİ METRİK: Oda Başına Açılan Kapasite = Toplam Kapasite / Aktif Oda
+            const odaBasiKap = oda.aktifOda > 0 ? (item.topKap / oda.aktifOda) : 0;
 
             return {
                 ...item,
                 aktifOda: oda.aktifOda,
                 mhrsOda: oda.mhrsOda,
+                katsayi: katsayi,
+                odaBasiKap: odaBasiKap,
                 acilabilecekKap: acilabilecekKap,
                 fark: fark,
                 talep: talepSayisi,
@@ -4662,7 +4646,7 @@ window.switchMhrsSubTab = function(tabName) {
             };
         }).sort((a, b) => b.topKap - a.topKap);
 
-        // TOPLAMLAR
+        // TOPLAMLAR & KPI HESAPLARI
         const tKapasite = satirlar.reduce((s, v) => s + v.topKap, 0);
         const tRandevu = satirlar.reduce((s, v) => s + v.randevu, 0);
         const tGereken = satirlar.reduce((s, v) => s + v.acilabilecekKap, 0);
@@ -4692,7 +4676,7 @@ window.switchMhrsSubTab = function(tabName) {
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
                         <div class="text-secondary small fw-bold">AÇILMASI GEREKEN KAPASİTE</div>
                         <div class="fs-3 fw-bold text-indigo" style="color:#4f46e5;">${tGereken.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">Günlük Poliklinik Hedefi</div>
+                        <div class="text-muted small">Günlük Hedef (Katsayılı)</div>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -4707,11 +4691,11 @@ window.switchMhrsSubTab = function(tabName) {
             `;
         }
 
-        // RESİM 2'DEKİ FORMATTA DETAYLI TABLO
+        // TABLO DOLDURMA (ODA BAŞINA AÇILAN KAPASİTE VE YEŞİL/KIRMIZI ROZETLİ)
         const tbody = document.getElementById('gkTableBody');
         if (tbody) {
             if (satirlar.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">Seçilen kriterlere uygun günlük kapasite kaydı bulunamadı.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted py-4">Seçilen kriterlere uygun günlük kapasite kaydı bulunamadı.</td></tr>';
             } else {
                 tbody.innerHTML = satirlar.map((r, idx) => {
                     let farkBadge = '<span class="text-muted">-</span>';
@@ -4725,6 +4709,17 @@ window.switchMhrsSubTab = function(tabName) {
                         }
                     }
 
+                    // Oda Başına Kapasite Rozeti: Katsayıya eşit veya büyükse YEŞİL, altındaysa KIRMIZI
+                    let odaBasiBadge = '<span class="text-muted">-</span>';
+                    if (r.aktifOda > 0 && r.odaBasiKap > 0) {
+                        const valStr = r.odaBasiKap.toFixed(1);
+                        if (r.odaBasiKap >= r.katsayi) {
+                            odaBasiBadge = `<span class="badge bg-success text-white fw-bold px-2 py-1">${valStr} (≥${r.katsayi})</span>`;
+                        } else {
+                            odaBasiBadge = `<span class="badge bg-danger text-white fw-bold px-2 py-1">${valStr} (<${r.katsayi})</span>`;
+                        }
+                    }
+
                     return `
                         <tr>
                             <td class="text-center fw-bold text-secondary">${idx + 1}</td>
@@ -4735,6 +4730,7 @@ window.switchMhrsSubTab = function(tabName) {
                             <td class="text-center text-secondary">${r.ilkKap > 0 ? r.ilkKap.toLocaleString('tr-TR') : '-'}</td>
                             <td class="text-center text-secondary">${r.devKap > 0 ? r.devKap.toLocaleString('tr-TR') : '-'}</td>
                             <td class="text-center fw-bold text-dark bg-light">${r.topKap.toLocaleString('tr-TR')}</td>
+                            <td class="text-center">${odaBasiBadge}</td>
                             <td class="text-center fw-bold text-primary" style="background-color:#eef2ff;">${r.acilabilecekKap > 0 ? r.acilabilecekKap.toLocaleString('tr-TR') : '-'}</td>
                             <td class="text-center">${farkBadge}</td>
                             <td class="text-center fw-bold text-dark">${r.randevu.toLocaleString('tr-TR')}</td>
@@ -4745,17 +4741,46 @@ window.switchMhrsSubTab = function(tabName) {
             }
         }
 
-// GRAFİK ÇİZİMİ (1. Doluluk Oranına Göre Büyükten Küçüğe İlk 10 Birim)
-        const top10 = [...satirlar]
-            .filter(r => r.topKap > 0)
-            .sort((a, b) => b.doluluk - a.doluluk || b.topKap - a.topKap)
-            .slice(0, 10);
+        // =========================================================================
+        // GRAFİK MOTORU: TÜM BÖLGE İÇİN KÜMÜLATİF TEKİL BRANŞ TOPLAMI
+        // =========================================================================
+        let chartDataList = [];
 
-        const chartLabels = top10.map(t => t.brans.length > 20 ? t.brans.substring(0, 18) + '...' : t.brans);
-        const chartKapasite = top10.map(t => t.topKap);
-        const chartRandevu = top10.map(t => t.randevu);
-        const chartKurumlar = top10.map(t => t.kurum);
-        const chartDoluluklar = top10.map(t => t.doluluk.toFixed(1) + '%');
+        if (seciliKurum === 'ALL') {
+            // TÜM BÖLGE: Branşları kümülatif topla (Aynı branş asla tekrar etmez!)
+            const bransKumuMap = {};
+            satirlar.forEach(r => {
+                if (!bransKumuMap[r.brans]) {
+                    bransKumuMap[r.brans] = { brans: r.brans, topKap: 0, randevu: 0 };
+                }
+                bransKumuMap[r.brans].topKap += r.topKap;
+                bransKumuMap[r.brans].randevu += r.randevu;
+            });
+
+            chartDataList = Object.values(bransKumuMap)
+                .filter(b => b.topKap > 0)
+                .map(b => ({
+                    brans: b.brans,
+                    topKap: b.topKap,
+                    randevu: b.randevu,
+                    kurum: 'Tüm Bölge (Kümülatif)',
+                    doluluk: (b.randevu / b.topKap) * 100
+                }))
+                .sort((a, b) => b.doluluk - a.doluluk || b.topKap - a.topKap)
+                .slice(0, 10);
+        } else {
+            // TEK KURUM SEÇİLİYSE: O kuruma ait en dolu 10 branş
+            chartDataList = [...satirlar]
+                .filter(r => r.topKap > 0)
+                .sort((a, b) => b.doluluk - a.doluluk || b.topKap - a.topKap)
+                .slice(0, 10);
+        }
+
+        const chartLabels = chartDataList.map(t => t.brans.length > 20 ? t.brans.substring(0, 18) + '...' : t.brans);
+        const chartKapasite = chartDataList.map(t => t.topKap);
+        const chartRandevu = chartDataList.map(t => t.randevu);
+        const chartKurumlar = chartDataList.map(t => t.kurum);
+        const chartDoluluklar = chartDataList.map(t => t.doluluk.toFixed(1) + '%');
 
         const ctx = document.getElementById('gkChartCanvas')?.getContext('2d');
         if (ctx) {
@@ -4792,7 +4817,6 @@ window.switchMhrsSubTab = function(tabName) {
                             position: 'bottom', 
                             labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: 'bold' } } 
                         },
-                        // 2. MOUSE İLE ÜSTÜNE GELİNDİĞİNDE KURUM ADINI YAZAN TOOLTIP
                         tooltip: {
                             callbacks: {
                                 title: function(context) {
@@ -4801,7 +4825,7 @@ window.switchMhrsSubTab = function(tabName) {
                                 },
                                 beforeBody: function(context) {
                                     const idx = context[0].dataIndex;
-                                    return `🩺 Branş: ${top10[idx].brans}\n📊 Doluluk Oranı: ${chartDoluluklar[idx]}`;
+                                    return `🩺 Branş: ${chartDataList[idx].brans}\n📊 Doluluk Oranı: ${chartDoluluklar[idx]}`;
                                 }
                             }
                         }
@@ -4810,7 +4834,7 @@ window.switchMhrsSubTab = function(tabName) {
                         x: { 
                             grid: { color: 'rgba(0, 0, 0, 0.05)' }, 
                             ticks: { precision: 0 },
-                            grace: '18%' // Sayıların çubuk dışına taşmaması için sağdan pay bırakır
+                            grace: '20%' 
                         },
                         y: { 
                             grid: { display: false },
@@ -4818,7 +4842,6 @@ window.switchMhrsSubTab = function(tabName) {
                         }
                     }
                 },
-                // 3. ÇUBUKLARIN UCUNA VERİ DEĞERLERİNİ VE DOLULUK YÜZDESİNİ YAZAN MOTOR
                 plugins: [{
                     id: 'horizontalBarLabels',
                     afterDatasetsDraw(chart) {
@@ -4834,10 +4857,9 @@ window.switchMhrsSubTab = function(tabName) {
                                     ctx.textAlign = 'left';
                                     ctx.textBaseline = 'middle';
                                     
-                                    // Sadece alınan randevu çubuğunun ucuna % doluluk ekle, kapasite çubuğuna net sayıyı bas
                                     let metin = val.toLocaleString('tr-TR');
                                     if (datasetIndex === 1) {
-                                        metin += ` (%${top10[index].doluluk.toFixed(0)})`;
+                                        metin += ` (%${chartDataList[index].doluluk.toFixed(0)})`;
                                     }
                                     
                                     ctx.fillText(metin, bar.x + 4, bar.y);
@@ -4851,6 +4873,7 @@ window.switchMhrsSubTab = function(tabName) {
         }
     };
 
+    // ARAYÜZ ŞABLONU (YENİ SÜTUN BAŞLIĞI EKLENDİ)
     window.renderGunlukKapasiteArayuz = function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
@@ -4858,7 +4881,6 @@ window.switchMhrsSubTab = function(tabName) {
         const varsayilanDonem = mhrsGunlukDonemListesi[0] || '';
 
         container.innerHTML = `
-            <!-- ÜST FİLTRELER -->
             <div class="p-3 bg-light rounded border mb-4 shadow-sm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
@@ -4887,14 +4909,12 @@ window.switchMhrsSubTab = function(tabName) {
                 </div>
             </div>
 
-            <!-- 4'LÜ KPI KARTLARI -->
             <div class="row g-3 mb-4" id="gkKpiAlani"></div>
 
-            <!-- GRAFİK VE MATRİS TABLOSU -->
             <div class="row g-4 mb-4">
                 <div class="col-lg-5">
                     <div class="p-3 border rounded bg-white shadow-sm h-100" style="border-radius:14px !important;">
-                        <h6 class="fw-bold mb-3 text-secondary" id="gkGrafikBaslik"><i class="bi bi-bar-chart-fill text-primary me-2"></i>Kapasite ve Randevu Dağılımı</h6>
+                        <h6 class="fw-bold mb-3 text-secondary" id="gkGrafikBaslik"><i class="bi bi-bar-chart-fill text-primary me-2"></i>Kapasite ve Randevu Dağılımı (Top 10 Doluluk)</h6>
                         <div style="height: 420px; position: relative;">
                             <canvas id="gkChartCanvas"></canvas>
                         </div>
@@ -4905,7 +4925,7 @@ window.switchMhrsSubTab = function(tabName) {
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
                                 <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-table text-success me-2"></i>Günlük Kapasite, Oda ve Planlama Matrisi</h6>
-                                <small class="text-muted" style="font-size:10.5px;">Aktif Oda, Açılan Kapasite, Açılabilecek Kapasite ve Fark Analizi</small>
+                                <small class="text-muted" style="font-size:10.5px;">Aktif Oda, Açılan Kapasite, Oda Başı Açılan ve Fark Analizi</small>
                             </div>
                             <button class="btn btn-sm btn-outline-success fw-bold" style="border-radius:8px;" onclick="window.exportTableToExcel('gkTablosu', 'Gunluk_Kapasite_Raporu')">
                                 <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
@@ -4918,14 +4938,15 @@ window.switchMhrsSubTab = function(tabName) {
                                         <th style="width: 30px;" class="text-center">#</th>
                                         <th>Kurum / Yerleşke</th>
                                         <th>Klinik / Branş</th>
-                                        <th class="text-center" style="width: 65px;">Aktif Oda</th>
-                                        <th class="text-center" style="width: 65px;">MHRS Oda</th>
-                                        <th class="text-center" style="width: 70px;">İlk Muayene</th>
-                                        <th class="text-center" style="width: 70px;">Devam Eden</th>
-                                        <th class="text-center bg-secondary text-white" style="width: 75px;">Toplam Kap.</th>
-                                        <th class="text-center bg-primary text-white" style="width: 80px;">Açılabilecek Kap.</th>
+                                        <th class="text-center" style="width: 60px;">Aktif Oda</th>
+                                        <th class="text-center" style="width: 60px;">MHRS Oda</th>
+                                        <th class="text-center" style="width: 65px;">İlk Muayene</th>
+                                        <th class="text-center" style="width: 65px;">Devam Eden</th>
+                                        <th class="text-center bg-secondary text-white" style="width: 70px;">Toplam Kap.</th>
+                                        <th class="text-center bg-dark text-warning" style="width: 80px;">Oda Başına Kap.</th>
+                                        <th class="text-center bg-primary text-white" style="width: 75px;">Açılabilecek Kap.</th>
                                         <th class="text-center" style="background-color: #0f172a; width: 85px;">Kapasite Farkı</th>
-                                        <th class="text-center bg-warning text-white" style="width: 75px;">Randevu</th>
+                                        <th class="text-center bg-warning text-white" style="width: 70px;">Randevu</th>
                                         <th class="text-center text-primary" style="width: 65px;">Doluluk %</th>
                                     </tr>
                                 </thead>
