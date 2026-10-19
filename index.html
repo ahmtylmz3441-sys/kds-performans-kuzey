@@ -4745,11 +4745,17 @@ window.switchMhrsSubTab = function(tabName) {
             }
         }
 
-        // GRAFİK ÇİZİMİ
-        const top10 = satirlar.slice(0, 10);
+// GRAFİK ÇİZİMİ (1. Doluluk Oranına Göre Büyükten Küçüğe İlk 10 Birim)
+        const top10 = [...satirlar]
+            .filter(r => r.topKap > 0)
+            .sort((a, b) => b.doluluk - a.doluluk || b.topKap - a.topKap)
+            .slice(0, 10);
+
         const chartLabels = top10.map(t => t.brans.length > 20 ? t.brans.substring(0, 18) + '...' : t.brans);
         const chartKapasite = top10.map(t => t.topKap);
         const chartRandevu = top10.map(t => t.randevu);
+        const chartKurumlar = top10.map(t => t.kurum);
+        const chartDoluluklar = top10.map(t => t.doluluk.toFixed(1) + '%');
 
         const ctx = document.getElementById('gkChartCanvas')?.getContext('2d');
         if (ctx) {
@@ -4782,16 +4788,65 @@ window.switchMhrsSubTab = function(tabName) {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'bottom', labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: 'bold' } } }
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: 'bold' } } 
+                        },
+                        // 2. MOUSE İLE ÜSTÜNE GELİNDİĞİNDE KURUM ADINI YAZAN TOOLTIP
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    const idx = context[0].dataIndex;
+                                    return `🏥 ${chartKurumlar[idx]}`;
+                                },
+                                beforeBody: function(context) {
+                                    const idx = context[0].dataIndex;
+                                    return `🩺 Branş: ${top10[idx].brans}\n📊 Doluluk Oranı: ${chartDoluluklar[idx]}`;
+                                }
+                            }
+                        }
                     },
                     scales: {
-                        x: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { precision: 0 } },
+                        x: { 
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }, 
+                            ticks: { precision: 0 },
+                            grace: '18%' // Sayıların çubuk dışına taşmaması için sağdan pay bırakır
+                        },
                         y: { 
                             grid: { display: false },
                             ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold', size: 10 }, autoSkip: false }
                         }
                     }
-                }
+                },
+                // 3. ÇUBUKLARIN UCUNA VERİ DEĞERLERİNİ VE DOLULUK YÜZDESİNİ YAZAN MOTOR
+                plugins: [{
+                    id: 'horizontalBarLabels',
+                    afterDatasetsDraw(chart) {
+                        const { ctx } = chart;
+                        ctx.save();
+                        chart.data.datasets.forEach((dataset, datasetIndex) => {
+                            const meta = chart.getDatasetMeta(datasetIndex);
+                            meta.data.forEach((bar, index) => {
+                                const val = dataset.data[index];
+                                if (val !== undefined && val !== null && bar.x > 0) {
+                                    ctx.font = 'bold 9.5px "Plus Jakarta Sans", sans-serif';
+                                    ctx.fillStyle = datasetIndex === 0 ? '#4338ca' : '#b45309';
+                                    ctx.textAlign = 'left';
+                                    ctx.textBaseline = 'middle';
+                                    
+                                    // Sadece alınan randevu çubuğunun ucuna % doluluk ekle, kapasite çubuğuna net sayıyı bas
+                                    let metin = val.toLocaleString('tr-TR');
+                                    if (datasetIndex === 1) {
+                                        metin += ` (%${top10[index].doluluk.toFixed(0)})`;
+                                    }
+                                    
+                                    ctx.fillText(metin, bar.x + 4, bar.y);
+                                }
+                            });
+                        });
+                        ctx.restore();
+                    }
+                }]
             });
         }
     };
