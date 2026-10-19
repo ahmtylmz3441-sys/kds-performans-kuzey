@@ -4384,7 +4384,7 @@ window.switchMhrsSubTab = function(tabName) {
         }
     };
     // =========================================================================
-    // GÜNLÜK KAPASİTE & ANLIK TALEP ANALİZ MODÜLÜ
+    // GÜNLÜK KAPASİTE & ANLIK TALEP ANALİZ MODÜLÜ (TAM ENTEGRE)
     // =========================================================================
     let mhrsGunlukKapasiteRawData = [];
     let mhrsGunlukDonemListesi = [];
@@ -4393,35 +4393,76 @@ window.switchMhrsSubTab = function(tabName) {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
 
-        // Talep verisi veya kurumlar haritası henüz yüklenmediyse önce onları garantiye alalım
-        if (!mhrsTalepRawData || mhrsTalepRawData.length === 0 || Object.keys(mhrsKurumlarMap).length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <div class="mt-3 text-dark fw-bold fs-5">Veri Tabanı Eşleştiriliyor...</div>
-                    <div class="text-muted small">Kurumlar ve talep havuzu taranıyor, lütfen bekleyiniz...</div>
-                </div>
-            `;
-            await window.initMhrsTalepView();
-        }
-
         container.innerHTML = `
             <div class="text-center py-5">
                 <div class="spinner-border text-success" role="status"></div>
-                <div class="mt-3 text-dark fw-bold fs-5">Günlük Kapasite Verileri Alınıyor...</div>
-                <div class="text-muted small">gunluk_kapasite sekmesi yükleniyor...</div>
+                <div class="mt-3 text-dark fw-bold fs-5">Günlük Kapasite ve Oda Verileri Yükleniyor...</div>
+                <div class="text-muted small">gunluk_kapasite, poliklinik_oda_sayilari ve BRANŞ_H sekmeleri taranıyor...</div>
             </div>
         `;
 
         try {
+            // 1. Oda Sayıları ve Branş_H boşsa onları da arka planda mutlaka çekelim (Gelecek Dönem Aksiyon mantığı)
             const urlGunluk = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('gunluk_kapasite')}`;
-            const res = await fetch(urlGunluk);
-            if (!res.ok) throw new Error("gunluk_kapasite sekmesine ulaşılamadı. Lütfen sekme adını ve yetkileri kontrol edin.");
+            const urlOda = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('poliklinik_oda_sayilari')}`;
+            const urlBransH = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('BRANŞ_H')}`;
 
-            const text = await res.text();
-            const rows = parseCSV(text);
-            if (!rows || rows.length <= 1) throw new Error("gunluk_kapasite sekmesinde veri satırı bulunamadı.");
+            const [resGunluk, resOda, resBransH] = await Promise.all([
+                fetch(urlGunluk),
+                fetch(urlOda),
+                fetch(urlBransH)
+            ]);
 
+            if (!resGunluk.ok) throw new Error("gunluk_kapasite sekmesine ulaşılamadı.");
+
+            const [txtGunluk, txtOda, txtBransH] = await Promise.all([
+                resGunluk.text(),
+                resOda.ok ? resOda.text() : "",
+                resBransH.ok ? resBransH.text() : ""
+            ]);
+
+            // BRANŞ_H Doldur
+            if (txtBransH && Object.keys(aksiyonBransHMap).length === 0) {
+                const rowsB = parseCSV(txtBransH);
+                for (let i = 1; i < rowsB.length; i++) {
+                    const bAd = (rowsB[i][0] || '').trim();
+                    const tur = (rowsB[i][1] || '').trim();
+                    if (bAd) {
+                        aksiyonBransHMap[bAd.toUpperCase()] = tur;
+                        aksiyonBransHMap[normText(bAd)] = tur;
+                    }
+                }
+            }
+
+            // ODA SAYILARI Doldur (Eğer daha önce dolmadıysa)
+            if (txtOda && aksiyonOdaRawData.length === 0) {
+                const rowsOda = parseCSV(txtOda);
+                for (let i = 1; i < rowsOda.length; i++) {
+                    const r = rowsOda[i];
+                    const hamK = (r[0] || '').trim();
+                    if (hamK.toUpperCase().includes("AĞIZ VE DİŞ") || hamK.toUpperCase().includes("ADSM") || hamK.toUpperCase().includes("ADSH")) continue;
+                    const brans = (r[1] || '').trim();
+                    const aktifOda = parseFloat((r[2] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
+                    const mhrsOda = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
+
+                    if (hamK && brans && !hamK.toUpperCase().includes("KURUM_ADI")) {
+                        const meta = (mhrsKurumlarMap && mhrsKurumlarMap[hamK]) ? mhrsKurumlarMap[hamK] : {
+                            anaKurumAdi: temizleMetinKurumAdi(hamK),
+                            temizAd: temizleMetinKurumAdi(hamK)
+                        };
+                        aksiyonOdaRawData.push({
+                            kurumTekil: meta.temizAd,
+                            kurumKonsolide: meta.anaKurumAdi,
+                            brans: brans,
+                            aktifOda: aktifOda,
+                            mhrsOda: mhrsOda
+                        });
+                    }
+                }
+            }
+
+            // GÜNLÜK KAPASİTE İŞLE
+            const rows = parseCSV(txtGunluk);
             mhrsGunlukKapasiteRawData = [];
             const donemSet = new Set();
 
@@ -4433,18 +4474,16 @@ window.switchMhrsSubTab = function(tabName) {
                     const klinik = (r[2] || '').trim();
                     const kapVal = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
                     const randVal = parseFloat((r[4] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
-                    
                     let dnm = (r[5] || '').toString().trim();
                     if (dnm.includes(" ")) dnm = dnm.split(" ")[0].trim();
 
                     if (hamKurum && klinik && dnm) {
                         donemSet.add(dnm);
 
-                        // Kurum Adı Eşleştirmesi
-                        let meta = mhrsKurumlarMap[hamKurum];
+                        let meta = (mhrsKurumlarMap && mhrsKurumlarMap[hamKurum]) ? mhrsKurumlarMap[hamKurum] : null;
                         if (!meta) {
                             const normHam = hamKurum.replace(/[\s\-_]+/g, '').toUpperCase();
-                            const bulunanKey = Object.keys(mhrsKurumlarMap).find(k => {
+                            const bulunanKey = Object.keys(mhrsKurumlarMap || {}).find(k => {
                                 const normK = k.replace(/[\s\-_]+/g, '').toUpperCase();
                                 return normK === normHam || normHam.includes(normK) || normK.includes(normHam);
                             });
@@ -4494,7 +4533,6 @@ window.switchMhrsSubTab = function(tabName) {
         }
     };
 
-    // 1. FİLTRELERİ DOLDURAN FONKSİYON
     window.updateGunlukKapasiteFiltreler = function(sadeceBransGuncelle = false) {
         const seciliDonem = document.getElementById('gkDonemSelect')?.value || '';
         const kapsam = document.getElementById('gkKapsamSelect')?.value || 'DAHIL';
@@ -4512,7 +4550,7 @@ window.switchMhrsSubTab = function(tabName) {
 
             if (kurumSelect) {
                 kurumSelect.innerHTML = `
-                    <option value="ALL">🌍 TÜMÜ (${kurumListesi.length} Kurum)</option>
+                    <option value="ALL">🌍 TÜM BÖLGE (${kurumListesi.length} Kurum)</option>
                     ${kurumListesi.map(k => `<option value="${k}">${k}</option>`).join('')}
                 `;
             }
@@ -4541,7 +4579,6 @@ window.switchMhrsSubTab = function(tabName) {
         window.updateGunlukKapasiteDashboard();
     };
 
-    // 2. DASHBOARD VE TABLOYU HESAPLAYIP ÇİZEN FONKSİYON
     window.updateGunlukKapasiteDashboard = function() {
         const seciliDonem = document.getElementById('gkDonemSelect')?.value || '';
         const kapsam = document.getElementById('gkKapsamSelect')?.value || 'DAHIL';
@@ -4558,17 +4595,17 @@ window.switchMhrsSubTab = function(tabName) {
             filteredKapasite = filteredKapasite.filter(d => d.klinik === seciliBrans);
         }
 
-        // Oda Verilerini Eşleştir
+        // 1. ODA VERİLERİNİ EŞLEŞTİR (Metin temizleme toleranslı)
         const odaMap = {};
         (aksiyonOdaRawData || []).forEach(o => {
             const kName = (kapsam === 'DAHIL') ? o.kurumKonsolide : o.kurumTekil;
-            const key = `${kName}___${o.brans}`;
-            if (!odaMap[key]) odaMap[key] = { aktifOda: 0, mhrsOda: 0 };
-            odaMap[key].aktifOda += o.aktifOda;
-            odaMap[key].mhrsOda += o.mhrsOda;
+            const normKey = `${normText(kName)}___${normText(o.brans)}`;
+            if (!odaMap[normKey]) odaMap[normKey] = { aktifOda: 0, mhrsOda: 0 };
+            odaMap[normKey].aktifOda += o.aktifOda;
+            odaMap[normKey].mhrsOda += o.mhrsOda;
         });
 
-        // En Güncel Talep Verilerini Al
+        // 2. EN GÜNCEL TALEP VERİSİNİ AL
         const talepDonemleri = [...new Set((mhrsTalepRawData || []).map(d => d.donem))];
         const parseTarihDegeri = (str) => {
             const pts = (str || '').split(".");
@@ -4581,11 +4618,11 @@ window.switchMhrsSubTab = function(tabName) {
         const talepMap = {};
         (mhrsTalepRawData || []).filter(d => d.donem === enSonTalepDonemi).forEach(r => {
             const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
-            const key = `${kName}___${r.klinik}`;
-            talepMap[key] = (talepMap[key] || 0) + 1;
+            const normKey = `${normText(kName)}___${normText(r.klinik)}`;
+            talepMap[normKey] = (talepMap[normKey] || 0) + 1;
         });
 
-        // Kapasite ve Randevuları Birleştir
+        // 3. KAPASİTE VE RANDEVULARI KONSOLİDE ET
         const grupMap = {};
         filteredKapasite.forEach(r => {
             const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
@@ -4602,11 +4639,13 @@ window.switchMhrsSubTab = function(tabName) {
             grupMap[key].randevu += r.randevu;
         });
 
+        // 4. SATIRLARI OLUŞTUR VE AÇILABİLECEK KAPASİTEYİ HESAPLA
         const satirlar = Object.values(grupMap).map(item => {
-            const key = `${item.kurum}___${item.brans}`;
-            const talepSayisi = talepMap[key] || 0;
-            const oda = odaMap[key] || { aktifOda: 0, mhrsOda: 0 };
-            
+            const normKey = `${normText(item.kurum)}___${normText(item.brans)}`;
+            const talepSayisi = talepMap[normKey] || 0;
+            const oda = odaMap[normKey] || { aktifOda: 0, mhrsOda: 0 };
+
+            // Günlük Katsayı * Aktif Oda (1 Günlük Hedef)
             const katsayi = getBakanlikKatsayisi(item.brans);
             const acilabilecekKap = Math.round(katsayi * oda.aktifOda);
             const fark = acilabilecekKap > 0 ? (item.topKap - acilabilecekKap) : null;
@@ -4623,10 +4662,12 @@ window.switchMhrsSubTab = function(tabName) {
             };
         }).sort((a, b) => b.topKap - a.topKap);
 
-        // KPI'lar
+        // TOPLAMLAR
         const tKapasite = satirlar.reduce((s, v) => s + v.topKap, 0);
         const tRandevu = satirlar.reduce((s, v) => s + v.randevu, 0);
         const tGereken = satirlar.reduce((s, v) => s + v.acilabilecekKap, 0);
+        const tAktifOda = satirlar.reduce((s, v) => s + v.aktifOda, 0);
+        const tMhrsOda = satirlar.reduce((s, v) => s + v.mhrsOda, 0);
         const tFark = tKapasite - tGereken;
         const genelDoluluk = tKapasite > 0 ? (tRandevu / tKapasite) * 100 : 0;
 
@@ -4635,16 +4676,23 @@ window.switchMhrsSubTab = function(tabName) {
             kpi.innerHTML = `
                 <div class="col-md-3">
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">AÇILAN GÜNLÜK KAPASİTE</div>
+                        <div class="text-secondary small fw-bold">TOPLAM AKTİF ODA</div>
+                        <div class="fs-3 fw-bold text-dark">${tAktifOda.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small">MHRS Açılan: <b>${tMhrsOda.toLocaleString('tr-TR')}</b> (%${tAktifOda > 0 ? ((tMhrsOda/tAktifOda)*100).toFixed(0) : 0})</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">AÇILAN MEVCUT KAPASİTE</div>
                         <div class="fs-3 fw-bold text-primary">${tKapasite.toLocaleString('tr-TR')}</div>
                         <div class="text-muted small">İlk Muayene + Devam Eden</div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">AÇILABİLECEK KAPASİTE</div>
+                        <div class="text-secondary small fw-bold">AÇILMASI GEREKEN KAPASİTE</div>
                         <div class="fs-3 fw-bold text-indigo" style="color:#4f46e5;">${tGereken.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">Aktif Oda Hedefi (Günlük)</div>
+                        <div class="text-muted small">Günlük Poliklinik Hedefi</div>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -4656,17 +4704,10 @@ window.switchMhrsSubTab = function(tabName) {
                         <div class="text-muted small">${tFark < 0 ? '🚨 Kapasite Açığı Var' : '✅ Hedef Karşılandı'}</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">ALINAN RANDEVU & DOLULUK</div>
-                        <div class="fs-3 fw-bold text-success">${tRandevu.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">Genel Doluluk: <b>%${genelDoluluk.toFixed(1)}</b></div>
-                    </div>
-                </div>
             `;
         }
 
-        // Tabloyu Doldur
+        // RESİM 2'DEKİ FORMATTA DETAYLI TABLO
         const tbody = document.getElementById('gkTableBody');
         if (tbody) {
             if (satirlar.length === 0) {
@@ -4690,6 +4731,7 @@ window.switchMhrsSubTab = function(tabName) {
                             <td class="fw-bold text-dark"><small>${r.kurum}</small></td>
                             <td><b>${r.brans}</b></td>
                             <td class="text-center fw-bold">${r.aktifOda > 0 ? r.aktifOda : '-'}</td>
+                            <td class="text-center fw-bold text-primary">${r.mhrsOda > 0 ? r.mhrsOda : '-'}</td>
                             <td class="text-center text-secondary">${r.ilkKap > 0 ? r.ilkKap.toLocaleString('tr-TR') : '-'}</td>
                             <td class="text-center text-secondary">${r.devKap > 0 ? r.devKap.toLocaleString('tr-TR') : '-'}</td>
                             <td class="text-center fw-bold text-dark bg-light">${r.topKap.toLocaleString('tr-TR')}</td>
@@ -4697,14 +4739,13 @@ window.switchMhrsSubTab = function(tabName) {
                             <td class="text-center">${farkBadge}</td>
                             <td class="text-center fw-bold text-dark">${r.randevu.toLocaleString('tr-TR')}</td>
                             <td class="text-center fw-bold text-primary">${r.doluluk.toFixed(1)}%</td>
-                            <td class="text-center fw-bold text-danger">${r.talep > 0 ? r.talep.toLocaleString('tr-TR') : '-'}</td>
                         </tr>
                     `;
                 }).join('');
             }
         }
 
-        // Grafik Çizimi
+        // GRAFİK ÇİZİMİ
         const top10 = satirlar.slice(0, 10);
         const chartLabels = top10.map(t => t.brans.length > 20 ? t.brans.substring(0, 18) + '...' : t.brans);
         const chartKapasite = top10.map(t => t.topKap);
@@ -4755,7 +4796,6 @@ window.switchMhrsSubTab = function(tabName) {
         }
     };
 
-    // 3. ARAYÜZÜ OLUŞTURUP İLK TETİKLEMEYİ YAPAN FONKSİYON
     window.renderGunlukKapasiteArayuz = function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
@@ -4824,6 +4864,7 @@ window.switchMhrsSubTab = function(tabName) {
                                         <th>Kurum / Yerleşke</th>
                                         <th>Klinik / Branş</th>
                                         <th class="text-center" style="width: 65px;">Aktif Oda</th>
+                                        <th class="text-center" style="width: 65px;">MHRS Oda</th>
                                         <th class="text-center" style="width: 70px;">İlk Muayene</th>
                                         <th class="text-center" style="width: 70px;">Devam Eden</th>
                                         <th class="text-center bg-secondary text-white" style="width: 75px;">Toplam Kap.</th>
@@ -4831,7 +4872,6 @@ window.switchMhrsSubTab = function(tabName) {
                                         <th class="text-center" style="background-color: #0f172a; width: 85px;">Kapasite Farkı</th>
                                         <th class="text-center bg-warning text-white" style="width: 75px;">Randevu</th>
                                         <th class="text-center text-primary" style="width: 65px;">Doluluk %</th>
-                                        <th class="text-center text-danger" style="width: 70px;">Talep</th>
                                     </tr>
                                 </thead>
                                 <tbody id="gkTableBody"></tbody>
@@ -4842,7 +4882,6 @@ window.switchMhrsSubTab = function(tabName) {
             </div>
         `;
 
-        // Artık filtre fonksiyonu yukarıda tanımlı olduğu için güvenle çalışır
         window.updateGunlukKapasiteFiltreler(false);
     };
     window.initMhrsDashboard = async function() {
