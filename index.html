@@ -4364,7 +4364,7 @@ function getBakanlikKatsayisi(bransAdi) {
         }
     };
     // =========================================================================
-    // GÜNLÜK KAPASİTE & ANLIK TALEP ANALİZ MODÜLÜ (TAM ENTEGRE)
+    // GÜNLÜK KAPASİTE & ANLIK TALEP ANALİZ MODÜLÜ (TAM ENTEGRE - GÜNCELLENDİ)
     // =========================================================================
     let mhrsGunlukKapasiteRawData = [];
     let mhrsGunlukDonemListesi = [];
@@ -4382,7 +4382,6 @@ function getBakanlikKatsayisi(bransAdi) {
         `;
 
         try {
-            // 1. Oda Sayıları ve Branş_H boşsa onları da arka planda mutlaka çekelim (Gelecek Dönem Aksiyon mantığı)
             const urlGunluk = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('gunluk_kapasite')}`;
             const urlOda = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('poliklinik_oda_sayilari')}`;
             const urlBransH = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('BRANŞ_H')}`;
@@ -4401,9 +4400,10 @@ function getBakanlikKatsayisi(bransAdi) {
                 resBransH.ok ? resBransH.text() : ""
             ]);
 
-            // BRANŞ_H Doldur
-            if (txtBransH && Object.keys(aksiyonBransHMap).length === 0) {
+            // BRANŞ_H Haritasını Tam ve Kesin Doldur
+            if (txtBransH) {
                 const rowsB = parseCSV(txtBransH);
+                aksiyonBransHMap = {};
                 for (let i = 1; i < rowsB.length; i++) {
                     const bAd = (rowsB[i][0] || '').trim();
                     const tur = (rowsB[i][1] || '').trim();
@@ -4414,7 +4414,7 @@ function getBakanlikKatsayisi(bransAdi) {
                 }
             }
 
-            // ODA SAYILARI Doldur (Eğer daha önce dolmadıysa)
+            // ODA SAYILARI Doldur
             if (txtOda && aksiyonOdaRawData.length === 0) {
                 const rowsOda = parseCSV(txtOda);
                 for (let i = 1; i < rowsOda.length; i++) {
@@ -4559,7 +4559,7 @@ function getBakanlikKatsayisi(bransAdi) {
         window.updateGunlukKapasiteDashboard();
     };
 
-window.updateGunlukKapasiteDashboard = function() {
+    window.updateGunlukKapasiteDashboard = function() {
         const seciliDonem = document.getElementById('gkDonemSelect')?.value || '';
         const kapsam = document.getElementById('gkKapsamSelect')?.value || 'DAHIL';
         const seciliKurum = document.getElementById('gkKurumSelect')?.value || 'ALL';
@@ -4619,7 +4619,7 @@ window.updateGunlukKapasiteDashboard = function() {
             grupMap[key].randevu += r.randevu;
         });
 
-        // 4. TABLO SATIRLARI & YENİ ODA BAŞINA AÇILAN SÜTUNU HESAPLA
+        // 4. TABLO SATIRLARI (ANA DAL/YAN DAL KATSAYISI VE ODA BAŞI TAM SAYI DÜZELTMESİ)
         const satirlar = Object.values(grupMap).map(item => {
             const normKey = `${normText(item.kurum)}___${normText(item.brans)}`;
             const talepSayisi = talepMap[normKey] || 0;
@@ -4630,8 +4630,8 @@ window.updateGunlukKapasiteDashboard = function() {
             const fark = acilabilecekKap > 0 ? (item.topKap - acilabilecekKap) : null;
             const dolulukOrani = item.topKap > 0 ? (item.randevu / item.topKap) * 100 : 0;
             
-            // YENİ METRİK: Oda Başına Açılan Kapasite = Toplam Kapasite / Aktif Oda
-            const odaBasiKap = oda.aktifOda > 0 ? (item.topKap / oda.aktifOda) : 0;
+            // ODA BAŞINA KAPASİTE: Ondalıksız (Math.round veya Math.floor) tam sayı yapıldı
+            const odaBasiKap = oda.aktifOda > 0 ? Math.round(item.topKap / oda.aktifOda) : 0;
 
             return {
                 ...item,
@@ -4653,7 +4653,6 @@ window.updateGunlukKapasiteDashboard = function() {
         const tAktifOda = satirlar.reduce((s, v) => s + v.aktifOda, 0);
         const tMhrsOda = satirlar.reduce((s, v) => s + v.mhrsOda, 0);
         const tFark = tKapasite - tGereken;
-        const genelDoluluk = tKapasite > 0 ? (tRandevu / tKapasite) * 100 : 0;
 
         const kpi = document.getElementById('gkKpiAlani');
         if (kpi) {
@@ -4691,7 +4690,7 @@ window.updateGunlukKapasiteDashboard = function() {
             `;
         }
 
-        // TABLO DOLDURMA (ODA BAŞINA AÇILAN KAPASİTE VE YEŞİL/KIRMIZI ROZETLİ)
+        // TABLO DOLDURMA (Oda Başına Kapasite Tam Sayı Olarak Yazdırıldı)
         const tbody = document.getElementById('gkTableBody');
         if (tbody) {
             if (satirlar.length === 0) {
@@ -4709,14 +4708,13 @@ window.updateGunlukKapasiteDashboard = function() {
                         }
                     }
 
-                    // Oda Başına Kapasite Rozeti: Katsayıya eşit veya büyükse YEŞİL, altındaysa KIRMIZI
+                    // Oda Başına Kapasite Tam Sayı Rozeti
                     let odaBasiBadge = '<span class="text-muted">-</span>';
                     if (r.aktifOda > 0 && r.odaBasiKap > 0) {
-                        const valStr = r.odaBasiKap.toFixed(1);
                         if (r.odaBasiKap >= r.katsayi) {
-                            odaBasiBadge = `<span class="badge bg-success text-white fw-bold px-2 py-1">${valStr} (≥${r.katsayi})</span>`;
+                            odaBasiBadge = `<span class="badge bg-success text-white fw-bold px-2 py-1">${r.odaBasiKap} (≥${r.katsayi})</span>`;
                         } else {
-                            odaBasiBadge = `<span class="badge bg-danger text-white fw-bold px-2 py-1">${valStr} (<${r.katsayi})</span>`;
+                            odaBasiBadge = `<span class="badge bg-danger text-white fw-bold px-2 py-1">${r.odaBasiKap} (<${r.katsayi})</span>`;
                         }
                     }
 
@@ -4742,12 +4740,11 @@ window.updateGunlukKapasiteDashboard = function() {
         }
 
         // =========================================================================
-        // GRAFİK MOTORU: TÜM BÖLGE İÇİN KÜMÜLATİF TEKİL BRANŞ TOPLAMI
+        // GRAFİK SIRALAMA DÜZELTMESİ: DOLULUK YERİNE TOPLAM KAPASİTEYE GÖRE SIRALA
         // =========================================================================
         let chartDataList = [];
 
         if (seciliKurum === 'ALL') {
-            // TÜM BÖLGE: Branşları kümülatif topla (Aynı branş asla tekrar etmez!)
             const bransKumuMap = {};
             satirlar.forEach(r => {
                 if (!bransKumuMap[r.brans]) {
@@ -4757,6 +4754,7 @@ window.updateGunlukKapasiteDashboard = function() {
                 bransKumuMap[r.brans].randevu += r.randevu;
             });
 
+            // TOPLAM KAPASİTEYE (topKap) GÖRE BÜYÜKTEN KÜÇÜĞE SIRALAMA
             chartDataList = Object.values(bransKumuMap)
                 .filter(b => b.topKap > 0)
                 .map(b => ({
@@ -4766,13 +4764,13 @@ window.updateGunlukKapasiteDashboard = function() {
                     kurum: 'Tüm Bölge (Kümülatif)',
                     doluluk: (b.randevu / b.topKap) * 100
                 }))
-                .sort((a, b) => b.doluluk - a.doluluk || b.topKap - a.topKap)
+                .sort((a, b) => b.topKap - a.topKap)
                 .slice(0, 10);
         } else {
-            // TEK KURUM SEÇİLİYSE: O kuruma ait en dolu 10 branş
+            // TEK KURUM: TOPLAM KAPASİTEYE (topKap) GÖRE BÜYÜKTEN KÜÇÜĞE SIRALAMA
             chartDataList = [...satirlar]
                 .filter(r => r.topKap > 0)
-                .sort((a, b) => b.doluluk - a.doluluk || b.topKap - a.topKap)
+                .sort((a, b) => b.topKap - a.topKap)
                 .slice(0, 10);
         }
 
