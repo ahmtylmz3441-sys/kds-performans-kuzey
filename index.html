@@ -3017,8 +3017,7 @@ window.switchMhrsSubTab = function(tabName) {
             document.getElementById('subtab-mhrs-aksiyon-btn')?.classList.add('active');
             if (stdFiltreler) stdFiltreler.style.display = 'none';
             window.initMhrsAksiyonView();
-        }
-    } else if (tabName === 'GUNLUK') {
+        } else if (tabName === 'GUNLUK') {
             document.getElementById('subtab-mhrs-gunluk-btn')?.classList.add('active');
             if (stdFiltreler) stdFiltreler.style.display = 'none';
             window.initMhrsGunlukKapasiteView();
