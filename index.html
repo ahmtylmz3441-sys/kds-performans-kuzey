@@ -4467,7 +4467,7 @@ function getBakanlikKatsayisi(bransAdi) {
             <div class="text-center py-5">
                 <div class="spinner-border text-success" role="status"></div>
                 <div class="mt-3 text-dark fw-bold fs-5">Günlük Kapasite ve Oda Verileri Yükleniyor...</div>
-                <div class="text-muted small">gunluk_kapasite, poliklinik_oda_sayilari ve BRANŞ_H sekmeleri taranıyor...</div>
+                <div class="text-muted small">gunluk_kapasite, poliklinik_oda_sayilari ve BRANŞ_H sekmeleri eksiksiz senkronize ediliyor...</div>
             </div>
         `;
 
@@ -4476,6 +4476,7 @@ function getBakanlikKatsayisi(bransAdi) {
             const urlOda = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('poliklinik_oda_sayilari')}`;
             const urlBransH = `https://docs.google.com/spreadsheets/d/${MHRS_TALEP_CONFIG.spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('BRANŞ_H')}`;
 
+            // 1. TÜM VERİLERİN KESİNLİKLE İNDİRİLMESİNİ BEKLE
             const [resGunluk, resOda, resBransH] = await Promise.all([
                 fetch(urlGunluk),
                 fetch(urlOda),
@@ -4486,11 +4487,11 @@ function getBakanlikKatsayisi(bransAdi) {
 
             const [txtGunluk, txtOda, txtBransH] = await Promise.all([
                 resGunluk.text(),
-                resOda.ok ? resOda.text() : "",
-                resBransH.ok ? resBransH.text() : ""
+                resOda.ok ? resOda.text() : Promise.resolve(""),
+                resBransH.ok ? resBransH.text() : Promise.resolve("")
             ]);
 
-            // BRANŞ_H Haritasını Tam ve Kesin Doldur
+            // 2. ÖNCE ODA VE BRANŞ HARİTALARINI BELLEĞE YÜKLE (Kritik Sıralama)
             if (txtBransH) {
                 const rowsB = parseCSV(txtBransH);
                 aksiyonBransHMap = {};
@@ -4504,9 +4505,9 @@ function getBakanlikKatsayisi(bransAdi) {
                 }
             }
 
-            // ODA SAYILARI Doldur
-            if (txtOda && aksiyonOdaRawData.length === 0) {
+            if (txtOda) {
                 const rowsOda = parseCSV(txtOda);
+                aksiyonOdaRawData = []; // Önceki kalıntıları temizle
                 for (let i = 1; i < rowsOda.length; i++) {
                     const r = rowsOda[i];
                     const hamK = (r[0] || '').trim();
@@ -4531,7 +4532,7 @@ function getBakanlikKatsayisi(bransAdi) {
                 }
             }
 
-            // GÜNLÜK KAPASİTE İŞLE
+            // 3. EN SON GÜNLÜK KAPASİTEYİ İŞLE
             const rows = parseCSV(txtGunluk);
             mhrsGunlukKapasiteRawData = [];
             const donemSet = new Set();
@@ -4589,6 +4590,8 @@ function getBakanlikKatsayisi(bransAdi) {
             };
 
             mhrsGunlukDonemListesi = Array.from(donemSet).sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
+            
+            // 4. VERİLER TAMAMEN HAZIR OLDUKTAN SONRA ARAYÜZÜ ÇİZ
             window.renderGunlukKapasiteArayuz();
 
         } catch (err) {
