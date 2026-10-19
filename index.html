@@ -4019,30 +4019,120 @@ window.switchMhrsSubTab = function(tabName) {
 function getBakanlikKatsayisi(bransAdi) {
         if (!bransAdi) return 32;
 
-        // Standartlaştırma (Büyük Harf & Boşluk Temizliği)
-        const b = bransAdi.toString().trim()
-            .replace(/i/g, "İ")
-            .replace(/ı/g, "I")
-            .toUpperCase();
+        const bTemiz = bransAdi.toString().trim();
+        const bUpper = bTemiz.replace(/i/g, "İ").replace(/ı/g, "I").toUpperCase();
+        const bNorm = normText(bTemiz);
 
-        // 1. İSTİSNA: Çocuk ve Ergen Ruh Sağlığı ve Hastalıkları -> 16
-        if (b.includes("ÇOCUK VE ERGEN RUH SAĞLIĞI VE HASTALIKLARI")) {
+        // 1. ÖZEL İSTİSNALAR (Katsayısı farklı olanlar)
+        if (bUpper.includes("ÇOCUK VE ERGEN RUH SAĞLIĞI") || bNorm.includes("COCUKVEERGENRUHSAGLIGI")) {
             return 16;
         }
-
-        // 2. İSTİSNA: Ruh Sağlığı ve Hastalıkları -> 28
-        if (b.includes("RUH SAĞLIĞI VE HASTALIKLARI")) {
+        if (bUpper.includes("RUH SAĞLIĞI VE HASTALIKLARI") || bUpper.includes("PSİKİYATRİ") || bNorm.includes("RUHSAGLIGI")) {
             return 28;
         }
 
-        // 3. BRANŞ_H SEKMESİNDEN DÜŞEYARA (Deri ve Zührevi Hastalıklar, İç Hastalıkları vb. Ana Dal ise 42)
-        let dalTuru = aksiyonBransHMap[b] || aksiyonBransHMap[normText(b)] || "";
+        // 2. GÖNDERDİĞİNİZ LİSTEDEKİ KESİN YAN DALLAR (Katsayı: 32)
+        // Göz alt branşları ve diğer tüm yan dallar buradadır.
+        const yanDallarListesi = [
+            "AĞIZ, YÜZ VE ÇENE CERRAHİSİ", "AGIZ, YUZ VE CENE CERRAHISI",
+            "ALGOLOJİ", "ALGOLOJI",
+            "CERRAHİ ONKOLOJİ", "CERRAHI ONKOLOJI",
+            "ÇOCUK ACİL", "COCUK ACIL",
+            "ÇOCUK ENDOKRİNOLOJİSİ", "COCUK ENDOKRINOLOJISI",
+            "ÇOCUK ENFEKSİYON HASTALIKLARI", "COCUK ENFEKSIYON HASTALIKLARI",
+            "ÇOCUK GASTROENTEROLOJİSİ", "COCUK GASTROENTEROLOJISI",
+            "ÇOCUK GENETİK HASTALIKLARI", "COCUK GENETIK HASTALIKLARI",
+            "ÇOCUK GÖĞÜS HASTALIKLARI", "COCUK GOGUS HASTALIKLARI",
+            "ÇOCUK HEMATOLOJİSİ VE ONKOLOJİSİ", "COCUK HEMATOLOJISI VE ONKOLOJISI",
+            "ÇOCUK İMMÜNOLOJİSİ VE ALERJİ HASTALIKLARI", "COCUK IMMUNOLOJISI VE ALERJI HASTALIKLARI",
+            "ÇOCUK KALP VE DAMAR CERRAHİSİ", "COCUK KALP VE DAMAR CERRAHISI",
+            "ÇOCUK KARDİYOLOJİSİ", "COCUK KARDIYOLOJISI",
+            "ÇOCUK METABOLİZMA HASTALIKLARI", "COCUK METABOLIZMA HASTALIKLARI",
+            "ÇOCUK NEFROLOJİSİ", "COCUK NEFROLOJISI",
+            "ÇOCUK NÖROLOJİSİ", "COCUK NOROLOJISI",
+            "ÇOCUK ROMATOLOJİSİ", "COCUK ROMATOLOJISI",
+            "ÇOCUK ÜROLOJİSİ", "COCUK UROLOJISI",
+            "EL CERRAHİSİ", "EL CERRAHISI",
+            "ENDOKRİNOLOJİ VE METABOLİZMA HASTALIKLARI", "ENDOKRINOLOJI VE METABOLIZMA HASTALIKLARI",
+            "GASTROENTEROLOJİ", "GASTROENTEROLOJI",
+            "GASTROENTEROLOJİ CERRAHİSİ", "GASTROENTEROLOJI CERRAHISI",
+            "GELİŞİMSEL PEDİATRİ", "GELISIMSEL PEDIATRI",
+            "GERİATRİ", "GERIATRI",
+            "GÖZ HASTALIKLARI-UVEA", "GÖZ HASTALIKLARI-ŞAŞILIK", "GÖZ HASTALIKLARI-KATARAKT", 
+            "GÖZ HASTALIKLARI-RETİNA", "GÖZ HASTALIKLARI-GLOKOM", "GÖZ HASTALIKLARI-OKÜLOPLASTİ", 
+            "GÖZ HASTALIKLARI-FFA", "GÖZ HASTALIKLARI-KONTAKLENS", "GÖZ HASTALIKLARI-KORNEA", 
+            "GÖZ HASTALIKLARI-LAZER", "GÖZ HASTALIKLARI-NÖROOFTALMOLOJİ", "GÖZ HASTALIKLARI-OPC",
+            "HEMATOLOJİ", "HEMATOLOJI",
+            "İMMÜNOLOJİ VE ALERJİ HASTALIKLARI", "IMMUNOLOJI VE ALERJI HASTALIKLARI",
+            "İŞ VE MESLEK HASTALIKLARI", "IS VE MESLEK HASTALIKLARI",
+            "JİNEKOLOJİK ONKOLOJİ CERRAHİSİ", "JINEKOLOJIK ONKOLOJI CERRAHISI",
+            "KLİNİK NÖROFİZYOLOJİ", "KLINIK NOROFIZYOLOJI",
+            "NEFROLOJİ", "NEFROLOJI",
+            "NEONATOLOJİ", "NEONATOLOJI",
+            "PERİNATOLOJİ", "PERINATOLOJI",
+            "ROMATOLOJİ", "ROMATOLOJI",
+            "SOSYAL PEDİATRİ", "SOSYAL PEDIATRI",
+            "SUALTI HEKİMLİĞİ VE HİPERBARİK TIP", "SUALTI HEKIMLIGI VE HIPERBARIK TIP",
+            "TIBBİ EKOLOJİ VE HİDROKLİMATOLOJİ", "TIBBI EKOLOJI VE HIDROKLIMATOLOJI",
+            "TIBBİ ONKOLOJİ", "TIBBI ONKOLOJI",
+            "YETİŞKİN ACİL", "YETISKIN ACIL",
+            "YOĞUN BAKIM", "YOGUN BAKIM"
+        ];
 
-        if (dalTuru && dalTuru.toString().toUpperCase().includes("ANA")) {
-            return 42;
+        const isYanDal = yanDallarListesi.some(y => bUpper === y || bNorm === normText(y) || bUpper.includes(y));
+        if (isYanDal) {
+            return 32; // Yan dal katsayısı
         }
 
-        // Yan Dal veya tanımlanamayanlar -> 32
+        // 3. GÖNDERDİĞİNİZ LİSTEDEKİ KESİN ANA DALLAR (Katsayı: 42)
+        const anaDallarListesi = [
+            "ADLİ TIP", "ADLI TIP",
+            "AİLE HEKİMLİĞİ", "AILE HEKIMLIGI",
+            "ANESTEZİYOLOJİ VE REANİMASYON", "ANESTEZIYOLOJI VE REANIMASYON",
+            "BEYİN VE SİNİR CERRAHİSİ", "BEYIN VE SINIR CERRAHISI",
+            "ÇOCUK CERRAHİSİ", "COCUK CERRAHISI",
+            "ÇOCUK SAĞLIĞI VE HASTALIKLARI", "COCUK SAGLIGI VE HASTALIKLARI",
+            "ÇOCUK VE ERGEN RUH SAĞLIĞI VE HASTALIKLARI",
+            "DERİ VE ZÜHREVİ HASTALIKLAR", "DERI VE ZUHREVI HASTALIKLAR",
+            "DİŞ POLİKLİNİĞİ", "DIS POLIKLINIGI",
+            "ENFEKSİYON HASTALIKLARI VE KLİNİK MİKROBİYOLOJİ", "ENFEKSIYON HASTALIKLARI VE KLINIK MIKROBIYOLOJI",
+            "FİZİKSEL TIP VE REHABİLİTASYON", "FIZIKSEL TIP VE REHABILITASYON",
+            "GENEL CERRAHİ", "GENEL CERRAHI",
+            "GÖĞÜS CERRAHİSİ", "GOGUS CERRAHISI",
+            "GÖĞÜS HASTALIKLARI", "GOGUS HASTALIKLARI",
+            "GÖZ HASTALIKLARI", "GOZ HASTALIKLARI",
+            "HALK SAĞLIĞI", "HALK SAGLIGI",
+            "İÇ HASTALIKLARI", "IC HASTALIKLARI",
+            "KADIN HASTALIKLARI VE DOĞUM", "KADIN HASTALIKLARI VE DOGUM",
+            "KALP VE DAMAR CERRAHİSİ", "KALP VE DAMAR CERRAHISI",
+            "KARDİYOLOJİ", "KARDIYOLOJI",
+            "KULAK BURUN BOĞAZ HASTALIKLARI", "KULAK BURUN BOGAZ HASTALIKLARI",
+            "NÖROLOJİ", "NOROLOJI",
+            "NÜKLEER TIP TEDAVİSİ", "NUKLEER TIP TEDAVISI",
+            "ORTOPEDİ VE TRAVMATOLOJİ", "ORTOPEDI VE TRAVMATOLOJI",
+            "PLASTİK, REKONSTRÜKTİF VE ESTETİK CERRAHİ", "PLASTIK, REKONSTRUKTIF VE ESTETIK CERRAHI",
+            "RADYASYON ONKOLOJİSİ", "RADYASYON ONKOLOJISI",
+            "RADYOLOJİ", "RADYOLOJI",
+            "RUH SAĞLIĞI VE HASTALIKLARI", "RUH SAGLIGI VE HASTALIKLARI",
+            "SPOR HEKİMLİĞİ", "SPOR HEKIMLIGI",
+            "TIBBİ GENETİK", "TIBBI GENETIK",
+            "ÜROLOJİ", "UROLOJI"
+        ];
+
+        const isAnaDal = anaDallarListesi.some(a => bUpper === a || bNorm === normText(a) || bUpper.includes(a));
+        if (isAnaDal) {
+            return 42; // Ana dal katsayısı
+        }
+
+        // 4. GOOGLE SHEETS (BRANŞ_H) YEDEK KONTROLÜ
+        let dalTuru = aksiyonBransHMap[bUpper] || aksiyonBransHMap[bNorm] || "";
+        if (dalTuru) {
+            const upTur = dalTuru.toString().toUpperCase();
+            if (upTur.includes("YAN")) return 32;
+            if (upTur.includes("ANA")) return 42;
+        }
+
+        // 5. LİSTEDE BULUNAMAYANLAR İÇİN VARSAYILAN -> 32
         return 32;
     }
     // Arayüzü Çizen Motor (SADECE KAPASİTELER DÖNEMLERİYLE BESLENİR)
