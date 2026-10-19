@@ -4494,6 +4494,268 @@ window.switchMhrsSubTab = function(tabName) {
         }
     };
 
+    // 1. FİLTRELERİ DOLDURAN FONKSİYON
+    window.updateGunlukKapasiteFiltreler = function(sadeceBransGuncelle = false) {
+        const seciliDonem = document.getElementById('gkDonemSelect')?.value || '';
+        const kapsam = document.getElementById('gkKapsamSelect')?.value || 'DAHIL';
+        const donemVerisi = mhrsGunlukKapasiteRawData.filter(d => d.donem === seciliDonem);
+
+        if (!sadeceBransGuncelle) {
+            const kurumSelect = document.getElementById('gkKurumSelect');
+            let kurumListesi = [];
+
+            if (kapsam === 'DAHIL') {
+                kurumListesi = [...new Set(donemVerisi.map(d => d.kurumKonsolide))].sort();
+            } else {
+                kurumListesi = [...new Set(donemVerisi.map(d => d.kurumTekil))].sort();
+            }
+
+            if (kurumSelect) {
+                kurumSelect.innerHTML = `
+                    <option value="ALL">🌍 TÜMÜ (${kurumListesi.length} Kurum)</option>
+                    ${kurumListesi.map(k => `<option value="${k}">${k}</option>`).join('')}
+                `;
+            }
+        }
+
+        const seciliKurum = document.getElementById('gkKurumSelect')?.value || 'ALL';
+        let kurumFiltreli = donemVerisi;
+        if (seciliKurum !== 'ALL') {
+            kurumFiltreli = (kapsam === 'DAHIL')
+                ? donemVerisi.filter(d => d.kurumKonsolide === seciliKurum)
+                : donemVerisi.filter(d => d.kurumTekil === seciliKurum);
+        }
+
+        const tekilBranslar = [...new Set(kurumFiltreli.map(d => d.klinik))].sort();
+        const bransSelect = document.getElementById('gkBransSelect');
+        const oncekiBrans = bransSelect?.value || 'ALL';
+
+        if (bransSelect) {
+            bransSelect.innerHTML = `
+                <option value="ALL">🩺 TÜM BRANŞLAR (${tekilBranslar.length} Branş)</option>
+                ${tekilBranslar.map(b => `<option value="${b}">${b}</option>`).join('')}
+            `;
+            if (tekilBranslar.includes(oncekiBrans)) bransSelect.value = oncekiBrans;
+        }
+
+        window.updateGunlukKapasiteDashboard();
+    };
+
+    // 2. DASHBOARD VE TABLOYU HESAPLAYIP ÇİZEN FONKSİYON
+    window.updateGunlukKapasiteDashboard = function() {
+        const seciliDonem = document.getElementById('gkDonemSelect')?.value || '';
+        const kapsam = document.getElementById('gkKapsamSelect')?.value || 'DAHIL';
+        const seciliKurum = document.getElementById('gkKurumSelect')?.value || 'ALL';
+        const seciliBrans = document.getElementById('gkBransSelect')?.value || 'ALL';
+
+        let filteredKapasite = mhrsGunlukKapasiteRawData.filter(d => d.donem === seciliDonem);
+        if (seciliKurum !== 'ALL') {
+            filteredKapasite = (kapsam === 'DAHIL')
+                ? filteredKapasite.filter(d => d.kurumKonsolide === seciliKurum)
+                : filteredKapasite.filter(d => d.kurumTekil === seciliKurum);
+        }
+        if (seciliBrans !== 'ALL') {
+            filteredKapasite = filteredKapasite.filter(d => d.klinik === seciliBrans);
+        }
+
+        // Oda Verilerini Eşleştir
+        const odaMap = {};
+        (aksiyonOdaRawData || []).forEach(o => {
+            const kName = (kapsam === 'DAHIL') ? o.kurumKonsolide : o.kurumTekil;
+            const key = `${kName}___${o.brans}`;
+            if (!odaMap[key]) odaMap[key] = { aktifOda: 0, mhrsOda: 0 };
+            odaMap[key].aktifOda += o.aktifOda;
+            odaMap[key].mhrsOda += o.mhrsOda;
+        });
+
+        // En Güncel Talep Verilerini Al
+        const talepDonemleri = [...new Set((mhrsTalepRawData || []).map(d => d.donem))];
+        const parseTarihDegeri = (str) => {
+            const pts = (str || '').split(".");
+            if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
+            return 0;
+        };
+        talepDonemleri.sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
+        const enSonTalepDonemi = talepDonemleri[0] || '';
+
+        const talepMap = {};
+        (mhrsTalepRawData || []).filter(d => d.donem === enSonTalepDonemi).forEach(r => {
+            const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
+            const key = `${kName}___${r.klinik}`;
+            talepMap[key] = (talepMap[key] || 0) + 1;
+        });
+
+        // Kapasite ve Randevuları Birleştir
+        const grupMap = {};
+        filteredKapasite.forEach(r => {
+            const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
+            const key = `${kName}___${r.klinik}`;
+            if (!grupMap[key]) {
+                grupMap[key] = { kurum: kName, brans: r.klinik, ilkKap: 0, devKap: 0, topKap: 0, randevu: 0 };
+            }
+            if (r.aksiyon === 'MUAYENE') {
+                grupMap[key].ilkKap += r.kapasite;
+            } else {
+                grupMap[key].devKap += r.kapasite;
+            }
+            grupMap[key].topKap += r.kapasite;
+            grupMap[key].randevu += r.randevu;
+        });
+
+        const satirlar = Object.values(grupMap).map(item => {
+            const key = `${item.kurum}___${item.brans}`;
+            const talepSayisi = talepMap[key] || 0;
+            const oda = odaMap[key] || { aktifOda: 0, mhrsOda: 0 };
+            
+            const katsayi = getBakanlikKatsayisi(item.brans);
+            const acilabilecekKap = Math.round(katsayi * oda.aktifOda);
+            const fark = acilabilecekKap > 0 ? (item.topKap - acilabilecekKap) : null;
+            const dolulukOrani = item.topKap > 0 ? (item.randevu / item.topKap) * 100 : 0;
+
+            return {
+                ...item,
+                aktifOda: oda.aktifOda,
+                mhrsOda: oda.mhrsOda,
+                acilabilecekKap: acilabilecekKap,
+                fark: fark,
+                talep: talepSayisi,
+                doluluk: dolulukOrani
+            };
+        }).sort((a, b) => b.topKap - a.topKap);
+
+        // KPI'lar
+        const tKapasite = satirlar.reduce((s, v) => s + v.topKap, 0);
+        const tRandevu = satirlar.reduce((s, v) => s + v.randevu, 0);
+        const tGereken = satirlar.reduce((s, v) => s + v.acilabilecekKap, 0);
+        const tFark = tKapasite - tGereken;
+        const genelDoluluk = tKapasite > 0 ? (tRandevu / tKapasite) * 100 : 0;
+
+        const kpi = document.getElementById('gkKpiAlani');
+        if (kpi) {
+            kpi.innerHTML = `
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">AÇILAN GÜNLÜK KAPASİTE</div>
+                        <div class="fs-3 fw-bold text-primary">${tKapasite.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small">İlk Muayene + Devam Eden</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">AÇILABİLECEK KAPASİTE</div>
+                        <div class="fs-3 fw-bold text-indigo" style="color:#4f46e5;">${tGereken.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small">Aktif Oda Hedefi (Günlük)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">KAPASİTE DENGESİ</div>
+                        <div class="fs-3 fw-bold ${tFark < 0 ? 'text-danger' : 'text-success'}">
+                            ${tFark > 0 ? `+${tFark.toLocaleString('tr-TR')}` : tFark.toLocaleString('tr-TR')}
+                        </div>
+                        <div class="text-muted small">${tFark < 0 ? '🚨 Kapasite Açığı Var' : '✅ Hedef Karşılandı'}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">ALINAN RANDEVU & DOLULUK</div>
+                        <div class="fs-3 fw-bold text-success">${tRandevu.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small">Genel Doluluk: <b>%${genelDoluluk.toFixed(1)}</b></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Tabloyu Doldur
+        const tbody = document.getElementById('gkTableBody');
+        if (tbody) {
+            if (satirlar.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">Seçilen kriterlere uygun günlük kapasite kaydı bulunamadı.</td></tr>';
+            } else {
+                tbody.innerHTML = satirlar.map((r, idx) => {
+                    let farkBadge = '<span class="text-muted">-</span>';
+                    if (r.fark !== null) {
+                        if (r.fark < 0) {
+                            farkBadge = `<span class="badge bg-danger-subtle text-danger border border-danger fw-bold">${r.fark.toLocaleString('tr-TR')} (Açık)</span>`;
+                        } else if (r.fark > 0) {
+                            farkBadge = `<span class="badge bg-success-subtle text-success border border-success fw-bold">+${r.fark.toLocaleString('tr-TR')} (Fazla)</span>`;
+                        } else {
+                            farkBadge = `<span class="badge bg-secondary">0 (Tam Hedef)</span>`;
+                        }
+                    }
+
+                    return `
+                        <tr>
+                            <td class="text-center fw-bold text-secondary">${idx + 1}</td>
+                            <td class="fw-bold text-dark"><small>${r.kurum}</small></td>
+                            <td><b>${r.brans}</b></td>
+                            <td class="text-center fw-bold">${r.aktifOda > 0 ? r.aktifOda : '-'}</td>
+                            <td class="text-center text-secondary">${r.ilkKap > 0 ? r.ilkKap.toLocaleString('tr-TR') : '-'}</td>
+                            <td class="text-center text-secondary">${r.devKap > 0 ? r.devKap.toLocaleString('tr-TR') : '-'}</td>
+                            <td class="text-center fw-bold text-dark bg-light">${r.topKap.toLocaleString('tr-TR')}</td>
+                            <td class="text-center fw-bold text-primary" style="background-color:#eef2ff;">${r.acilabilecekKap > 0 ? r.acilabilecekKap.toLocaleString('tr-TR') : '-'}</td>
+                            <td class="text-center">${farkBadge}</td>
+                            <td class="text-center fw-bold text-dark">${r.randevu.toLocaleString('tr-TR')}</td>
+                            <td class="text-center fw-bold text-primary">${r.doluluk.toFixed(1)}%</td>
+                            <td class="text-center fw-bold text-danger">${r.talep > 0 ? r.talep.toLocaleString('tr-TR') : '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Grafik Çizimi
+        const top10 = satirlar.slice(0, 10);
+        const chartLabels = top10.map(t => t.brans.length > 20 ? t.brans.substring(0, 18) + '...' : t.brans);
+        const chartKapasite = top10.map(t => t.topKap);
+        const chartRandevu = top10.map(t => t.randevu);
+
+        const ctx = document.getElementById('gkChartCanvas')?.getContext('2d');
+        if (ctx) {
+            if (window.gkChartNesnesi) window.gkChartNesnesi.destroy();
+            window.gkChartNesnesi = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Açılan Kapasite',
+                            data: chartKapasite,
+                            backgroundColor: 'rgba(79, 70, 229, 0.8)',
+                            borderColor: '#4f46e5',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Alınan Randevu',
+                            data: chartRandevu,
+                            backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                            borderColor: '#d97706',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: 'bold' } } }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { precision: 0 } },
+                        y: { 
+                            grid: { display: false },
+                            ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold', size: 10 }, autoSkip: false }
+                        }
+                    }
+                }
+            });
+        }
+    };
+
+    // 3. ARAYÜZÜ OLUŞTURUP İLK TETİKLEMEYİ YAPAN FONKSİYON
     window.renderGunlukKapasiteArayuz = function() {
         const container = document.getElementById('mhrsDashboardContent');
         if (!container) return;
@@ -4580,222 +4842,8 @@ window.switchMhrsSubTab = function(tabName) {
             </div>
         `;
 
+        // Artık filtre fonksiyonu yukarıda tanımlı olduğu için güvenle çalışır
         window.updateGunlukKapasiteFiltreler(false);
-    };
-
-    window.updateGunlukKapasiteDashboard = function() {
-        const seciliDonem = document.getElementById('gkDonemSelect')?.value || '';
-        const kapsam = document.getElementById('gkKapsamSelect')?.value || 'DAHIL';
-        const seciliKurum = document.getElementById('gkKurumSelect')?.value || 'ALL';
-        const seciliBrans = document.getElementById('gkBransSelect')?.value || 'ALL';
-
-        let filteredKapasite = mhrsGunlukKapasiteRawData.filter(d => d.donem === seciliDonem);
-        if (seciliKurum !== 'ALL') {
-            filteredKapasite = (kapsam === 'DAHIL')
-                ? filteredKapasite.filter(d => d.kurumKonsolide === seciliKurum)
-                : filteredKapasite.filter(d => d.kurumTekil === seciliKurum);
-        }
-        if (seciliBrans !== 'ALL') {
-            filteredKapasite = filteredKapasite.filter(d => d.klinik === seciliBrans);
-        }
-
-        // 1. ODA VERİLERİNİ EŞLEŞTİR (aksiyonOdaRawData üzerinden)
-        const odaMap = {};
-        (aksiyonOdaRawData || []).forEach(o => {
-            const kName = (kapsam === 'DAHIL') ? o.kurumKonsolide : o.kurumTekil;
-            const key = `${kName}___${o.brans}`;
-            if (!odaMap[key]) odaMap[key] = { aktifOda: 0, mhrsOda: 0 };
-            odaMap[key].aktifOda += o.aktifOda;
-            odaMap[key].mhrsOda += o.mhrsOda;
-        });
-
-        // 2. EN GÜNCEL TALEP VERİSİNİ HARİTALANDIR
-        const talepDonemleri = [...new Set((mhrsTalepRawData || []).map(d => d.donem))];
-        const parseTarihDegeri = (str) => {
-            const pts = (str || '').split(".");
-            if (pts.length === 3) return new Date(`${pts[2]}-${pts[1]}-${pts[0]}`).getTime();
-            return 0;
-        };
-        talepDonemleri.sort((a, b) => parseTarihDegeri(b) - parseTarihDegeri(a));
-        const enSonTalepDonemi = talepDonemleri[0] || '';
-
-        const talepMap = {};
-        (mhrsTalepRawData || []).filter(d => d.donem === enSonTalepDonemi).forEach(r => {
-            const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
-            const key = `${kName}___${r.klinik}`;
-            talepMap[key] = (talepMap[key] || 0) + 1;
-        });
-
-        // 3. KAPASİTE VE RANDEVULARI KONSOLİDE ET
-        const grupMap = {};
-        filteredKapasite.forEach(r => {
-            const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
-            const key = `${kName}___${r.klinik}`;
-            if (!grupMap[key]) {
-                grupMap[key] = { kurum: kName, brans: r.klinik, ilkKap: 0, devKap: 0, topKap: 0, randevu: 0 };
-            }
-            if (r.aksiyon === 'MUAYENE') {
-                grupMap[key].ilkKap += r.kapasite;
-            } else {
-                grupMap[key].devKap += r.kapasite;
-            }
-            grupMap[key].topKap += r.kapasite;
-            grupMap[key].randevu += r.randevu;
-        });
-
-        // 4. LİSTEYİ OLUŞTUR VE AÇILABİLECEK KAPASİTE & FARK HESAPLA
-        const satirlar = Object.values(grupMap).map(item => {
-            const key = `${item.kurum}___${item.brans}`;
-            const talepSayisi = talepMap[key] || 0;
-            const oda = odaMap[key] || { aktifOda: 0, mhrsOda: 0 };
-            
-            // Günlük Açılabilecek Kapasite (Bakanlık Katsayısı * Aktif Oda * 1 Gün)
-            const katsayi = getBakanlikKatsayisi(item.brans);
-            const acilabilecekKap = Math.round(katsayi * oda.aktifOda);
-            const fark = acilabilecekKap > 0 ? (item.topKap - acilabilecekKap) : null;
-            const dolulukOrani = item.topKap > 0 ? (item.randevu / item.topKap) * 100 : 0;
-
-            return {
-                ...item,
-                aktifOda: oda.aktifOda,
-                mhrsOda: oda.mhrsOda,
-                acilabilecekKap: acilabilecekKap,
-                fark: fark,
-                talep: talepSayisi,
-                doluluk: dolulukOrani
-            };
-        }).sort((a, b) => b.topKap - a.topKap);
-
-        // TOPLAMLAR & KPI HESAPLARI
-        const tKapasite = satirlar.reduce((s, v) => s + v.topKap, 0);
-        const tRandevu = satirlar.reduce((s, v) => s + v.randevu, 0);
-        const tGereken = satirlar.reduce((s, v) => s + v.acilabilecekKap, 0);
-        const tFark = tKapasite - tGereken;
-        const genelDoluluk = tKapasite > 0 ? (tRandevu / tKapasite) * 100 : 0;
-
-        const kpi = document.getElementById('gkKpiAlani');
-        if (kpi) {
-            kpi.innerHTML = `
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">AÇILAN GÜNLÜK KAPASİTE</div>
-                        <div class="fs-3 fw-bold text-primary">${tKapasite.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">İlk Muayene + Devam Eden</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">AÇILABİLECEK KAPASİTE</div>
-                        <div class="fs-3 fw-bold text-indigo" style="color:#4f46e5;">${tGereken.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">Aktif Oda Hedefi (Günlük)</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">KAPASİTE DENGESİ</div>
-                        <div class="fs-3 fw-bold ${tFark < 0 ? 'text-danger' : 'text-success'}">
-                            ${tFark > 0 ? `+${tFark.toLocaleString('tr-TR')}` : tFark.toLocaleString('tr-TR')}
-                        </div>
-                        <div class="text-muted small">${tFark < 0 ? '🚨 Kapasite Açığı Var' : '✅ Hedef Karşılandı'}</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">ALINAN RANDEVU & DOLULUK</div>
-                        <div class="fs-3 fw-bold text-success">${tRandevu.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">Genel Doluluk: <b>%${genelDoluluk.toFixed(1)}</b></div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // TABLOYU DOLDUR
-        const tbody = document.getElementById('gkTableBody');
-        if (tbody) {
-            if (satirlar.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">Seçilen kriterlere uygun günlük kapasite kaydı bulunamadı.</td></tr>';
-            } else {
-                tbody.innerHTML = satirlar.map((r, idx) => {
-                    let farkBadge = '<span class="text-muted">-</span>';
-                    if (r.fark !== null) {
-                        if (r.fark < 0) {
-                            farkBadge = `<span class="badge bg-danger-subtle text-danger border border-danger fw-bold">${r.fark.toLocaleString('tr-TR')} (Açık)</span>`;
-                        } else if (r.fark > 0) {
-                            farkBadge = `<span class="badge bg-success-subtle text-success border border-success fw-bold">+${r.fark.toLocaleString('tr-TR')} (Fazla)</span>`;
-                        } else {
-                            farkBadge = `<span class="badge bg-secondary">0 (Tam Hedef)</span>`;
-                        }
-                    }
-
-                    return `
-                        <tr>
-                            <td class="text-center fw-bold text-secondary">${idx + 1}</td>
-                            <td class="fw-bold text-dark"><small>${r.kurum}</small></td>
-                            <td><b>${r.brans}</b></td>
-                            <td class="text-center fw-bold">${r.aktifOda > 0 ? r.aktifOda : '-'}</td>
-                            <td class="text-center text-secondary">${r.ilkKap > 0 ? r.ilkKap.toLocaleString('tr-TR') : '-'}</td>
-                            <td class="text-center text-secondary">${r.devKap > 0 ? r.devKap.toLocaleString('tr-TR') : '-'}</td>
-                            <td class="text-center fw-bold text-dark bg-light">${r.topKap.toLocaleString('tr-TR')}</td>
-                            <td class="text-center fw-bold text-primary" style="background-color:#eef2ff;">${r.acilabilecekKap > 0 ? r.acilabilecekKap.toLocaleString('tr-TR') : '-'}</td>
-                            <td class="text-center">${farkBadge}</td>
-                            <td class="text-center fw-bold text-dark">${r.randevu.toLocaleString('tr-TR')}</td>
-                            <td class="text-center fw-bold text-primary">${r.doluluk.toFixed(1)}%</td>
-                            <td class="text-center fw-bold text-danger">${r.talep > 0 ? r.talep.toLocaleString('tr-TR') : '-'}</td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-        }
-
-        // GRAFİK ÇİZİMİ (Top 10 Branş)
-        const top10 = satirlar.slice(0, 10);
-        const chartLabels = top10.map(t => t.brans.length > 20 ? t.brans.substring(0, 18) + '...' : t.brans);
-        const chartKapasite = top10.map(t => t.topKap);
-        const chartRandevu = top10.map(t => t.randevu);
-
-        const ctx = document.getElementById('gkChartCanvas')?.getContext('2d');
-        if (ctx) {
-            if (window.gkChartNesnesi) window.gkChartNesnesi.destroy();
-            window.gkChartNesnesi = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: chartLabels,
-                    datasets: [
-                        {
-                            label: 'Açılan Kapasite',
-                            data: chartKapasite,
-                            backgroundColor: 'rgba(79, 70, 229, 0.8)',
-                            borderColor: '#4f46e5',
-                            borderWidth: 1,
-                            borderRadius: 4
-                        },
-                        {
-                            label: 'Alınan Randevu',
-                            data: chartRandevu,
-                            backgroundColor: 'rgba(245, 158, 11, 0.8)',
-                            borderColor: '#d97706',
-                            borderWidth: 1,
-                            borderRadius: 4
-                        }
-                    ]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: 'bold' } } }
-                    },
-                    scales: {
-                        x: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { precision: 0 } },
-                        y: { 
-                            grid: { display: false },
-                            ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold', size: 10 }, autoSkip: false }
-                        }
-                    }
-                }
-            });
-        }
     };
     window.initMhrsDashboard = async function() {
         showLoading('mhrsDashboardContent', 'MHRS verileri canlı olarak Google Sheets dosyasından çekiliyor, lütfen bekleyiniz...');
