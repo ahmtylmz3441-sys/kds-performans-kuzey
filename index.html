@@ -4729,14 +4729,15 @@ function getBakanlikKatsayisi(bransAdi) {
             const key2 = `${item.kurum}___${normBrans}`.toUpperCase();
             
             const oda = odaMap[key1] || odaMap[key2] || { aktifOda: 0, mhrsOda: 0 };
-            const talepSayisi = talepMap[normKey] || 0;
+            const talepKey = `${item.kurum}___${item.brans}`;
+            const talepSayisi = talepMap[talepKey] || 0;
 
             const katsayi = getBakanlikKatsayisi(item.brans);
             
             // Aktif Odaya Göre Açılabilecek Kapasite (Katsayı * Aktif Oda)
             const acilabilecekKap = Math.round(katsayi * oda.aktifOda);
             
-            // MHRS Odaya Göre Açılabilecek Kapasite (Katsayı * MHRS Oda) -> Yeni Sütun
+            // MHRS Odaya Göre Açılabilecek Kapasite (Katsayı * MHRS Oda)
             const mhrsAcilabilecekKap = Math.round(katsayi * oda.mhrsOda);
 
             const fark = acilabilecekKap > 0 ? (item.topKap - acilabilecekKap) : null;
