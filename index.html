@@ -4709,7 +4709,7 @@ function getBakanlikKatsayisi(bransAdi) {
             grupMap[key].randevu += r.randevu;
         });
 
-        // 4. TABLO SATIRLARI (ANA DAL/YAN DAL KATSAYISI VE ODA BAŞI TAM SAYI DÜZELTMESİ)
+// 4. TABLO SATIRLARI & İLK MUAYENE / AKTİF ODA FORMÜLÜNÜN UYGULANMASi
         const satirlar = Object.values(grupMap).map(item => {
             const normKey = `${normText(item.kurum)}___${normText(item.brans)}`;
             const talepSayisi = talepMap[normKey] || 0;
@@ -4720,8 +4720,8 @@ function getBakanlikKatsayisi(bransAdi) {
             const fark = acilabilecekKap > 0 ? (item.topKap - acilabilecekKap) : null;
             const dolulukOrani = item.topKap > 0 ? (item.randevu / item.topKap) * 100 : 0;
             
-            // ODA BAŞINA KAPASİTE: Ondalıksız (Math.round veya Math.floor) tam sayı yapıldı
-            const odaBasiKap = oda.aktifOda > 0 ? Math.round(item.topKap / oda.aktifOda) : 0;
+            // YENİ FORMÜL: Oda Başına Kap. = İlk Muayene / Aktif Oda (Tam sayıya yuvarlanmış)
+            const odaBasiKap = oda.aktifOda > 0 ? Math.round(item.ilkKap / oda.aktifOda) : 0;
 
             return {
                 ...item,
