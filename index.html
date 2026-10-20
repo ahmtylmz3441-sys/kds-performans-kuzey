@@ -4740,7 +4740,7 @@ function getBakanlikKatsayisi(bransAdi) {
             // MHRS Odaya Göre Açılabilecek Kapasite (Katsayı * MHRS Oda)
             const mhrsAcilabilecekKap = Math.round(katsayi * oda.mhrsOda);
 
-            const fark = acilabilecekKap > 0 ? (item.topKap - acilabilecekKap) : null;
+            const fark = acilabilecekKap > 0 ? (item.ilkKap - acilabilecekKap) : null;
             const dolulukOrani = item.topKap > 0 ? (item.randevu / item.topKap) * 100 : 0;
             
             const odaBasiKap = oda.aktifOda > 0 ? Math.round(item.ilkKap / oda.aktifOda) : 0;
