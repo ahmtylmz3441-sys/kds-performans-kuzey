@@ -4665,14 +4665,25 @@ function getBakanlikKatsayisi(bransAdi) {
             filteredKapasite = filteredKapasite.filter(d => d.klinik === seciliBrans);
         }
 
-        // 1. ODA HARİTASI
+        // 1. ODA HARİTASINI GÜÇLENDİRİLMİŞ EŞLEŞTİRME İLE OLUŞTUR (poliklinik_oda_sayilari sekmelesi verileri)
         const odaMap = {};
         (aksiyonOdaRawData || []).forEach(o => {
             const kName = (kapsam === 'DAHIL') ? o.kurumKonsolide : o.kurumTekil;
-            const normKey = `${normText(kName)}___${normText(o.brans)}`;
-            if (!odaMap[normKey]) odaMap[normKey] = { aktifOda: 0, mhrsOda: 0 };
-            odaMap[normKey].aktifOda += o.aktifOda;
-            odaMap[normKey].mhrsOda += o.mhrsOda;
+            
+            // Hem orijinal temiz anahtar hem de normText (boşluksuz ve Türkçe karaktersiz) anahtar üretiyoruz
+            const cleanBrans = (o.brans || '').toString().trim();
+            const normBrans = normText(cleanBrans);
+            
+            const key1 = `${kName}___${cleanBrans}`.toUpperCase();
+            const key2 = `${kName}___${normBrans}`.toUpperCase();
+            
+            if (!odaMap[key1]) odaMap[key1] = { aktifOda: 0, mhrsOda: 0 };
+            if (!odaMap[key2]) odaMap[key2] = { aktifOda: 0, mhrsOda: 0 };
+            
+            odaMap[key1].aktifOda += o.aktifOda;
+            odaMap[key1].mhrsOda += o.mhrsOda;
+            odaMap[key2].aktifOda += o.aktifOda;
+            odaMap[key2].mhrsOda += o.mhrsOda;
         });
 
         // 2. EN GÜNCEL TALEP HARİTASI
@@ -4709,18 +4720,28 @@ function getBakanlikKatsayisi(bransAdi) {
             grupMap[key].randevu += r.randevu;
         });
 
-// 4. TABLO SATIRLARI & İLK MUAYENE / AKTİF ODA FORMÜLÜNÜN UYGULANMASi
+// 4. TABLO SATIRLARI & HER İKİ ODA HESABI
         const satirlar = Object.values(grupMap).map(item => {
-            const normKey = `${normText(item.kurum)}___${normText(item.brans)}`;
+            const cleanBrans = (item.brans || '').toString().trim();
+            const normBrans = normText(cleanBrans);
+            
+            const key1 = `${item.kurum}___${cleanBrans}`.toUpperCase();
+            const key2 = `${item.kurum}___${normBrans}`.toUpperCase();
+            
+            const oda = odaMap[key1] || odaMap[key2] || { aktifOda: 0, mhrsOda: 0 };
             const talepSayisi = talepMap[normKey] || 0;
-            const oda = odaMap[normKey] || { aktifOda: 0, mhrsOda: 0 };
 
             const katsayi = getBakanlikKatsayisi(item.brans);
+            
+            // Aktif Odaya Göre Açılabilecek Kapasite (Katsayı * Aktif Oda)
             const acilabilecekKap = Math.round(katsayi * oda.aktifOda);
+            
+            // MHRS Odaya Göre Açılabilecek Kapasite (Katsayı * MHRS Oda) -> Yeni Sütun
+            const mhrsAcilabilecekKap = Math.round(katsayi * oda.mhrsOda);
+
             const fark = acilabilecekKap > 0 ? (item.topKap - acilabilecekKap) : null;
             const dolulukOrani = item.topKap > 0 ? (item.randevu / item.topKap) * 100 : 0;
             
-            // YENİ FORMÜL: Oda Başına Kap. = İlk Muayene / Aktif Oda (Tam sayıya yuvarlanmış)
             const odaBasiKap = oda.aktifOda > 0 ? Math.round(item.ilkKap / oda.aktifOda) : 0;
 
             return {
@@ -4730,6 +4751,7 @@ function getBakanlikKatsayisi(bransAdi) {
                 katsayi: katsayi,
                 odaBasiKap: odaBasiKap,
                 acilabilecekKap: acilabilecekKap,
+                mhrsAcilabilecekKap: mhrsAcilabilecekKap,
                 fark: fark,
                 talep: talepSayisi,
                 doluluk: dolulukOrani
