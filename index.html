@@ -4759,45 +4759,61 @@ function getBakanlikKatsayisi(bransAdi) {
             };
         }).sort((a, b) => b.topKap - a.topKap);
 
-        // TOPLAMLAR & KPI HESAPLARI
+       // TOPLAMLAR & 6'LI KPI HESAPLARI
         const tKapasite = satirlar.reduce((s, v) => s + v.topKap, 0);
+        const tIlkMuayene = satirlar.reduce((s, v) => s + v.ilkKap, 0);
+        const tDevamEden = satirlar.reduce((s, v) => s + v.devKap, 0);
         const tRandevu = satirlar.reduce((s, v) => s + v.randevu, 0);
         const tGereken = satirlar.reduce((s, v) => s + v.acilabilecekKap, 0);
         const tAktifOda = satirlar.reduce((s, v) => s + v.aktifOda, 0);
         const tMhrsOda = satirlar.reduce((s, v) => s + v.mhrsOda, 0);
-        const tFark = tKapasite - tGereken;
+        const tFark = tIlkMuayene - tGereken; // Güncellenmiş İlk Muayene bazlı fark
 
         const kpi = document.getElementById('gkKpiAlani');
         if (kpi) {
             kpi.innerHTML = `
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px; min-height:115px;">
                         <div class="text-secondary small fw-bold">TOPLAM AKTİF ODA</div>
-                        <div class="fs-3 fw-bold text-dark">${tAktifOda.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">MHRS Açılan: <b>${tMhrsOda.toLocaleString('tr-TR')}</b> (%${tAktifOda > 0 ? ((tMhrsOda/tAktifOda)*100).toFixed(0) : 0})</div>
+                        <div class="fs-4 fw-bold text-dark">${tAktifOda.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small" style="font-size:11px;">MHRS Açılan: <b>${tMhrsOda.toLocaleString('tr-TR')}</b> (%${tAktifOda > 0 ? ((tMhrsOda/tAktifOda)*100).toFixed(0) : 0})</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
-                        <div class="text-secondary small fw-bold">AÇILAN MEVCUT KAPASİTE</div>
-                        <div class="fs-3 fw-bold text-primary">${tKapasite.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">İlk Muayene + Devam Eden</div>
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px; min-height:115px;">
+                        <div class="text-secondary small fw-bold">İLK MUAYENE AÇILAN</div>
+                        <div class="fs-4 fw-bold text-info">${tIlkMuayene.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small" style="font-size:11px;">Aktif İlk Muayene Kap.</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px; min-height:115px;">
+                        <div class="text-secondary small fw-bold">DEVAM EDEN AÇILAN</div>
+                        <div class="fs-4 fw-bold text-warning">${tDevamEden.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small" style="font-size:11px;">Aktif Devam Eden Kap.</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px; min-height:115px;">
+                        <div class="text-secondary small fw-bold">AÇILAN MEVCUT TOPLAM</div>
+                        <div class="fs-4 fw-bold text-primary">${tKapasite.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small" style="font-size:11px;">İlk Muayene + Devam Eden</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px; min-height:115px;">
                         <div class="text-secondary small fw-bold">AÇILMASI GEREKEN KAPASİTE</div>
-                        <div class="fs-3 fw-bold text-indigo" style="color:#4f46e5;">${tGereken.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">Günlük Hedef (Katsayılı)</div>
+                        <div class="fs-4 fw-bold text-indigo" style="color:#4f46e5;">${tGereken.toLocaleString('tr-TR')}</div>
+                        <div class="text-muted small" style="font-size:11px;">Günlük Hedef (Katsayılı)</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px; min-height:115px;">
                         <div class="text-secondary small fw-bold">KAPASİTE DENGESİ</div>
-                        <div class="fs-3 fw-bold ${tFark < 0 ? 'text-danger' : 'text-success'}">
+                        <div class="fs-4 fw-bold ${tFark < 0 ? 'text-danger' : 'text-success'}">
                             ${tFark > 0 ? `+${tFark.toLocaleString('tr-TR')}` : tFark.toLocaleString('tr-TR')}
                         </div>
-                        <div class="text-muted small">${tFark < 0 ? '🚨 Kapasite Açığı Var' : '✅ Hedef Karşılandı'}</div>
+                        <div class="text-muted small" style="font-size:11px;">${tFark < 0 ? '🚨 Kapasite Açığı Var' : '✅ Hedef Karşılandı'}</div>
                     </div>
                 </div>
             `;
@@ -5021,7 +5037,8 @@ function getBakanlikKatsayisi(bransAdi) {
                 </div>
             </div>
 
-            <div class="row g-3 mb-4" id="gkKpiAlani"></div>
+            <!-- YENİ 6'LI KPI KARTLARI ALANI -->
+            <div class="row g-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-6" id="gkKpiAlani"></div>
 
             <div class="row g-4 mb-4">
                 <div class="col-lg-5">
@@ -5057,8 +5074,8 @@ function getBakanlikKatsayisi(bransAdi) {
                                         <th class="text-center bg-secondary text-white" style="width: 70px;">Toplam Kap.</th>
                                         <th class="text-center bg-dark text-warning" style="width: 80px;">Oda Başına İlk Muayene Kap.</th>
                                         <th class="text-center bg-primary text-white" style="width: 75px;">Toplam Oda Açılabilecek Kap.</th>
-                                        <th class="text center bg-primary text-white" style="width: 75px;">MHRS'ye Tanımlı Oda Açılabilecek Kap.</th>
-                                        <th class="text-center" style="background-color: #0f172a; width: 85px;">Toplam Odaya Göre Kapasite Farkı</th>
+                                        <th class="text-center text-white" style="background-color: #4338ca; width: 75px;">MHRS'ye Tanımlı Oda Açılabilecek Kap.</th>
+                                        <th class="text-center" style="background-color: #0f172a; width: 85px;">Kapasite Farkı</th>
                                         <th class="text-center bg-warning text-white" style="width: 70px;">Randevu</th>
                                         <th class="text-center text-primary" style="width: 65px;">Doluluk %</th>
                                     </tr>
