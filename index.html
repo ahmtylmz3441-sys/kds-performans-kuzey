@@ -2585,7 +2585,7 @@ function getAvailableMonthsFromData(rows) {
 }
 
 // =========================================================================
-// BİRLEŞTİRİLMİŞ: DÖNEMSEL (AYLIK) VEYA GÜNLÜK TARİH ARALIĞI KARŞILAŞTIRMA
+// BİRLEŞTİRİLMİŞ: AYLIK KARŞILAŞTIRMA VEYA İKİ TARİH ARASI GÜNLÜK RAPOR MATRİSİ
 // =========================================================================
 function renderAylikKarsilastirmaView() {
     const rows = googleSheetsData.rawDATA;
@@ -2605,7 +2605,7 @@ function renderAylikKarsilastirmaView() {
                     <span class="fw-bold small text-secondary">Analiz Modu:</span>
                     <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-outline-primary active" id="btnModAylik" onclick="window.setKarsilastirmaModu('aylik')">📊 Aylık Karşılaştırma</button>
-                        <button type="button" class="btn btn-outline-primary" id="btnModGunluk" onclick="window.setKarsilastirmaModu('gunluk')">📅 Günlük Tarih Aralığı</button>
+                        <button type="button" class="btn btn-outline-primary" id="btnModGunluk" onclick="window.setKarsilastirmaModu('gunluk')">📅 İki Tarih Arası Rapor (Tam Matris)</button>
                     </div>
                 </div>
                 <div id="karsRaporBaslik" class="fw-bold text-dark small">Rapor Hazırlanıyor...</div>
@@ -2633,35 +2633,35 @@ function renderAylikKarsilastirmaView() {
                 </div>
             </div>
 
-            <!-- 2. GÜNLÜK TARİH ARALIĞI SEÇİM ALANI (Varsayılan Gizli) -->
+            <!-- 2. GÜNLÜK TARİH ARALIĞI SEÇİM ALANI (Tam Matris Modu) -->
             <div id="karsPanelGunluk" class="row g-3 align-items-center" style="display: none;">
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold text-secondary mb-1">Başlangıç Tarihi</label>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-secondary mb-1">📅 Başlangıç Tarihi</label>
                     <input type="date" id="karsGunBaslangic" class="form-control form-control-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold text-secondary mb-1">Bitiş Tarihi</label>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-secondary mb-1">📅 Bitiş Tarihi</label>
                     <input type="date" id="karsGunBitis" class="form-control form-control-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label small fw-bold text-secondary mb-1">Değişken Seçin</label>
-                    <select id="karsDegiskenGun" class="form-select form-select-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">
-                        ${["Taburcu + Ex", "Toplam Yatırılan Hasta Sayısı", ...VARIABLES].map(v => `<option value="${v}">${v}</option>`).join('')}
-                    </select>
+                <div class="col-md-4">
+                    <button class="btn btn-sm btn-primary w-100 fw-bold py-1.5 mt-4" style="border-radius:8px;" onclick="window.updateAylikKarsilastirmaChart()">
+                        <i class="bi bi-funnel-fill me-1"></i> Raporu Getir
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div class="border rounded p-3 bg-white shadow-sm mb-4" style="border-radius:14px;">
+        <!-- Grafik Alanı (Sadece Aylık Modda Görünür) -->
+        <div id="karsGrafikKapsayici" class="border rounded p-3 bg-white shadow-sm mb-4" style="border-radius:14px;">
             <div style="height: 380px; position: relative;">
                 <canvas id="aylikKarsilastirmaCanvas"></canvas>
             </div>
         </div>
 
-        <!-- Değişim & Fark Özeti Tablosu -->
+        <!-- Değişim & Fark Özeti Veya Tam Matris Tablo Alanı -->
         <div class="border rounded p-3 bg-white shadow-sm" style="border-radius:14px;">
-            <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-arrow-left-right text-primary me-2"></i>Hastane Bazlı Değişim Özeti</h6>
-            <div class="table-responsive">
+            <h6 class="fw-bold text-secondary mb-3" id="karsTabloBaslik"><i class="bi bi-arrow-left-right text-primary me-2"></i>Hastane Bazlı Değişim Özeti</h6>
+            <div id="karsTabloKapsayici" class="table-responsive">
                 <table class="table table-sm table-bordered table-hover align-middle mb-0" id="karsFarkTablo" style="font-size:11.5px;">
                     <thead class="table-dark">
                         <tr>
@@ -2692,7 +2692,6 @@ function renderAylikKarsilastirmaView() {
         if(bitInput) bitInput.value = toInputDate(sortedDates[sortedDates.length - 1]);
     }
 
-    // Varsayılan aylık seçimler
     if (availableMonths.length >= 2) {
         document.getElementById('karsDonem1').value = availableMonths[availableMonths.length - 2].key;
         document.getElementById('karsDonem2').value = availableMonths[availableMonths.length - 1].key;
@@ -2708,10 +2707,12 @@ window.setKarsilastirmaModu = function(mod) {
     const panelGunluk = document.getElementById('karsPanelGunluk');
     const btnAylik = document.getElementById('btnModAylik');
     const btnGunluk = document.getElementById('btnModGunluk');
+    const grafikKapsayici = document.getElementById('karsGrafikKapsayici');
 
     if (mod === 'gunluk') {
         panelAylik.style.display = 'none';
         panelGunluk.style.display = 'flex';
+        grafikKapsayici.style.display = 'none'; // Günlük tam matriste grafik gizlenir
         btnGunluk.classList.add('active', 'btn-primary');
         btnGunluk.classList.remove('btn-outline-primary');
         btnAylik.classList.remove('active', 'btn-primary');
@@ -2719,6 +2720,7 @@ window.setKarsilastirmaModu = function(mod) {
     } else {
         panelAylik.style.display = 'flex';
         panelGunluk.style.display = 'none';
+        grafikKapsayici.style.display = 'block'; // Aylık modda grafik görünür
         btnAylik.classList.add('active', 'btn-primary');
         btnAylik.classList.remove('btn-outline-primary');
         btnGunluk.classList.remove('active', 'btn-primary');
@@ -2727,53 +2729,193 @@ window.setKarsilastirmaModu = function(mod) {
     window.updateAylikKarsilastirmaChart();
 };
 
-// Grafik ve Tabloyu İki Moda Göre Birlikte Hesaplayan Motor
 window.updateAylikKarsilastirmaChart = function() {
     const rows = googleSheetsData.rawDATA;
     if (!rows || rows.length <= 1) return;
 
     const isGunluk = (window.karsilastirmaAktifMod === 'gunluk');
-    let label1 = '', label2 = '', degisken = '';
-    
-    // Değerleri Mod'a Göre Al
+    const baslikEl = document.getElementById('karsRaporBaslik');
+    const tabloBaslikEl = document.getElementById('karsTabloBaslik');
+    const tabloKapsayici = document.getElementById('karsTabloKapsayici');
+
+    // =========================================================================
+    // MOD 1: GÜNLÜK TARİH ARALIĞI - TAM KAPSAMLI GÜNLÜK DURUM RAPORU MATRİSİ
+    // =========================================================================
     if (isGunluk) {
-        label1 = document.getElementById('karsGunBaslangic')?.value || '';
-        label2 = document.getElementById('karsGunBitis')?.value || '';
-        degisken = document.getElementById('karsDegiskenGun')?.value || '';
-    } else {
-        const d1Key = document.getElementById('karsDonem1')?.value;
-        const d2Key = document.getElementById('karsDonem2')?.value;
-        label1 = document.getElementById('karsDonem1')?.selectedOptions[0]?.text || d1Key;
-        label2 = document.getElementById('karsDonem2')?.selectedOptions[0]?.text || d2Key;
-        degisken = document.getElementById('karsDegisken')?.value || '';
+        const basVal = document.getElementById('karsGunBaslangic')?.value;
+        const bitVal = document.getElementById('karsGunBitis')?.value;
+        if (!basVal || !bitVal) return;
+
+        const basDate = new Date(basVal);
+        const bitDate = new Date(bitVal);
+
+        if (baslikEl) {
+            baslikEl.innerHTML = `📅 Seçilen Aralık: <b>${basVal.split('-').reverse().join('.')}</b> - <b>${bitVal.split('-').reverse().join('.')}</b>`;
+        }
+        if (tabloBaslikEl) {
+            tabloBaslikEl.innerHTML = `<i class="bi bi-table text-primary me-2"></i>İki Tarih Arası Konsolide Durum Raporu (Akışlar Toplam / Anlıklar Son Gün)`;
+        }
+
+        const getRangeTotal = (hospital, variable, isFlow) => {
+            let sum = 0, latestDate = null, latestValue = 0;
+            for (let i = 1; i < rows.length; i++) {
+                const r = rows[i];
+                const dStr = r[1], hName = r[2], vName = r[3], valStr = r[4];
+                if (!dStr || !hName || !vName) continue;
+
+                const d = parseSheetDate(dStr);
+                if (!d || isNaN(d.getTime())) continue;
+
+                if (d >= basDate && d <= bitDate) {
+                    if (hName.trim().toLowerCase() === hospital.trim().toLowerCase() && 
+                        vName.trim().toLowerCase() === variable.trim().toLowerCase()) {
+                        
+                        const num = parseFloat(valStr?.toString().replace(/\./g, '').replace(',', '.').trim());
+                        if (!isNaN(num)) {
+                            if (isFlow) {
+                                sum += num;
+                            } else {
+                                if (!latestDate || d >= latestDate) {
+                                    latestDate = d;
+                                    latestValue = num;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return isFlow ? sum : latestValue;
+        };
+
+        let tableHtml = `
+            <table class="table table-sm table-hover table-bordered bg-white align-middle mb-0" style="font-size: 11.5px;">
+                <thead class="table-dark">
+                    <tr>
+                        <th>HASTANE</th>
+                        <th class="text-center">🏥 3. Seviye YB Yatak (Son)</th>
+                        <th class="text-center">🛏️ Dolu Yatak (Son)</th>
+                        <th class="text-center">🚪 Boş Yatak (Son)</th>
+                        <th class="text-center">📊 Dolu Yatak Oranı</th>
+                        <th class="text-center">🚨 YB Bekleyen (Son)</th>
+                        <th class="text-center">📥 Yatırılan (Kendi - Toplam)</th>
+                        <th class="text-center">🚚 Dış Kurum (Toplam)</th>
+                        <th class="text-center">📤 Taburcu (Toplam)</th>
+                        <th class="text-center">🖤 Ex (Toplam)</th>
+                        <th class="text-center">📊 Taburcu+Ex (Toplam)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let totals = { yatak: 0, dolu: 0, bos: 0, bekleyen: 0, yatirilan: 0, disKurum: 0, taburcu: 0, ex: 0, taburcuEx: 0 };
+
+        HOSPITALS.forEach(h => {
+            const yatak = getRangeTotal(h, "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)", false);
+            const bos = getRangeTotal(h, "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)", false);
+            const dolu = yatak - bos;
+            const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(2).replace('.', ',') : "0,00";
+            
+            const bekleyen = getRangeTotal(h, "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)", false);
+            const yatirilan = getRangeTotal(h, "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)", true);
+            const disKurum = getRangeTotal(h, "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)", true);
+            
+            const taburcu = getRangeTotal(h, "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)", true);
+            const ex = getRangeTotal(h, "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)", true);
+            const taburcuEx = taburcu + ex;
+            
+            totals.yatak += yatak;
+            totals.dolu += dolu;
+            totals.bos += bos;
+            totals.bekleyen += bekleyen;
+            totals.yatirilan += yatirilan;
+            totals.disKurum += disKurum;
+            totals.taburcu += taburcu;
+            totals.ex += ex;
+            totals.taburcuEx += taburcuEx;
+            
+            tableHtml += `
+                <tr>
+                    <td class="fw-bold text-dark bg-light">${h}</td>
+                    <td class="text-center">${yatak}</td>
+                    <td class="text-center">${dolu}</td>
+                    <td class="text-center">${bos}</td>
+                    <td class="text-center fw-bold text-primary">${oranStr}%</td>
+                    <td class="text-center">${bekleyen}</td>
+                    <td class="text-center">${yatirilan}</td>
+                    <td class="text-center">${disKurum}</td>
+                    <td class="text-center text-secondary">${taburcu}</td>
+                    <td class="text-center text-danger">${ex}</td>
+                    <td class="text-center fw-bold text-dark bg-light">${taburcuEx}</td>
+                </tr>
+            `;
+        });
+
+        const totalOranStr = totals.yatak > 0 ? (totals.dolu / totals.yatak * 100).toFixed(2).replace('.', ',') : "0,00";
+        tableHtml += `
+            <tr class="table-secondary fw-bold text-dark">
+                <td>TOPLAM</td>
+                <td class="text-center">${totals.yatak}</td>
+                <td class="text-center">${totals.dolu}</td>
+                <td class="text-center">${totals.bos}</td>
+                <td class="text-center text-primary">${totalOranStr}%</td>
+                <td class="text-center">${totals.bekleyen}</td>
+                <td class="text-center">${totals.yatirilan}</td>
+                <td class="text-center">${totals.disKurum}</td>
+                <td class="text-center text-secondary">${totals.taburcu}</td>
+                <td class="text-center text-danger">${totals.ex}</td>
+                <td class="text-center text-dark">${totals.taburcuEx}</td>
+            </tr>
+        `;
+        tableHtml += `</tbody></table>`;
+        tabloKapsayici.innerHTML = tableHtml;
+        return;
     }
 
-    const baslikEl = document.getElementById('karsRaporBaslik');
+    // =========================================================================
+    // MOD 2: AYLIK KARŞILAŞTIRMA (Mevcut Grafik ve Fark Tablosu)
+    // =========================================================================
+    if (tabloBaslikEl) {
+        tabloBaslikEl.innerHTML = `<i class="bi bi-arrow-left-right text-primary me-2"></i>Hastane Bazlı Değişim Özeti`;
+    }
+    tabloKapsayici.innerHTML = `
+        <table class="table table-sm table-bordered table-hover align-middle mb-0" id="karsFarkTablo" style="font-size:11.5px;">
+            <thead class="table-dark">
+                <tr>
+                    <th>Hastane</th>
+                    <th class="text-center" id="thDonem1">Seçim 1</th>
+                    <th class="text-center" id="thDonem2">Seçim 2</th>
+                    <th class="text-center">Net Fark</th>
+                    <th class="text-center">Değişim (%)</th>
+                </tr>
+            </thead>
+            <tbody id="karsFarkTbody"></tbody>
+        </table>
+    `;
+
+    const d1Key = document.getElementById('karsDonem1')?.value;
+    const d2Key = document.getElementById('karsDonem2')?.value;
+    const degisken = document.getElementById('karsDegisken')?.value;
+    const label1 = document.getElementById('karsDonem1')?.selectedOptions[0]?.text || d1Key;
+    const label2 = document.getElementById('karsDonem2')?.selectedOptions[0]?.text || d2Key;
+
     if (baslikEl) {
         baslikEl.innerHTML = `📊 <b>${label1}</b> vs <b>${label2}</b> - <span class="text-primary">${degisken}</span>`;
     }
 
-    // Veri Hesaplama Fonksiyonu (Aylık veya Günlük Aralık)
-    const getCalculatedValue = (identifier, hospital, variable, isModeGunluk) => {
+    const getMonthTotal = (monthKey, hospital, variable) => {
         if (variable === "Taburcu + Ex") {
-            const t = getCalculatedValue(identifier, hospital, "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)", isModeGunluk);
-            const e = getCalculatedValue(identifier, hospital, "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)", isModeGunluk);
+            const t = getMonthTotal(monthKey, hospital, "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)");
+            const e = getMonthTotal(monthKey, hospital, "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)");
             return t + e;
         }
         if (variable === "Toplam Yatırılan Hasta Sayısı") {
-            const k = getCalculatedValue(identifier, hospital, "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)", isModeGunluk);
-            const d = getCalculatedValue(identifier, hospital, "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)", isModeGunluk);
+            const k = getMonthTotal(monthKey, hospital, "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)");
+            const d = getMonthTotal(monthKey, hospital, "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)");
             return k + d;
         }
 
         const isFlowVariable = variable.includes("24 SAATLİK") || variable.includes("TABURCU") || variable.includes("EX") || variable.includes("YATIRILAN");
         let sum = 0, latestDate = null, latestValue = 0;
-
-        let basDate = null, bitDate = null;
-        if (isModeGunluk) {
-            basDate = new Date(document.getElementById('karsGunBaslangic')?.value);
-            bitDate = new Date(document.getElementById('karsGunBitis')?.value);
-        }
 
         for (let i = 1; i < rows.length; i++) {
             const r = rows[i];
@@ -2783,15 +2925,8 @@ window.updateAylikKarsilastirmaChart = function() {
             const d = parseSheetDate(dStr);
             if (!d || isNaN(d.getTime())) continue;
 
-            let matches = false;
-            if (isModeGunluk) {
-                if (d >= basDate && d <= bitDate) matches = true;
-            } else {
-                const curKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                if (curKey === identifier) matches = true;
-            }
-
-            if (matches && hName.trim().toLowerCase() === hospital.trim().toLowerCase() && 
+            const curKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (curKey === monthKey && hName.trim().toLowerCase() === hospital.trim().toLowerCase() && 
                 vName.trim().toLowerCase() === variable.trim().toLowerCase()) {
                 
                 const num = parseFloat(valStr?.toString().replace(/\./g, '').replace(',', '.').trim());
@@ -2810,16 +2945,10 @@ window.updateAylikKarsilastirmaChart = function() {
         return isFlowVariable ? sum : latestValue;
     };
 
-    const d1Values = [];
-    const d2Values = [];
-    const tableRows = [];
-
-    const id1 = isGunluk ? null : document.getElementById('karsDonem1')?.value;
-    const id2 = isGunluk ? null : document.getElementById('karsDonem2')?.value;
-
+    const d1Values = [], d2Values = [], tableRows = [];
     HOSPITALS.forEach(h => {
-        const val1 = Math.round(getCalculatedValue(id1, h, degisken, isGunluk));
-        const val2 = Math.round(getCalculatedValue(id2, h, degisken, isGunluk));
+        const val1 = Math.round(getMonthTotal(d1Key, h, degisken));
+        const val2 = Math.round(getMonthTotal(d2Key, h, degisken));
         d1Values.push(val1);
         d2Values.push(val2);
 
@@ -2828,10 +2957,8 @@ window.updateAylikKarsilastirmaChart = function() {
         tableRows.push({ hospital: h, val1, val2, diff, pct });
     });
 
-    const th1 = document.getElementById('thDonem1');
-    const th2 = document.getElementById('thDonem2');
-    if (th1) th1.innerText = isGunluk ? label1.split('-').reverse().join('.') : label1;
-    if (th2) th2.innerText = isGunluk ? label2.split('-').reverse().join('.') : label2;
+    document.getElementById('thDonem1').innerText = label1;
+    document.getElementById('thDonem2').innerText = label2;
 
     const tbody = document.getElementById('karsFarkTbody');
     if (tbody) {
@@ -2855,46 +2982,23 @@ window.updateAylikKarsilastirmaChart = function() {
     const ctx = document.getElementById('aylikKarsilastirmaCanvas')?.getContext('2d');
     if (!ctx) return;
 
-    if (charts.aylikKarsilastirma) {
-        charts.aylikKarsilastirma.destroy();
-    }
+    if (charts.aylikKarsilastirma) charts.aylikKarsilastirma.destroy();
 
     charts.aylikKarsilastirma = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: HOSPITALS.map(h => h.split(" ")),
             datasets: [
-                {
-                    label: isGunluk ? label1.split('-').reverse().join('.') : label1,
-                    data: d1Values,
-                    backgroundColor: '#94a3b8',
-                    borderColor: '#64748b',
-                    borderWidth: 1,
-                    borderRadius: 3
-                },
-                {
-                    label: isGunluk ? label2.split('-').reverse().join('.') : label2,
-                    data: d2Values,
-                    backgroundColor: '#476b9e',
-                    borderColor: '#2d476e',
-                    borderWidth: 1,
-                    borderRadius: 3
-                }
+                { label: label1, data: d1Values, backgroundColor: '#94a3b8', borderColor: '#64748b', borderWidth: 1, borderRadius: 3 },
+                { label: label2, data: d2Values, backgroundColor: '#476b9e', borderColor: '#2d476e', borderWidth: 1, borderRadius: 3 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: { font: { size: 9, weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" }, autoSkip: false }
-                },
-                y: {
-                    grid: { color: 'rgba(0,0,0,0.06)', borderDash: [4, 4] },
-                    ticks: { precision: 0 },
-                    grace: '15%'
-                }
+                x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" }, autoSkip: false } },
+                y: { grid: { color: 'rgba(0,0,0,0.06)', borderDash: [4, 4] }, ticks: { precision: 0 }, grace: '15%' }
             },
             plugins: {
                 legend: { position: 'bottom', labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: 'bold' }, boxWidth: 14 } }
