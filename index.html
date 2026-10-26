@@ -889,7 +889,7 @@
                             <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-rapor-btn" onclick="window.switchETabloSubTab('rapor')">📋 Günlük Durum Raporu (Son Gün)</button>
                         </li>
                         <li style="flex:1;">
-    <button class="sub-tab-btn" id="subtab-karsilastir-btn" onclick="window.switchETabloSubTab('karsilastir')">📊 Aylık Karşılaştırma</button>
+    <button class="sub-tab-btn" id="subtab-karsilastir-btn" onclick="window.switchETabloSubTab('karsilastir')">📊 Dönemsel & Tarih Aralığı Analizi</button>
 </li>
                         <li style="flex:1;">
                             <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analiz-btn" onclick="window.switchETabloSubTab('analiz')">📊 İnteraktif Trend Analizi</button>
@@ -2584,7 +2584,9 @@ function getAvailableMonthsFromData(rows) {
     return Array.from(monthsMap.values()).sort((a, b) => a.date - b.date);
 }
 
-// Aylık Karşılaştırma Ekranını Çizen Fonksiyon
+// =========================================================================
+// BİRLEŞTİRİLMİŞ: DÖNEMSEL (AYLIK) VEYA GÜNLÜK TARİH ARALIĞI KARŞILAŞTIRMA
+// =========================================================================
 function renderAylikKarsilastirmaView() {
     const rows = googleSheetsData.rawDATA;
     if (!rows || rows.length <= 1) {
@@ -2593,39 +2595,60 @@ function renderAylikKarsilastirmaView() {
     }
 
     const availableMonths = getAvailableMonthsFromData(rows);
-    if (availableMonths.length === 0) {
-        document.getElementById('eTabloDashboardContent').innerHTML = '<div class="alert alert-warning text-center">Geçerli dönem tarihi tespit edilemedi.</div>';
-        return;
-    }
-
-    const mOptions = availableMonths.map((m) => `<option value="${m.key}">${m.label}</option>`).join('');
-    const extraVars = [
-        "Taburcu + Ex",
-        "Toplam Yatırılan Hasta Sayısı"
-    ];
-    const allVars = [...extraVars, ...VARIABLES];
-    const vOptions = allVars.map(v => `<option value="${v}">${v}</option>`).join('');
+    const sortedDates = getSortedDates(rows);
 
     let html = `
         <div class="p-3 bg-light rounded border mb-4 shadow-sm">
-            <div class="row g-3 align-items-center">
+            <!-- Mod Seçici Butonlar -->
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fw-bold small text-secondary">Analiz Modu:</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="btnModAylik" onclick="window.setKarsilastirmaModu('aylik')">📊 Aylık Karşılaştırma</button>
+                        <button type="button" class="btn btn-outline-primary" id="btnModGunluk" onclick="window.setKarsilastirmaModu('gunluk')">📅 Günlük Tarih Aralığı</button>
+                    </div>
+                </div>
+                <div id="karsRaporBaslik" class="fw-bold text-dark small">Rapor Hazırlanıyor...</div>
+            </div>
+
+            <!-- 1. AYLIK SEÇİM ALANI -->
+            <div id="karsPanelAylik" class="row g-3 align-items-center">
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-secondary mb-1">Dönem 1</label>
-                    <select id="karsDonem1" class="form-select form-select-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">${mOptions}</select>
+                    <select id="karsDonem1" class="form-select form-select-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">
+                        ${availableMonths.map((m) => `<option value="${m.key}">${m.label}</option>`).join('')}
+                    </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-secondary mb-1">Dönem 2</label>
-                    <select id="karsDonem2" class="form-select form-select-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">${mOptions}</select>
+                    <select id="karsDonem2" class="form-select form-select-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">
+                        ${availableMonths.map((m) => `<option value="${m.key}">${m.label}</option>`).join('')}
+                    </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label small fw-bold text-secondary mb-1">Değişken Seçin</label>
-                    <select id="karsDegisken" class="form-select form-select-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">${vOptions}</select>
+                    <select id="karsDegisken" class="form-select form-select-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">
+                        ${["Taburcu + Ex", "Toplam Yatırılan Hasta Sayısı", ...VARIABLES].map(v => `<option value="${v}">${v}</option>`).join('')}
+                    </select>
                 </div>
             </div>
-            
-            <div class="mt-3 pt-2 border-top d-flex align-items-center gap-2">
-                <span class="badge bg-primary px-2 py-1">Rapor Tipi</span>
-                <span id="karsRaporBaslik" class="fw-bold text-dark small">Yükleniyor...</span>
+
+            <!-- 2. GÜNLÜK TARİH ARALIĞI SEÇİM ALANI (Varsayılan Gizli) -->
+            <div id="karsPanelGunluk" class="row g-3 align-items-center" style="display: none;">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Başlangıç Tarihi</label>
+                    <input type="date" id="karsGunBaslangic" class="form-control form-control-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Bitiş Tarihi</label>
+                    <input type="date" id="karsGunBitis" class="form-control form-control-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-secondary mb-1">Değişken Seçin</label>
+                    <select id="karsDegiskenGun" class="form-select form-select-sm shadow-sm" onchange="window.updateAylikKarsilastirmaChart()">
+                        ${["Taburcu + Ex", "Toplam Yatırılan Hasta Sayısı", ...VARIABLES].map(v => `<option value="${v}">${v}</option>`).join('')}
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -2643,8 +2666,8 @@ function renderAylikKarsilastirmaView() {
                     <thead class="table-dark">
                         <tr>
                             <th>Hastane</th>
-                            <th class="text-center" id="thDonem1">Dönem 1</th>
-                            <th class="text-center" id="thDonem2">Dönem 2</th>
+                            <th class="text-center" id="thDonem1">Seçim 1</th>
+                            <th class="text-center" id="thDonem2">Seçim 2</th>
                             <th class="text-center">Net Fark</th>
                             <th class="text-center">Değişim (%)</th>
                         </tr>
@@ -2657,89 +2680,118 @@ function renderAylikKarsilastirmaView() {
 
     document.getElementById('eTabloDashboardContent').innerHTML = html;
 
-    // Varsayılan seçimler (Mümkünse son 2 ayı seç)
-    const d1Select = document.getElementById('karsDonem1');
-    const d2Select = document.getElementById('karsDonem2');
-    const degSelect = document.getElementById('karsDegisken');
+    // Tarih inputlarını varsayılan son 7 güne ayarla
+    if(sortedDates.length > 0) {
+        const toInputDate = (dStr) => {
+            const d = parseSheetDate(dStr);
+            return (d && !isNaN(d.getTime())) ? d.toISOString().split('T')[0] : '';
+        };
+        const basInput = document.getElementById('karsGunBaslangic');
+        const bitInput = document.getElementById('karsGunBitis');
+        if(basInput) basInput.value = toInputDate(sortedDates[Math.max(0, sortedDates.length - 7)]);
+        if(bitInput) bitInput.value = toInputDate(sortedDates[sortedDates.length - 1]);
+    }
 
+    // Varsayılan aylık seçimler
     if (availableMonths.length >= 2) {
-        d1Select.value = availableMonths[availableMonths.length - 2].key;
-        d2Select.value = availableMonths[availableMonths.length - 1].key;
-    } else {
-        d1Select.value = availableMonths[0].key;
-        d2Select.value = availableMonths[0].key;
+        document.getElementById('karsDonem1').value = availableMonths[availableMonths.length - 2].key;
+        document.getElementById('karsDonem2').value = availableMonths[availableMonths.length - 1].key;
     }
 
-    // Varsayılan değişken: Ex sayısı
-    const defaultVar = "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)";
-    if (VARIABLES.includes(defaultVar)) {
-        degSelect.value = defaultVar;
-    }
-
+    window.karsilastirmaAktifMod = 'aylik';
     window.updateAylikKarsilastirmaChart();
 }
 
-// Grafiği ve Fark Tablosunu Hesaplayıp Çizen Motor
+window.setKarsilastirmaModu = function(mod) {
+    window.karsilastirmaAktifMod = mod;
+    const panelAylik = document.getElementById('karsPanelAylik');
+    const panelGunluk = document.getElementById('karsPanelGunluk');
+    const btnAylik = document.getElementById('btnModAylik');
+    const btnGunluk = document.getElementById('btnModGunluk');
+
+    if (mod === 'gunluk') {
+        panelAylik.style.display = 'none';
+        panelGunluk.style.display = 'flex';
+        btnGunluk.classList.add('active', 'btn-primary');
+        btnGunluk.classList.remove('btn-outline-primary');
+        btnAylik.classList.remove('active', 'btn-primary');
+        btnAylik.classList.add('btn-outline-primary');
+    } else {
+        panelAylik.style.display = 'flex';
+        panelGunluk.style.display = 'none';
+        btnAylik.classList.add('active', 'btn-primary');
+        btnAylik.classList.remove('btn-outline-primary');
+        btnGunluk.classList.remove('active', 'btn-primary');
+        btnGunluk.classList.add('btn-outline-primary');
+    }
+    window.updateAylikKarsilastirmaChart();
+};
+
+// Grafik ve Tabloyu İki Moda Göre Birlikte Hesaplayan Motor
 window.updateAylikKarsilastirmaChart = function() {
     const rows = googleSheetsData.rawDATA;
     if (!rows || rows.length <= 1) return;
 
-    const d1Key = document.getElementById('karsDonem1')?.value;
-    const d2Key = document.getElementById('karsDonem2')?.value;
-    const degisken = document.getElementById('karsDegisken')?.value;
-
-    const d1Text = document.getElementById('karsDonem1')?.selectedOptions[0]?.text || d1Key;
-    const d2Text = document.getElementById('karsDonem2')?.selectedOptions[0]?.text || d2Key;
-
-    // Başlığı Güncelle
-    const baslikEl = document.getElementById('karsRaporBaslik');
-    if (baslikEl) {
-        baslikEl.innerHTML = `📊 <b>${d1Text}</b> vs <b>${d2Text}</b> - <span class="text-primary">${degisken}</span> Hastane Karşılaştırması`;
+    const isGunluk = (window.karsilastirmaAktifMod === 'gunluk');
+    let label1 = '', label2 = '', degisken = '';
+    
+    // Değerleri Mod'a Göre Al
+    if (isGunluk) {
+        label1 = document.getElementById('karsGunBaslangic')?.value || '';
+        label2 = document.getElementById('karsGunBitis')?.value || '';
+        degisken = document.getElementById('karsDegiskenGun')?.value || '';
+    } else {
+        const d1Key = document.getElementById('karsDonem1')?.value;
+        const d2Key = document.getElementById('karsDonem2')?.value;
+        label1 = document.getElementById('karsDonem1')?.selectedOptions[0]?.text || d1Key;
+        label2 = document.getElementById('karsDonem2')?.selectedOptions[0]?.text || d2Key;
+        degisken = document.getElementById('karsDegisken')?.value || '';
     }
 
-    // Belirli bir Ay-Yıl ve Hastane için toplam değeri hesaplayan yardımcı fonksiyon
-    // Belirli bir Ay-Yıl ve Hastane için değeri hesaplayan Akıllı Fonksiyon
-    const getMonthTotal = (monthKey, hospital, variable) => {
-        // 1. ÖZEL DEĞİŞKEN 1: Taburcu + Ex
+    const baslikEl = document.getElementById('karsRaporBaslik');
+    if (baslikEl) {
+        baslikEl.innerHTML = `📊 <b>${label1}</b> vs <b>${label2}</b> - <span class="text-primary">${degisken}</span>`;
+    }
+
+    // Veri Hesaplama Fonksiyonu (Aylık veya Günlük Aralık)
+    const getCalculatedValue = (identifier, hospital, variable, isModeGunluk) => {
         if (variable === "Taburcu + Ex") {
-            const taburcu = getMonthTotal(monthKey, hospital, "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)");
-            const ex = getMonthTotal(monthKey, hospital, "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)");
-            return taburcu + ex;
+            const t = getCalculatedValue(identifier, hospital, "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)", isModeGunluk);
+            const e = getCalculatedValue(identifier, hospital, "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)", isModeGunluk);
+            return t + e;
         }
-
-        // 2. ÖZEL DEĞİŞKEN 2: Toplam Yatırılan Hasta Sayısı (Kendi + Dış Kurum)
         if (variable === "Toplam Yatırılan Hasta Sayısı") {
-            const kendi = getMonthTotal(monthKey, hospital, "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)");
-            const dis = getMonthTotal(monthKey, hospital, "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)");
-            return kendi + dis;
+            const k = getCalculatedValue(identifier, hospital, "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)", isModeGunluk);
+            const d = getCalculatedValue(identifier, hospital, "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)", isModeGunluk);
+            return k + d;
         }
 
-        // Standart Değişken Hesaplaması
-        const isFlowVariable = variable.includes("24 SAATLİK") || 
-                               variable.includes("TABURCU") || 
-                               variable.includes("EX") || 
-                               variable.includes("YATIRILAN");
+        const isFlowVariable = variable.includes("24 SAATLİK") || variable.includes("TABURCU") || variable.includes("EX") || variable.includes("YATIRILAN");
+        let sum = 0, latestDate = null, latestValue = 0;
 
-        let sum = 0;
-        let latestDate = null;
-        let latestValue = 0;
+        let basDate = null, bitDate = null;
+        if (isModeGunluk) {
+            basDate = new Date(document.getElementById('karsGunBaslangic')?.value);
+            bitDate = new Date(document.getElementById('karsGunBitis')?.value);
+        }
 
         for (let i = 1; i < rows.length; i++) {
             const r = rows[i];
-            const dStr = r[1];
-            const hName = r[2];
-            const vName = r[3];
-            const valStr = r[4];
-
+            const dStr = r[1], hName = r[2], vName = r[3], valStr = r[4];
             if (!dStr || !hName || !vName) continue;
 
             const d = parseSheetDate(dStr);
             if (!d || isNaN(d.getTime())) continue;
 
-            const curKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            let matches = false;
+            if (isModeGunluk) {
+                if (d >= basDate && d <= bitDate) matches = true;
+            } else {
+                const curKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                if (curKey === identifier) matches = true;
+            }
 
-            if (curKey === monthKey && 
-                hName.trim().toLowerCase() === hospital.trim().toLowerCase() && 
+            if (matches && hName.trim().toLowerCase() === hospital.trim().toLowerCase() && 
                 vName.trim().toLowerCase() === variable.trim().toLowerCase()) {
                 
                 const num = parseFloat(valStr?.toString().replace(/\./g, '').replace(',', '.').trim());
@@ -2755,16 +2807,19 @@ window.updateAylikKarsilastirmaChart = function() {
                 }
             }
         }
-
         return isFlowVariable ? sum : latestValue;
     };
+
     const d1Values = [];
     const d2Values = [];
     const tableRows = [];
 
+    const id1 = isGunluk ? null : document.getElementById('karsDonem1')?.value;
+    const id2 = isGunluk ? null : document.getElementById('karsDonem2')?.value;
+
     HOSPITALS.forEach(h => {
-        const val1 = Math.round(getMonthTotal(d1Key, h, degisken));
-        const val2 = Math.round(getMonthTotal(d2Key, h, degisken));
+        const val1 = Math.round(getCalculatedValue(id1, h, degisken, isGunluk));
+        const val2 = Math.round(getCalculatedValue(id2, h, degisken, isGunluk));
         d1Values.push(val1);
         d2Values.push(val2);
 
@@ -2773,11 +2828,10 @@ window.updateAylikKarsilastirmaChart = function() {
         tableRows.push({ hospital: h, val1, val2, diff, pct });
     });
 
-    // Tablo Başlıklarını ve Satırlarını Doldur
     const th1 = document.getElementById('thDonem1');
     const th2 = document.getElementById('thDonem2');
-    if (th1) th1.innerText = d1Text;
-    if (th2) th2.innerText = d2Text;
+    if (th1) th1.innerText = isGunluk ? label1.split('-').reverse().join('.') : label1;
+    if (th2) th2.innerText = isGunluk ? label2.split('-').reverse().join('.') : label2;
 
     const tbody = document.getElementById('karsFarkTbody');
     if (tbody) {
@@ -2798,7 +2852,6 @@ window.updateAylikKarsilastirmaChart = function() {
         }).join('');
     }
 
-    // Chart.js Grafiğini Çiz (Görseldeki Renkler & Sütun Üstü Etiketler)
     const ctx = document.getElementById('aylikKarsilastirmaCanvas')?.getContext('2d');
     if (!ctx) return;
 
@@ -2809,20 +2862,20 @@ window.updateAylikKarsilastirmaChart = function() {
     charts.aylikKarsilastirma = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: HOSPITALS.map(h => h.split(" ")), // Çok satırlı düzgün hastane adı
+            labels: HOSPITALS.map(h => h.split(" ")),
             datasets: [
                 {
-                    label: d1Text,
+                    label: isGunluk ? label1.split('-').reverse().join('.') : label1,
                     data: d1Values,
-                    backgroundColor: '#94a3b8', // Dönem 1 Açık Gri-Mavi
+                    backgroundColor: '#94a3b8',
                     borderColor: '#64748b',
                     borderWidth: 1,
                     borderRadius: 3
                 },
                 {
-                    label: d2Text,
+                    label: isGunluk ? label2.split('-').reverse().join('.') : label2,
                     data: d2Values,
-                    backgroundColor: '#476b9e', // Dönem 2 Koyu Petrol Mavi
+                    backgroundColor: '#476b9e',
                     borderColor: '#2d476e',
                     borderWidth: 1,
                     borderRadius: 3
@@ -2835,10 +2888,7 @@ window.updateAylikKarsilastirmaChart = function() {
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: {
-                        font: { size: 9, weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" },
-                        autoSkip: false
-                    }
+                    ticks: { font: { size: 9, weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" }, autoSkip: false }
                 },
                 y: {
                     grid: { color: 'rgba(0,0,0,0.06)', borderDash: [4, 4] },
@@ -2847,16 +2897,9 @@ window.updateAylikKarsilastirmaChart = function() {
                 }
             },
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: 'bold' },
-                        boxWidth: 14
-                    }
-                }
+                legend: { position: 'bottom', labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: 'bold' }, boxWidth: 14 } }
             }
         },
-        // Barların Üzerine Sayıları Basan Plugin (Görseldeki 150, 161 gibi)
         plugins: [{
             id: 'barTopValueLabels',
             afterDatasetsDraw(chart) {
