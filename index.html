@@ -889,13 +889,10 @@
                             <button class="sub-tab-btn active w-100 border-0 text-center py-2" id="subtab-rapor-btn" onclick="window.switchETabloSubTab('rapor')">📋 Günlük Durum Raporu (Son Gün)</button>
                         </li>
                         <li style="flex:1;">
-    <button class="sub-tab-btn" id="subtab-karsilastir-btn" onclick="window.switchETabloSubTab('karsilastir')">📊 Dönemsel & Tarih Aralığı Analizi</button>
-</li>
-                        <li style="flex:1;">
-                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analiz-btn" onclick="window.switchETabloSubTab('analiz')">📊 İnteraktif Trend Analizi</button>
+                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-karsilastir-btn" onclick="window.switchETabloSubTab('karsilastir')">📊 Dönemsel & Tarih Aralığı Analizi</button>
                         </li>
                         <li style="flex:1;">
-                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-raw-btn" onclick="window.switchETabloSubTab('raw')">🔍 Ham DATA Tablosu</button>
+                            <button class="sub-tab-btn w-100 border-0 text-center py-2" id="subtab-analiz-btn" onclick="window.switchETabloSubTab('analiz')">📊 İnteraktif Trend Analizi</button>
                         </li>
                     </ul>
                     
@@ -1050,8 +1047,10 @@
     ];
 
     const VARIABLES = [
-        "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)",
-        "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)",
+        "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF) - KVC DAHİL",
+        "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK) - KVC DAHİL",
+        "KVC YB YATAK SAYISI (AKTİF)",
+        "KVC YB BOŞ YATAK SAYISI (24:00'DE ANLIK)",
         "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)",
         "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)",
         "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)",
@@ -2273,8 +2272,6 @@ function renderETabloActiveView() {
         renderDATAAnalizView();
     } else if(currentETabloSubTab === 'karsilastir') {
         renderAylikKarsilastirmaView();
-    } else if(currentETabloSubTab === 'raw') {
-        renderHamDATAView();
     }
 }
 
@@ -2753,10 +2750,10 @@ window.updateAylikKarsilastirmaChart = function() {
             baslikEl.innerHTML = `📅 Seçilen Aralık: <b>${basVal.split('-').reverse().join('.')}</b> - <b>${bitVal.split('-').reverse().join('.')}</b>`;
         }
         if (tabloBaslikEl) {
-            tabloBaslikEl.innerHTML = `<i class="bi bi-table text-primary me-2"></i>İki Tarih Arası Konsolide Durum Raporu (Akışlar Toplam / Anlıklar Son Gün)`;
+            tabloBaslikEl.innerHTML = `<i class="bi bi-table text-primary me-2"></i>İki Tarih Arası Konsolide Durum Raporu (12 Değişken Tam Matris)`;
         }
 
-        const getRangeTotal = (hospital, variable, isFlow) => {
+        const getRangeTotal = (hospital, keyword, isFlow) => {
             let sum = 0, latestDate = null, latestValue = 0;
             for (let i = 1; i < rows.length; i++) {
                 const r = rows[i];
@@ -2767,17 +2764,19 @@ window.updateAylikKarsilastirmaChart = function() {
                 if (!d || isNaN(d.getTime())) continue;
 
                 if (d >= basDate && d <= bitDate) {
-                    if (hName.trim().toLowerCase() === hospital.trim().toLowerCase() && 
-                        vName.trim().toLowerCase() === variable.trim().toLowerCase()) {
-                        
-                        const num = parseFloat(valStr?.toString().replace(/\./g, '').replace(',', '.').trim());
-                        if (!isNaN(num)) {
-                            if (isFlow) {
-                                sum += num;
-                            } else {
-                                if (!latestDate || d >= latestDate) {
-                                    latestDate = d;
-                                    latestValue = num;
+                    if (hName.trim().toLowerCase() === hospital.trim().toLowerCase()) {
+                        const cleanVarName = vName.trim().toUpperCase().replace(/ı/g, 'I').replace(/İ/g, 'İ').replace(/[\s\-_]+/g, '');
+                        const cleanKeyword = keyword.trim().toUpperCase().replace(/ı/g, 'I').replace(/İ/g, 'İ').replace(/[\s\-_]+/g, '');
+
+                        if (cleanVarName.includes(cleanKeyword)) {
+                            const num = parseFloat(valStr?.toString().replace(/\./g, '').replace(',', '.').trim());
+                            if (!isNaN(num)) {
+                                if (isFlow) sum += num;
+                                else {
+                                    if (!latestDate || d >= latestDate) {
+                                        latestDate = d;
+                                        latestValue = num;
+                                    }
                                 }
                             }
                         }
@@ -2788,51 +2787,75 @@ window.updateAylikKarsilastirmaChart = function() {
         };
 
         let tableHtml = `
-            <table class="table table-sm table-hover table-bordered bg-white align-middle mb-0" style="font-size: 11.5px;">
+            <table class="table table-sm table-hover table-bordered bg-white align-middle mb-0" style="font-size: 11px;">
                 <thead class="table-dark">
                     <tr>
                         <th>HASTANE</th>
-                        <th class="text-center">🏥 3. Seviye YB Yatak (Son)</th>
-                        <th class="text-center">🛏️ Dolu Yatak (Son)</th>
-                        <th class="text-center">🚪 Boş Yatak (Son)</th>
-                        <th class="text-center">📊 Dolu Yatak Oranı</th>
-                        <th class="text-center">🚨 YB Bekleyen (Son)</th>
-                        <th class="text-center">📥 Yatırılan (Kendi - Toplam)</th>
-                        <th class="text-center">🚚 Dış Kurum (Toplam)</th>
-                        <th class="text-center">📤 Taburcu (Toplam)</th>
-                        <th class="text-center">🖤 Ex (Toplam)</th>
-                        <th class="text-center">📊 Taburcu+Ex (Toplam)</th>
+                        <th class="text-center">3. Sev. YB (KVC Dahil)</th>
+                        <th class="text-center">YB Dolu</th>
+                        <th class="text-center">YB Boş</th>
+                        <th class="text-center">YB Doluluk %</th>
+                        <th class="text-center bg-secondary">KVC YB Yatak</th>
+                        <th class="text-center bg-secondary">KVC Dolu</th>
+                        <th class="text-center bg-secondary">KVC Boş</th>
+                        <th class="text-center text-warning">YB Talep</th>
+                        <th class="text-center">YB Yatırılan (Kendi)</th>
+                        <th class="text-center">YB Yatırılan (Dış)</th>
+                        <th class="text-center">Taburcu</th>
+                        <th class="text-center text-danger">Ex</th>
+                        <th class="text-center">Taburcu+Ex</th>
+                        <th class="text-center bg-primary">Servis Yatak</th>
+                        <th class="text-center bg-primary">Servis Boş</th>
+                        <th class="text-center text-warning">Acil Servis Yatış Talebi</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
-        let totals = { yatak: 0, dolu: 0, bos: 0, bekleyen: 0, yatirilan: 0, disKurum: 0, taburcu: 0, ex: 0, taburcuEx: 0 };
+        let totals = { 
+            yatak: 0, dolu: 0, bos: 0, 
+            kvcYatak: 0, kvcDolu: 0, kvcBos: 0,
+            bekleyen: 0, yatirilan: 0, disKurum: 0, taburcu: 0, ex: 0, taburcuEx: 0,
+            servisYatak: 0, servisBos: 0, acilServisTalep: 0 
+        };
 
         HOSPITALS.forEach(h => {
-            const yatak = getRangeTotal(h, "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF)", false);
-            const bos = getRangeTotal(h, "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK)", false);
+            const yatak = getRangeTotal(h, "3.SEVİYE YOĞUN BAKIM YATAK SAYISI (AKTİF) - KVC DAHİL", false);
+            const bos = getRangeTotal(h, "3.SEVİYE YOĞUN BAKIM BOŞ YATAK SAYISI (24:00'DE ANLIK) - KVC DAHİL", false);
             const dolu = yatak - bos;
             const oranStr = yatak > 0 ? (dolu / yatak * 100).toFixed(2).replace('.', ',') : "0,00";
-            
-            const bekleyen = getRangeTotal(h, "YBÜ TALEBİ OLAN HASTA SAYISI (24:00'DE ANLIK)", false);
-            const yatirilan = getRangeTotal(h, "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ) (24 SAATLİK)", true);
-            const disKurum = getRangeTotal(h, "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM) (24 SAATLİK)", true);
-            
-            const taburcu = getRangeTotal(h, "3.SEVİYE YB DAN TABURCU HASTA SAYISI (24 SAATLİK)", true);
-            const ex = getRangeTotal(h, "3.SEVİYE YB DAN EX OLAN HASTA SAYISI (24 SAATLİK)", true);
+
+            const kvcYatak = getRangeTotal(h, "KVC YB YATAK SAYISI (AKTİF)", false);
+            const kvcBos = getRangeTotal(h, "KVC YB BOŞ YATAK SAYISI", false);
+            const kvcDolu = kvcYatak - kvcBos;
+
+            const bekleyen = getRangeTotal(h, "YBÜ TALEBİ OLAN HASTA SAYISI", false);
+            const yatirilan = getRangeTotal(h, "3.SEVİYE YB YATIRILAN HASTA SAYISI (KENDİ HASTANESİ)", true);
+            const disKurum = getRangeTotal(h, "3.SEVİYE YB YATIRILAN HASTA SAYISI (DIŞ KURUM)", true);
+            const taburcu = getRangeTotal(h, "3.SEVİYE YB DAN TABURCU HASTA SAYISI", true);
+            const ex = getRangeTotal(h, "3.SEVİYE YB DAN EX OLAN HASTA SAYISI", true);
             const taburcuEx = taburcu + ex;
             
+            const servisYatak = getRangeTotal(h, "SERVİS YATAK SAYISI TOPLAMI", false);
+            const servisBos = getRangeTotal(h, "SERVİS BOŞ YATAK SAYISI TOPLAMI", false);
+            const acilServisTalep = getRangeTotal(h, "ACİLDE SERVİS YATIŞ TALEBİ OLAN HASTA SAYISI", false);
+
             totals.yatak += yatak;
             totals.dolu += dolu;
             totals.bos += bos;
+            totals.kvcYatak += kvcYatak;
+            totals.kvcDolu += kvcDolu;
+            totals.kvcBos += kvcBos;
             totals.bekleyen += bekleyen;
             totals.yatirilan += yatirilan;
             totals.disKurum += disKurum;
             totals.taburcu += taburcu;
             totals.ex += ex;
             totals.taburcuEx += taburcuEx;
-            
+            totals.servisYatak += servisYatak;
+            totals.servisBos += servisBos;
+            totals.acilServisTalep += acilServisTalep;
+
             tableHtml += `
                 <tr>
                     <td class="fw-bold text-dark bg-light">${h}</td>
@@ -2840,12 +2863,18 @@ window.updateAylikKarsilastirmaChart = function() {
                     <td class="text-center">${dolu}</td>
                     <td class="text-center">${bos}</td>
                     <td class="text-center fw-bold text-primary">${oranStr}%</td>
-                    <td class="text-center">${bekleyen}</td>
+                    <td class="text-center fw-bold bg-light">${kvcYatak}</td>
+                    <td class="text-center">${kvcDolu}</td>
+                    <td class="text-center text-secondary">${kvcBos}</td>
+                    <td class="text-center text-warning fw-bold">${bekleyen}</td>
                     <td class="text-center">${yatirilan}</td>
                     <td class="text-center">${disKurum}</td>
                     <td class="text-center text-secondary">${taburcu}</td>
                     <td class="text-center text-danger">${ex}</td>
                     <td class="text-center fw-bold text-dark bg-light">${taburcuEx}</td>
+                    <td class="text-center">${servisYatak}</td>
+                    <td class="text-center">${servisBos}</td>
+                    <td class="text-center text-warning fw-bold">${acilServisTalep}</td>
                 </tr>
             `;
         });
@@ -2858,12 +2887,18 @@ window.updateAylikKarsilastirmaChart = function() {
                 <td class="text-center">${totals.dolu}</td>
                 <td class="text-center">${totals.bos}</td>
                 <td class="text-center text-primary">${totalOranStr}%</td>
+                <td class="text-center">${totals.kvcYatak}</td>
+                <td class="text-center">${totals.kvcDolu}</td>
+                <td class="text-center">${totals.kvcBos}</td>
                 <td class="text-center">${totals.bekleyen}</td>
                 <td class="text-center">${totals.yatirilan}</td>
                 <td class="text-center">${totals.disKurum}</td>
-                <td class="text-center text-secondary">${totals.taburcu}</td>
-                <td class="text-center text-danger">${totals.ex}</td>
-                <td class="text-center text-dark">${totals.taburcuEx}</td>
+                <td class="text-center">${totals.taburcu}</td>
+                <td class="text-center">${totals.ex}</td>
+                <td class="text-center">${totals.taburcuEx}</td>
+                <td class="text-center">${totals.servisYatak}</td>
+                <td class="text-center">${totals.servisBos}</td>
+                <td class="text-center">${totals.acilServisTalep}</td>
             </tr>
         `;
         tableHtml += `</tbody></table>`;
