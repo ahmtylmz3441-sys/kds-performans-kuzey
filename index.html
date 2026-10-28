@@ -4384,16 +4384,21 @@ function getBakanlikKatsayisi(bransAdi) {
         const varsayilanDonem = aksiyonDonemListesi[0] || "EKİM";
 
         container.innerHTML = `
-            <div class="p-3 bg-light rounded border mb-4 shadow-sm">
+<div class="p-3 bg-light rounded border mb-4 shadow-sm">
                 <div class="row g-3 align-items-end">
                     <!-- SADECE KAPASİTELER SEKME DÖNEMLERİ -->
                     <div class="col-md-3">
                         <label class="form-label small fw-bold text-secondary mb-1">📅 Kapasite Dönemi</label>
-                        <select id="aksiyonDonemSelect" class="form-select form-select-sm shadow-sm" onchange="window.updateAksiyonTable()">
+                        <select id="aksiyonDonemSelect" class="form-select form-select-sm shadow-sm" onchange="window.otomatikIsGunuAyarla(); window.updateAksiyonTable();">
                             ${aksiyonDonemListesi.map(d => `<option value="${d}" ${d === varsayilanDonem ? 'selected' : ''}>${d}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="col-md-5">
+                    <!-- YENİ: İş Günü Çarpanı Kutusu -->
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-secondary mb-1" title="Seçilen ayın toplam iş günü sayısı">⚙️ İş Günü Çarpanı</label>
+                        <input type="number" id="aksiyonIsGunuInput" class="form-control form-control-sm shadow-sm text-center fw-bold text-primary" value="22" step="0.5" onchange="window.updateAksiyonTable()">
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label small fw-bold text-secondary mb-1">🏥 Ana Kurum Seçiniz (Konsolide)</label>
                         <select id="aksiyonKurumSelect" class="form-select form-select-sm shadow-sm" onchange="window.updateAksiyonTable()">
                             <option value="ALL">🌍 TÜM BÖLGE (TÜM ANA KURUMLAR)</option>
@@ -4464,15 +4469,53 @@ function getBakanlikKatsayisi(bransAdi) {
 
         window.updateAksiyonTable();
     };
+// Seçilen aya göre standart iş günlerini otomatik belirleyen motor
+    window.otomatikIsGunuAyarla = function() {
+        const donemSelectVal = document.getElementById('aksiyonDonemSelect')?.value || '';
+        const inputEl = document.getElementById('aksiyonIsGunuInput');
+        if (!inputEl) return;
 
+        const dUpper = donemSelectVal.toString().toUpperCase().trim();
+        
+        const aylikIsGunleriHaritasi = {
+            "OCAK": 21,
+            "ŞUBAT": 20, "SUBAT": 20,
+            "MART": 22,
+            "NİSAN": 21, "NISAN": 21,
+            "MAYIS": 20,
+            "HAZİRAN": 22, "HAZIRAN": 22,
+            "TEMMUZ": 23,
+            "AĞUSTOS": 21, "AGUSTOS": 21,
+            "EYLÜL": 22, "EYLUL": 22,
+            "EKİM": 21, "EKIM": 21,
+            "KASIM": 20,
+            "ARALIK": 23
+        };
+
+        let bulunanGun = 22;
+
+        for (const [ayAdi, isGunu] of Object.entries(aylikIsGunleriHaritasi)) {
+            if (dUpper.includes(ayAdi)) {
+                bulunanGun = isGunu;
+                break;
+            }
+        }
+
+        if (!dUpper.includes('EKİ') && !dUpper.includes('KAS') && !dUpper.includes('ARA') && dUpper.includes('.')) {
+            bulunanGun = 5;
+        }
+
+        inputEl.value = bulunanGun;
+    };
     window.updateAksiyonTable = function() {
         const seciliDonem = document.getElementById('aksiyonDonemSelect')?.value || (aksiyonDonemListesi[0] || 'EKİM');
         const seciliKurum = document.getElementById('aksiyonKurumSelect')?.value || 'ALL';
         const arama = (document.getElementById('aksiyonBransInput')?.value || '').toLowerCase().trim();
 
-        // EKİM seçilmişse 22 ile, tarih seçilmişse 5 ile çarpar:
-        const isEkim = seciliDonem.toUpperCase().includes('EKİ') || seciliDonem.toUpperCase().includes('EKI');
-        const gunCarpani = isEkim ? 22 : 5;
+        // YENİ: Input kutusundaki dinamik iş günü değerini okur
+        const isGunuInputEl = document.getElementById('aksiyonIsGunuInput');
+        const gunCarpani = isGunuInputEl ? (parseFloat(isGunuInputEl.value) || 22) : 22;
+        const isAylikRapor = gunCarpani > 7;
 
         const altBaslik = document.getElementById('aksiyonTabloAltBaslik');
         if (altBaslik) altBaslik.innerHTML = `Seçili Kapasite Dönemi: <b>${seciliDonem}</b> | Bağlı Binalar Dahil Planlama`;
@@ -4562,7 +4605,7 @@ function getBakanlikKatsayisi(bransAdi) {
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
                         <div class="text-secondary small fw-bold">AÇILMASI GEREKEN KAPASİTE</div>
                         <div class="fs-3 fw-bold text-indigo" style="color:#4f46e5;">${tGerekenKap.toLocaleString('tr-TR')}</div>
-                        <div class="text-muted small">MHRS ${isEkim ? 'Aylık (22 İş Günü)' : 'Haftalık (5 Gün)'} Hedefi</div>
+                        <div class="text-muted small">MHRS ${isAylikRapor ? `Aylık (${gunCarpani} İş Günü)` : `${gunCarpani} Günlük`} Hedef</div>
                     </div>
                 </div>
                 <div class="col-md-3">
