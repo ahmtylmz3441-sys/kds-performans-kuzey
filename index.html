@@ -596,6 +596,70 @@
     background: #0f172a;
     display: block;
 }
+/* ============================================================= */
+/* YENİ NESİL KREM / BEYAZ BLUR & DOLAN BAR LOADER               */
+/* ============================================================= */
+.page-loader-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.75) 0%, rgba(244, 246, 251, 0.88) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 999999;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s ease;
+}
+
+.page-loader-overlay.active {
+    display: flex !important;
+}
+
+.loader-card-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 32px 40px;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 340px;
+}
+
+.loader-title {
+    color: #0f172a;
+    font-weight: 800;
+    font-size: 13.5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+}
+
+.loader-progress-track {
+    width: 100%;
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.loader-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #4f46e5 0%, #06b6d4 100%);
+    border-radius: 10px;
+    animation: progressAnimation 2.2s ease-in-out infinite;
+}
+
+@keyframes progressAnimation {
+    0% { width: 0%; transform: translateX(0); }
+    50% { width: 75%; }
+    100% { width: 100%; transform: translateX(0); }
+}
     </style>
 </head>
 <body>
@@ -657,24 +721,12 @@
     </aside>
 
    <main class="main-content">
-        <div id="page-loader" class="page-loader-overlay">
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;">
-                
-                <!-- Beğendiğiniz Lottie Animasyonu -->
-                <lottie-player 
-                    src="https://lottie.host/fe9e3d1e-609f-4486-86c7-a598e4d5e9b6/CrUuyR0zid.json" 
-                    background="transparent" 
-                    speed="1" 
-                    style="width: 360px; height: 360px;" 
-                    loop 
-                    autoplay>
-                </lottie-player>
-
-                <!-- Altındaki Şık Medikal Yazı -->
-                <div style="color: #ffffff; font-weight: 800; font-size: 16px; letter-spacing: 2.5px; text-transform: uppercase; margin-top: 5px; text-shadow: 0 2px 10px rgba(0,0,0,0.8);">
-                    VERİLER YÜKLENİYOR...
+<div id="page-loader" class="page-loader-overlay">
+            <div class="loader-card-box">
+                <div class="loader-title">VERİLER YÜKLENİYOR...</div>
+                <div class="loader-progress-track">
+                    <div class="loader-progress-fill"></div>
                 </div>
-
             </div>
         </div>
         <header class="top-header">
