@@ -4587,11 +4587,10 @@ function getBakanlikKatsayisi(bransAdi) {
 
         let seciliDonemUpper = seciliDonem.toString().toUpperCase().trim();
 
-        // Sadece seçilen döneme (aya) ait oda kayıtlarını filtrele
+        // TAM EŞLEŞTİRME: Seçilen dönem ile satırdaki dönem birebir uyuşmalı!
         let filteredOda = aksiyonOdaRawData.filter(d => {
             if (d.donem) {
-                const dUpper = d.donem.toUpperCase();
-                return dUpper.includes(seciliDonemUpper) || seciliDonemUpper.includes(dUpper);
+                return d.donem.toUpperCase().trim() === seciliDonemUpper;
             }
             return true;
         });
@@ -5028,14 +5027,14 @@ function getBakanlikKatsayisi(bransAdi) {
             return tUpper;
         };
 
-        const hedefAyAdi = getAyAdiFromTarih(seciliDonem); // Örn: "EKİM"
+        const hedefAyAdi = getAyAdiFromTarih(seciliDonem); // Örn: "KASIM"
 
         const odaMap = {};
         (aksiyonOdaRawData || []).forEach(o => {
+            // Sadece ve sadece seçilen aya birebir uyan odaları al
             if (o.donem && hedefAyAdi) {
-                const odaDonemUpper = o.donem.toUpperCase();
-                if (!odaDonemUpper.includes(hedefAyAdi) && !hedefAyAdi.includes(odaDonemUpper)) {
-                    return;
+                if (o.donem.toUpperCase().trim() !== hedefAyAdi) {
+                    return; // Ay uyuşmuyorsa atla
                 }
             }
 
@@ -5046,7 +5045,6 @@ function getBakanlikKatsayisi(bransAdi) {
             const key1 = `${kName}___${cleanBrans}`.toUpperCase();
             const key2 = `${kName}___${normBrans}`.toUpperCase();
             
-            // Tekil atama yapıyoruz (=)
             odaMap[key1] = { aktifOda: o.aktifOda, mhrsOda: o.mhrsOda };
             odaMap[key2] = { aktifOda: o.aktifOda, mhrsOda: o.mhrsOda };
         });
