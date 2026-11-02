@@ -4585,21 +4585,31 @@ function getBakanlikKatsayisi(bransAdi) {
             donemKapasiteMap[key].toplam += k.kapasite;
         });
 
-        let filtered = aksiyonOdaRawData;
+        let seciliDonemUpper = seciliDonem.toString().toUpperCase().trim();
+
+        // Sadece seçilen döneme (aya) ait oda kayıtlarını filtrele
+        let filteredOda = aksiyonOdaRawData.filter(d => {
+            if (d.donem) {
+                const dUpper = d.donem.toUpperCase();
+                return dUpper.includes(seciliDonemUpper) || seciliDonemUpper.includes(dUpper);
+            }
+            return true;
+        });
+
         if (seciliKurum !== 'ALL') {
-            filtered = filtered.filter(d => d.kurumKonsolide === seciliKurum);
+            filteredOda = filteredOda.filter(d => d.kurumKonsolide === seciliKurum);
         }
 
         const odaGrupMap = {};
-        filtered.forEach(r => {
+        filteredOda.forEach(r => {
             const key = `${r.kurumKonsolide}___${r.brans}`;
             if (!odaGrupMap[key]) {
                 odaGrupMap[key] = { kurum: r.kurumKonsolide, brans: r.brans, aktifOda: 0, mhrsOda: 0 };
             }
-            odaGrupMap[key].aktifOda += r.aktifOda;
-            odaGrupMap[key].mhrsOda += r.mhrsOda;
+            // Çift toplamayı önlemek için += yerine direkt atama yapıyoruz (=)
+            odaGrupMap[key].aktifOda = r.aktifOda;
+            odaGrupMap[key].mhrsOda = r.mhrsOda;
         });
-
         let satirlar = Object.values(odaGrupMap).map(item => {
             const kapKey = `${item.kurum}___${item.brans}`;
             const kap = donemKapasiteMap[kapKey] || { ilk: 0, devam: 0, toplam: 0 };
@@ -5018,11 +5028,10 @@ function getBakanlikKatsayisi(bransAdi) {
             return tUpper;
         };
 
-        const hedefAyAdi = getAyAdiFromTarih(seciliDonem); // Örn: "23.10.2026" -> "EKİM"
+        const hedefAyAdi = getAyAdiFromTarih(seciliDonem); // Örn: "EKİM"
 
         const odaMap = {};
         (aksiyonOdaRawData || []).forEach(o => {
-            // Eğer odanın dönemi varsa ve seçilen günün ayı ile uyuşmuyorsa bu odayı atla
             if (o.donem && hedefAyAdi) {
                 const odaDonemUpper = o.donem.toUpperCase();
                 if (!odaDonemUpper.includes(hedefAyAdi) && !hedefAyAdi.includes(odaDonemUpper)) {
@@ -5037,15 +5046,10 @@ function getBakanlikKatsayisi(bransAdi) {
             const key1 = `${kName}___${cleanBrans}`.toUpperCase();
             const key2 = `${kName}___${normBrans}`.toUpperCase();
             
-            if (!odaMap[key1]) odaMap[key1] = { aktifOda: 0, mhrsOda: 0 };
-            if (!odaMap[key2]) odaMap[key2] = { aktifOda: 0, mhrsOda: 0 };
-            
-            odaMap[key1].aktifOda += o.aktifOda;
-            odaMap[key1].mhrsOda += o.mhrsOda;
-            odaMap[key2].aktifOda += o.aktifOda;
-            odaMap[key2].mhrsOda += o.mhrsOda;
+            // Tekil atama yapıyoruz (=)
+            odaMap[key1] = { aktifOda: o.aktifOda, mhrsOda: o.mhrsOda };
+            odaMap[key2] = { aktifOda: o.aktifOda, mhrsOda: o.mhrsOda };
         });
-
         // 2. EN GÜNCEL TALEP HARİTASI
         const talepDonemleri = [...new Set((mhrsTalepRawData || []).map(d => d.donem))];
         const parseTarihDegeri = (str) => {
