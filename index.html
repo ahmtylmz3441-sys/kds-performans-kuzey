@@ -5000,12 +5000,37 @@ function getBakanlikKatsayisi(bransAdi) {
             filteredKapasite = filteredKapasite.filter(d => d.klinik === seciliBrans);
         }
 
-        // 1. ODA HARİTASINI GÜÇLENDİRİLMİŞ EŞLEŞTİRME İLE OLUŞTUR (poliklinik_oda_sayilari sekmelesi verileri)
+        // 1. ODA HARİTASINI TARİHE GÖRE (AY BAZINDA) DİNAMİK EŞLEŞTİRME İLE OLUŞTUR
+        const getAyAdiFromTarih = (tarihStr) => {
+            if (!tarihStr) return '';
+            const tUpper = tarihStr.toString().toUpperCase().trim();
+            const trAylar = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
+            for (let ay of trAylar) {
+                if (tUpper.includes(ay)) return ay;
+            }
+            if (tUpper.includes('.')) {
+                const parts = tUpper.split('.');
+                if (parts.length === 3) {
+                    const ayNum = parseInt(parts[1], 10);
+                    return trAylar[ayNum - 1] || '';
+                }
+            }
+            return tUpper;
+        };
+
+        const hedefAyAdi = getAyAdiFromTarih(seciliDonem); // Örn: "23.10.2026" -> "EKİM"
+
         const odaMap = {};
         (aksiyonOdaRawData || []).forEach(o => {
+            // Eğer odanın dönemi varsa ve seçilen günün ayı ile uyuşmuyorsa bu odayı atla
+            if (o.donem && hedefAyAdi) {
+                const odaDonemUpper = o.donem.toUpperCase();
+                if (!odaDonemUpper.includes(hedefAyAdi) && !hedefAyAdi.includes(odaDonemUpper)) {
+                    return;
+                }
+            }
+
             const kName = (kapsam === 'DAHIL') ? o.kurumKonsolide : o.kurumTekil;
-            
-            // Hem orijinal temiz anahtar hem de normText (boşluksuz ve Türkçe karaktersiz) anahtar üretiyoruz
             const cleanBrans = (o.brans || '').toString().trim();
             const normBrans = normText(cleanBrans);
             
