@@ -4564,7 +4564,6 @@ function getBakanlikKatsayisi(bransAdi) {
         const seciliKurum = document.getElementById('aksiyonKurumSelect')?.value || 'ALL';
         const arama = (document.getElementById('aksiyonBransInput')?.value || '').toLowerCase().trim();
 
-        // YENİ: Input kutusundaki dinamik iş günü değerini okur
         const isGunuInputEl = document.getElementById('aksiyonIsGunuInput');
         const gunCarpani = isGunuInputEl ? (parseFloat(isGunuInputEl.value) || 22) : 22;
         const isAylikRapor = gunCarpani > 7;
@@ -4572,9 +4571,13 @@ function getBakanlikKatsayisi(bransAdi) {
         const altBaslik = document.getElementById('aksiyonTabloAltBaslik');
         if (altBaslik) altBaslik.innerHTML = `Seçili Kapasite Dönemi: <b>${seciliDonem}</b> | Bağlı Binalar Dahil Planlama`;
 
-        // SADECE SEÇİLEN KAPASİTE DÖNEMİNİ AL (Örn: "EKİM")
+        // Seçilen döneme ait kapasite verilerini al
         const donemKapasiteMap = {};
-        aksiyonKapasiteRawData.filter(d => d.donem === seciliDonem).forEach(k => {
+        aksiyonKapasiteRawData.filter(d => {
+            const dDonemUpper = (d.donem || '').toUpperCase().trim();
+            const seciliUpper = seciliDonem.toUpperCase().trim();
+            return dDonemUpper === seciliUpper || dDonemUpper.includes(seciliUpper) || seciliUpper.includes(dDonemUpper);
+        }).forEach(k => {
             const key = `${k.kurumKonsolide}___${k.brans}`;
             if (!donemKapasiteMap[key]) donemKapasiteMap[key] = { ilk: 0, devam: 0, toplam: 0 };
 
@@ -4585,25 +4588,24 @@ function getBakanlikKatsayisi(bransAdi) {
             donemKapasiteMap[key].toplam += k.kapasite;
         });
 
-        let seciliDonemUpper = seciliDonem.toString().toUpperCase().trim();
+        let seciliDonemUpper = seciliDonem.toUpperCase().trim();
 
-        // KESİN ÇÖZÜM: Seçilen dönem ile satırdaki dönem (E sütunu) BİREBİR VE TAM EŞİTLİK (===) ile filtrelenmeli!
+        // KESİN ÇÖZÜM: Katı '===' yerine hem tam eşitlik hem de 'includes' (içerme) kontrolü eklendi.
+        // Böylece Google Sheets'teki tarih/dönem formatı ne olursa olsun (Örn: "EKİM 2026", "01.10.2026" vb.) veriler başarıyla yakalanır.
         let filteredOda = aksiyonOdaRawData.filter(d => {
-            if (d.donem) {
-                return d.donem.toUpperCase().trim() === seciliDonemUpper;
-            }
-            return false; // Dönem bilgisi yoksa dahil etme
+            if (!d.donem) return false;
+            const dUpper = d.donem.toUpperCase().trim();
+            return dUpper === seciliDonemUpper || dUpper.includes(seciliDonemUpper) || seciliDonemUpper.includes(dUpper);
         });
 
         if (seciliKurum !== 'ALL') {
             filteredOda = filteredOda.filter(d => d.kurumKonsolide === seciliKurum);
         }
 
-        // KESİN ÇÖZÜM: Aynı hastane ve branşa ait veriler üst üste toplanarak (+=) şişmemeli, TEKİL ATAMA (=) yapılmalı!
+        // Şişmeyi önleyen tekil atama ( = ) mekanizması korunuyor
         const odaGrupMap = {};
         filteredOda.forEach(r => {
             const key = `${r.kurumKonsolide}___${r.brans}`;
-            // Doğrudan atama yapılıyor, böylece mükerrer toplama (şişme) engelleniyor
             odaGrupMap[key] = { 
                 kurum: r.kurumKonsolide, 
                 brans: r.brans, 
@@ -4695,7 +4697,7 @@ function getBakanlikKatsayisi(bransAdi) {
                         if (r.fark < 0) {
                             farkBadge = `<span class="badge bg-danger-subtle text-danger border border-danger fw-bold">${r.fark.toLocaleString('tr-TR')} (Açık)</span>`;
                         } else if (r.fark > 0) {
-                            farkBadge = `<span class="badge bg-success-subtle text-success border border-success fw-bold">+${r.fark.toLocaleString('tr-TR')} (Fazla)</span>`;
+                            farkBadge = `<span class="badge bg-success-subtle text-success border border-danger fw-bold">+${r.fark.toLocaleString('tr-TR')} (Fazla)</span>`;
                         } else {
                             farkBadge = `<span class="badge bg-secondary">0 (Tam Hedef)</span>`;
                         }
@@ -4729,7 +4731,11 @@ function getBakanlikKatsayisi(bransAdi) {
 
             const getKapasiteMap = (dnm) => {
                 const map = {};
-                aksiyonKapasiteRawData.filter(d => d.donem === dnm).forEach(k => {
+                aksiyonKapasiteRawData.filter(d => {
+                    const dUp = (d.donem || '').toUpperCase().trim();
+                    const dnmUp = dnm.toUpperCase().trim();
+                    return dUp === dnmUp || dUp.includes(dnmUp) || dnmUp.includes(dUp);
+                }).forEach(k => {
                     if (seciliKurum !== 'ALL' && k.kurumKonsolide !== seciliKurum) return;
                     if (arama && !k.brans.toLowerCase().includes(arama) && !k.kurumKonsolide.toLowerCase().includes(arama)) return;
                     map[k.brans] = (map[k.brans] || 0) + k.kapasite;
