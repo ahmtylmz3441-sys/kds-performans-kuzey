@@ -4587,28 +4587,31 @@ function getBakanlikKatsayisi(bransAdi) {
 
         let seciliDonemUpper = seciliDonem.toString().toUpperCase().trim();
 
-        // TAM EŞLEŞTİRME: Seçilen dönem ile satırdaki dönem birebir uyuşmalı!
+        // KESİN ÇÖZÜM: Seçilen dönem ile satırdaki dönem (E sütunu) BİREBİR VE TAM EŞİTLİK (===) ile filtrelenmeli!
         let filteredOda = aksiyonOdaRawData.filter(d => {
             if (d.donem) {
                 return d.donem.toUpperCase().trim() === seciliDonemUpper;
             }
-            return true;
+            return false; // Dönem bilgisi yoksa dahil etme
         });
 
         if (seciliKurum !== 'ALL') {
             filteredOda = filteredOda.filter(d => d.kurumKonsolide === seciliKurum);
         }
 
+        // KESİN ÇÖZÜM: Aynı hastane ve branşa ait veriler üst üste toplanarak (+=) şişmemeli, TEKİL ATAMA (=) yapılmalı!
         const odaGrupMap = {};
         filteredOda.forEach(r => {
             const key = `${r.kurumKonsolide}___${r.brans}`;
-            if (!odaGrupMap[key]) {
-                odaGrupMap[key] = { kurum: r.kurumKonsolide, brans: r.brans, aktifOda: 0, mhrsOda: 0 };
-            }
-            // Çift toplamayı önlemek için += yerine direkt atama yapıyoruz (=)
-            odaGrupMap[key].aktifOda = r.aktifOda;
-            odaGrupMap[key].mhrsOda = r.mhrsOda;
+            // Doğrudan atama yapılıyor, böylece mükerrer toplama (şişme) engelleniyor
+            odaGrupMap[key] = { 
+                kurum: r.kurumKonsolide, 
+                brans: r.brans, 
+                aktifOda: r.aktifOda, 
+                mhrsOda: r.mhrsOda 
+            };
         });
+
         let satirlar = Object.values(odaGrupMap).map(item => {
             const kapKey = `${item.kurum}___${item.brans}`;
             const kap = donemKapasiteMap[kapKey] || { ilk: 0, devam: 0, toplam: 0 };
@@ -4715,9 +4718,8 @@ function getBakanlikKatsayisi(bransAdi) {
                 }).join('');
             }
         }
-        // =========================================================================
-        // DÖNEM KARŞILAŞTIRMA GRAFİĞİ MOTORU
-        // =========================================================================
+
+        // Dönem Karşılaştırma Grafiği
         const kiyasDonem = document.getElementById('aksiyonKiyasDonemSelect')?.value;
         const baslikEl = document.getElementById('aksiyonKiyasGrafikBaslik');
         const badgeEl = document.getElementById('aksiyonKiyasFarkBadge');
@@ -4725,7 +4727,6 @@ function getBakanlikKatsayisi(bransAdi) {
         if (kiyasDonem && baslikEl) {
             baslikEl.innerHTML = `<b>${seciliDonem}</b> ile <b>${kiyasDonem}</b> dönemleri branş kapasite kıyası (${seciliKurum === 'ALL' ? 'Tüm Kurumlar' : seciliKurum})`;
 
-            // Ortak Hesaplama Yardımcısı (İki dönemi de birebir aynı süzgeçten geçirir):
             const getKapasiteMap = (dnm) => {
                 const map = {};
                 aksiyonKapasiteRawData.filter(d => d.donem === dnm).forEach(k => {
@@ -4741,7 +4742,6 @@ function getBakanlikKatsayisi(bransAdi) {
 
             const tumKiyasBranslar = [...new Set([...Object.keys(donem1Map), ...Object.keys(kiyasKapasiteMap)])];
             
-            // En çok kapasite açılan 10 branşı seç
             const siraliKiyas = tumKiyasBranslar.map(b => ({
                 brans: b,
                 val1: donem1Map[b] || 0,
@@ -4749,19 +4749,18 @@ function getBakanlikKatsayisi(bransAdi) {
                 toplam: (donem1Map[b] || 0) + (kiyasKapasiteMap[b] || 0)
             })).sort((a, b) => b.toplam - a.toplam).slice(0, 10);
 
-            // Fark rozetini hesapla
-        const totalD1 = Object.values(donem1Map).reduce((a, b) => a + b, 0);
-        const totalD2 = Object.values(kiyasKapasiteMap).reduce((a, b) => a + b, 0);
-        const fark = totalD2 - totalD1;
-        if (badgeEl) {
-            if (fark === 0) {
-                badgeEl.className = 'badge bg-secondary text-white px-2 py-1 small';
-                badgeEl.innerText = 'Toplam Fark: 0 Kapasite (Aynı Dönem)';
-            } else {
-                badgeEl.className = `badge ${fark > 0 ? 'bg-success' : 'bg-danger'} text-white px-2 py-1 small`;
-                badgeEl.innerText = `Toplam Fark: ${fark > 0 ? '+' : ''}${fark.toLocaleString('tr-TR')} Kapasite`;
+            const totalD1 = Object.values(donem1Map).reduce((a, b) => a + b, 0);
+            const totalD2 = Object.values(kiyasKapasiteMap).reduce((a, b) => a + b, 0);
+            const fark = totalD2 - totalD1;
+            if (badgeEl) {
+                if (fark === 0) {
+                    badgeEl.className = 'badge bg-secondary text-white px-2 py-1 small';
+                    badgeEl.innerText = 'Toplam Fark: 0 Kapasite';
+                } else {
+                    badgeEl.className = `badge ${fark > 0 ? 'bg-success' : 'bg-danger'} text-white px-2 py-1 small`;
+                    badgeEl.innerText = `Toplam Fark: ${fark > 0 ? '+' : ''}${fark.toLocaleString('tr-TR')} Kapasite`;
+                }
             }
-        }
 
             const ctxKiyas = document.getElementById('aksiyonDonemKiyasCanvas')?.getContext('2d');
             if (ctxKiyas) {
@@ -4774,13 +4773,13 @@ function getBakanlikKatsayisi(bransAdi) {
                             {
                                 label: `${seciliDonem} Kapasitesi`,
                                 data: siraliKiyas.map(k => k.val1),
-                                backgroundColor: 'rgba(244, 114, 182, 0.85)', // Şık Toz Pembe
+                                backgroundColor: 'rgba(244, 114, 182, 0.85)',
                                 borderRadius: 4
                             },
                             {
                                 label: `${kiyasDonem} Kapasitesi`,
                                 data: siraliKiyas.map(k => k.val2),
-                                backgroundColor: 'rgba(110, 231, 183, 0.85)', // Uyumlu Pastel Lavanta
+                                backgroundColor: 'rgba(110, 231, 183, 0.85)',
                                 borderRadius: 4
                             }
                         ]
@@ -5009,14 +5008,18 @@ function getBakanlikKatsayisi(bransAdi) {
             filteredKapasite = filteredKapasite.filter(d => d.klinik === seciliBrans);
         }
 
-        // 1. ODA HARİTASINI TARİHE GÖRE (AY BAZINDA) DİNAMİK EŞLEŞTİRME İLE OLUŞTUR
+        // 1. KESİN ÇÖZÜM: Seçilen tarihin hangi aya ait olduğunu bulan yardımcı fonksiyon (Örn: "23.10.2026" -> "EKİM")
         const getAyAdiFromTarih = (tarihStr) => {
             if (!tarihStr) return '';
             const tUpper = tarihStr.toString().toUpperCase().trim();
             const trAylar = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
+            
+            // Eğer string içinde doğrudan ay adı geçiyorsa
             for (let ay of trAylar) {
                 if (tUpper.includes(ay)) return ay;
             }
+            
+            // Eğer "DD.MM.YYYY" formatındaysa
             if (tUpper.includes('.')) {
                 const parts = tUpper.split('.');
                 if (parts.length === 3) {
@@ -5027,14 +5030,14 @@ function getBakanlikKatsayisi(bransAdi) {
             return tUpper;
         };
 
-        const hedefAyAdi = getAyAdiFromTarih(seciliDonem); // Örn: "KASIM"
+        const hedefAyAdi = getAyAdiFromTarih(seciliDonem); // Örn: Seçilen tarih 23.10.2026 ise hedefAyAdi "EKİM" olur
 
+        // 2. ODA HARİTASINI OLUŞTUR (Sadece o aya ait poliklinik oda sayıları filtrelenir)
         const odaMap = {};
         (aksiyonOdaRawData || []).forEach(o => {
-            // Sadece ve sadece seçilen aya birebir uyan odaları al
             if (o.donem && hedefAyAdi) {
                 if (o.donem.toUpperCase().trim() !== hedefAyAdi) {
-                    return; // Ay uyuşmuyorsa atla
+                    return; // Ay uyuşmuyorsa bu oda kaydını atla
                 }
             }
 
@@ -5045,10 +5048,12 @@ function getBakanlikKatsayisi(bransAdi) {
             const key1 = `${kName}___${cleanBrans}`.toUpperCase();
             const key2 = `${kName}___${normBrans}`.toUpperCase();
             
+            // Tekil atama ile oda değerleri güncellenir
             odaMap[key1] = { aktifOda: o.aktifOda, mhrsOda: o.mhrsOda };
             odaMap[key2] = { aktifOda: o.aktifOda, mhrsOda: o.mhrsOda };
         });
-        // 2. EN GÜNCEL TALEP HARİTASI
+
+        // 3. EN GÜNCEL TALEP HARİTASI
         const talepDonemleri = [...new Set((mhrsTalepRawData || []).map(d => d.donem))];
         const parseTarihDegeri = (str) => {
             const pts = (str || '').split(".");
@@ -5065,7 +5070,7 @@ function getBakanlikKatsayisi(bransAdi) {
             talepMap[normKey] = (talepMap[normKey] || 0) + 1;
         });
 
-        // 3. KAPASİTE VE RANDEVULARI KONSOLİDE ET
+        // 4. KAPASİTE VE RANDEVULARI KONSOLİDE ET
         const grupMap = {};
         filteredKapasite.forEach(r => {
             const kName = (kapsam === 'DAHIL') ? r.kurumKonsolide : r.kurumTekil;
@@ -5082,7 +5087,7 @@ function getBakanlikKatsayisi(bransAdi) {
             grupMap[key].randevu += r.randevu;
         });
 
-// 4. TABLO SATIRLARI & HER İKİ ODA HESABI
+        // 5. TABLO SATIRLARI
         const satirlar = Object.values(grupMap).map(item => {
             const cleanBrans = (item.brans || '').toString().trim();
             const normBrans = normText(cleanBrans);
@@ -5095,16 +5100,11 @@ function getBakanlikKatsayisi(bransAdi) {
             const talepSayisi = talepMap[talepKey] || 0;
 
             const katsayi = getBakanlikKatsayisi(item.brans);
-            
-            // Aktif Odaya Göre Açılabilecek Kapasite (Katsayı * Aktif Oda)
             const acilabilecekKap = Math.round(katsayi * oda.aktifOda);
-            
-            // MHRS Odaya Göre Açılabilecek Kapasite (Katsayı * MHRS Oda)
             const mhrsAcilabilecekKap = Math.round(katsayi * oda.mhrsOda);
 
             const fark = acilabilecekKap > 0 ? (item.ilkKap - acilabilecekKap) : null;
             const dolulukOrani = item.topKap > 0 ? (item.randevu / item.topKap) * 100 : 0;
-            
             const odaBasiKap = oda.aktifOda > 0 ? Math.round(item.ilkKap / oda.aktifOda) : 0;
 
             return {
@@ -5121,7 +5121,6 @@ function getBakanlikKatsayisi(bransAdi) {
             };
         }).sort((a, b) => b.topKap - a.topKap);
 
-       // TOPLAMLAR & 6'LI KPI HESAPLARI
         const tKapasite = satirlar.reduce((s, v) => s + v.topKap, 0);
         const tIlkMuayene = satirlar.reduce((s, v) => s + v.ilkKap, 0);
         const tDevamEden = satirlar.reduce((s, v) => s + v.devKap, 0);
@@ -5129,7 +5128,7 @@ function getBakanlikKatsayisi(bransAdi) {
         const tGereken = satirlar.reduce((s, v) => s + v.acilabilecekKap, 0);
         const tAktifOda = satirlar.reduce((s, v) => s + v.aktifOda, 0);
         const tMhrsOda = satirlar.reduce((s, v) => s + v.mhrsOda, 0);
-        const tFark = tIlkMuayene - tGereken; // Güncellenmiş İlk Muayene bazlı fark
+        const tFark = tIlkMuayene - tGereken;
 
         const kpi = document.getElementById('gkKpiAlani');
         if (kpi) {
@@ -5181,11 +5180,10 @@ function getBakanlikKatsayisi(bransAdi) {
             `;
         }
 
-        // TABLO DOLDURMA (Oda Başına Kapasite Tam Sayı Olarak Yazdırıldı)
         const tbody = document.getElementById('gkTableBody');
         if (tbody) {
             if (satirlar.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted py-4">Seçilen kriterlere uygun günlük kapasite kaydı bulunamadı.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">Seçilen kriterlere uygun günlük kapasite kaydı bulunamadı.</td></tr>';
             } else {
                 tbody.innerHTML = satirlar.map((r, idx) => {
                     let farkBadge = '<span class="text-muted">-</span>';
@@ -5199,7 +5197,6 @@ function getBakanlikKatsayisi(bransAdi) {
                         }
                     }
 
-                    // Oda Başına Kapasite Tam Sayı Rozeti
                     let odaBasiBadge = '<span class="text-muted">-</span>';
                     if (r.aktifOda > 0 && r.odaBasiKap > 0) {
                         if (r.odaBasiKap >= r.katsayi) {
@@ -5231,11 +5228,8 @@ function getBakanlikKatsayisi(bransAdi) {
             }
         }
 
-        // =========================================================================
-        // GRAFİK SIRALAMA DÜZELTMESİ: DOLULUK YERİNE TOPLAM KAPASİTEYE GÖRE SIRALA
-        // =========================================================================
+        // Grafik Çizimi
         let chartDataList = [];
-
         if (seciliKurum === 'ALL') {
             const bransKumuMap = {};
             satirlar.forEach(r => {
@@ -5246,7 +5240,6 @@ function getBakanlikKatsayisi(bransAdi) {
                 bransKumuMap[r.brans].randevu += r.randevu;
             });
 
-            // TOPLAM KAPASİTEYE (topKap) GÖRE BÜYÜKTEN KÜÇÜĞE SIRALAMA
             chartDataList = Object.values(bransKumuMap)
                 .filter(b => b.topKap > 0)
                 .map(b => ({
@@ -5259,7 +5252,6 @@ function getBakanlikKatsayisi(bransAdi) {
                 .sort((a, b) => b.topKap - a.topKap)
                 .slice(0, 10);
         } else {
-            // TEK KURUM: TOPLAM KAPASİTEYE (topKap) GÖRE BÜYÜKTEN KÜÇÜĞE SIRALAMA
             chartDataList = [...satirlar]
                 .filter(r => r.topKap > 0)
                 .sort((a, b) => b.topKap - a.topKap)
@@ -5331,34 +5323,7 @@ function getBakanlikKatsayisi(bransAdi) {
                             ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold', size: 10 }, autoSkip: false }
                         }
                     }
-                },
-                plugins: [{
-                    id: 'horizontalBarLabels',
-                    afterDatasetsDraw(chart) {
-                        const { ctx } = chart;
-                        ctx.save();
-                        chart.data.datasets.forEach((dataset, datasetIndex) => {
-                            const meta = chart.getDatasetMeta(datasetIndex);
-                            meta.data.forEach((bar, index) => {
-                                const val = dataset.data[index];
-                                if (val !== undefined && val !== null && bar.x > 0) {
-                                    ctx.font = 'bold 9.5px "Plus Jakarta Sans", sans-serif';
-                                    ctx.fillStyle = datasetIndex === 0 ? '#4338ca' : '#b45309';
-                                    ctx.textAlign = 'left';
-                                    ctx.textBaseline = 'middle';
-                                    
-                                    let metin = val.toLocaleString('tr-TR');
-                                    if (datasetIndex === 1) {
-                                        metin += ` (%${chartDataList[index].doluluk.toFixed(0)})`;
-                                    }
-                                    
-                                    ctx.fillText(metin, bar.x + 4, bar.y);
-                                }
-                            });
-                        });
-                        ctx.restore();
-                    }
-                }]
+                }
             });
         }
     };
