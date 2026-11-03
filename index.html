@@ -4178,7 +4178,7 @@ window.switchMhrsSubTab = function(tabName) {
                 }
             }
 
-            // 2. BRANŞ_H (A: Uzmanlık, B: Sınıflandırma)
+            // 2. BRANŞ_H 
             aksiyonBransHMap = {};
             const rowsB = parseCSV(txtBransH);
             for (let i = 1; i < rowsB.length; i++) {
@@ -4190,52 +4190,55 @@ window.switchMhrsSubTab = function(tabName) {
                 }
             }
 
-// 3. KAPASİTELER SEKMESİ (TAM DİNAMİK VE DOĞRUDAN DÖNEM TESPİTİ)
+            // 3. KAPASİTELER SEKMESİ (Akıllı Sütun Tarayıcı)
             aksiyonKapasiteRawData = [];
             const donemSet = new Set();
             const rowsKap = parseCSV(txtKap);
 
             console.log("--> KAPASİTELER TOPLAM SATIR SAYISI:", rowsKap.length);
-            if (rowsKap.length > 1) {
-                console.log("--> KAPASİTELER 1. SATIR BAŞLIKLARI:", rowsKap[0]);
-                console.log("--> KAPASİTELER 2. SATIR VERİLERİ:", rowsKap[1]);
-                console.log("--> KAPASİTELER EN SON SATIR VERİSİ:", rowsKap[rowsKap.length - 1]);
-            }
 
             for (let i = 1; i < rowsKap.length; i++) {
                 const r = rowsKap[i];
+                if (!r || r.length < 3) continue;
+
                 const hamK = (r[0] || '').trim();
-                // ADSM / ADSH Kurumlarını ve Diş Hastanelerini Aksiyon Modülünden Dışla:
                 const upHamK = hamK.toUpperCase();
                 if (upHamK.includes("AĞIZ VE DİŞ") || upHamK.includes("AGIZ VE DIS") || upHamK.includes("ADSM") || upHamK.includes("ADSH")) {
-                    continue; // Bu satırı atla, listeye ekleme
+                    continue;
                 }
+                
                 const aks = (r[1] || '').trim().toUpperCase();
                 const kl = (r[2] || '').trim();
-                const val = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
                 
-                // Satırdaki tüm hücreleri tara: İçinde "EKİM", "KASIM" veya tarih geçen hücreyi yakala!
+                // Sayısal değeri bul (genellikle 3. veya 4. sütundadır)
+                let val = 0;
                 let dnm = "";
-                for (let c = 0; c < r.length; c++) {
+
+                for (let c = 3; c < r.length; c++) {
                     const cellVal = (r[c] || '').toString().trim();
                     const upVal = cellVal.toUpperCase();
-                    if (upVal === "EKİM" || upVal === "EKIM" || upVal === "KASIM" || upVal === "EYLÜL" || /^\d{2}\.\d{2}\.\d{4}$/.test(cellVal)) {
+                    
+                    // Eğer hücrede ay ismi veya tarih geçiyorsa burası dönem sütunudur
+                    if (upVal.includes("EKİM") || upVal.includes("EKIM") || upVal.includes("KASIM") || upVal.includes("EYLÜL") || upVal.includes("ARALIK") || upVal.includes("OCAK") || /^\d{2}\.\d{2}\.\d{4}$/.test(cellVal)) {
                         dnm = cellVal;
-                        break;
+                    } else {
+                        const parsedNum = parseFloat(cellVal.replace(/\./g, '').replace(',', '.'));
+                        if (!isNaN(parsedNum) && parsedNum > 0 && val === 0) {
+                            val = parsedNum;
+                        }
                     }
                 }
 
-                // Eğer özel taramada bulamadıysa varsayılan E sütununu (index 4) al:
-                if (!dnm) {
-                    dnm = (r[4] || '').toString().trim();
-                    if (dnm.includes(" ")) dnm = dnm.split(" ")[0].trim();
+                // Eğer döngüde dönem bulunamadıysa son sütunu al
+                if (!dnm && r.length > 0) {
+                    dnm = (r[r.length - 1] || '').toString().trim();
                 }
 
-                if (dnm && !dnm.toUpperCase().includes("DÖNEM")) {
+                if (dnm && !dnm.toUpperCase().includes("DÖNEM") && !dnm.toUpperCase().includes("KURUM")) {
                     donemSet.add(dnm);
                 }
 
-                if (hamK && kl && dnm) {
+                if (hamK && kl) {
                     const meta = aksiyonKurumlarMap[hamK] || aksiyonKurumlarMap[temizleAksiyonKurumAdi(hamK)] || {
                         anaKurumAdi: temizleAksiyonKurumAdi(hamK),
                         temizAd: temizleAksiyonKurumAdi(hamK)
@@ -4246,12 +4249,11 @@ window.switchMhrsSubTab = function(tabName) {
                         brans: kl,
                         aksiyon: aks,
                         kapasite: val,
-                        donem: dnm
+                        donem: dnm || "EKİM"
                     });
                 }
             }
 
-            // DÖNEM LİSTESİ:
             aksiyonDonemListesi = Array.from(donemSet).sort((a, b) => {
                 const aUp = a.toUpperCase();
                 const bUp = b.toUpperCase();
@@ -4260,23 +4262,32 @@ window.switchMhrsSubTab = function(tabName) {
                 return b.localeCompare(a);
             });
 
-            console.log("--> BULUNAN TÜM DÖNEMLER LİSTESİ:", aksiyonDonemListesi);
+            if (aksiyonDonemListesi.length === 0) {
+                aksiyonDonemListesi = ["EKİM", "KASIM", "ARALIK"];
+            }
 
-            // 4. POLİKLİNİK ODA SAYILARI (A: Kurum, B: Branş, C: Aktif Oda, D: MHRS Oda)
+            console.log("--> DÜZELTİLMİŞ DÖNEMLER LİSTESİ:", aksiyonDonemListesi);
+
+            // 4. POLİKLİNİK ODA SAYILARI (A: Kurum, B: Branş, C: Aktif Oda, D: MHRS Oda, E: Dönem/Ay)
             const rowsOda = parseCSV(txtOda);
             aksiyonOdaRawData = [];
 
             for (let i = 1; i < rowsOda.length; i++) {
                 const r = rowsOda[i];
+                if (!r || r.length < 3) continue;
+
                 const hamK = (r[0] || '').trim();
-                // ADSM / ADSH Kurumlarını ve Diş Hastanelerini Aksiyon Modülünden Dışla:
                 const upHamK = hamK.toUpperCase();
-                if (upHamK.includes("AĞIZ VE DİŞ") || upHamK.includes("AGIZ VE DIS") || upHamK.includes("ADSM") || upHamK.includes("ADSH")) {
-                    continue; // Bu satırı atla, listeye ekleme
+                if (upHamK.includes("AĞIZ VE DİŞ") || upHamK.includes("ADSM") || upHamK.includes("ADSH")) {
+                    continue;
                 }
                 const brans = (r[1] || '').trim();
                 const aktifOda = parseFloat((r[2] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
                 const mhrsOda = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
+                
+                // Oda sayılarındaki E sütununu (Dönem bilgisi) yakala
+                let odaDonem = (r[4] || '').toString().trim().toUpperCase();
+                if (!odaDonem && r.length > 4) odaDonem = (r[r.length - 1] || '').toString().trim().toUpperCase();
 
                 if (hamK && brans && !hamK.toUpperCase().includes("KURUM_ADI")) {
                     const meta = aksiyonKurumlarMap[hamK] || aksiyonKurumlarMap[temizleAksiyonKurumAdi(hamK)] || {
@@ -4289,7 +4300,8 @@ window.switchMhrsSubTab = function(tabName) {
                         kurumKonsolide: meta.anaKurumAdi,
                         brans: brans,
                         aktifOda: aktifOda,
-                        mhrsOda: mhrsOda
+                        mhrsOda: mhrsOda,
+                        donem: odaDonem || "EKİM" // Eğer boşsa varsayılan EKİM ata
                     });
                 }
             }
@@ -4571,12 +4583,13 @@ function getBakanlikKatsayisi(bransAdi) {
         const altBaslik = document.getElementById('aksiyonTabloAltBaslik');
         if (altBaslik) altBaslik.innerHTML = `Seçili Kapasite Dönemi: <b>${seciliDonem}</b> | Bağlı Binalar Dahil Planlama`;
 
-        // Seçilen döneme ait kapasite verilerini al
+        let seciliDonemUpper = seciliDonem.toUpperCase().trim();
+
+        // 1. Kapasite verilerini filtrele
         const donemKapasiteMap = {};
         aksiyonKapasiteRawData.filter(d => {
-            const dDonemUpper = (d.donem || '').toUpperCase().trim();
-            const seciliUpper = seciliDonem.toUpperCase().trim();
-            return dDonemUpper === seciliUpper || dDonemUpper.includes(seciliUpper) || seciliUpper.includes(dDonemUpper);
+            const dUp = (d.donem || '').toUpperCase().trim();
+            return dUp === seciliDonemUpper || dUp.includes(seciliDonemUpper) || seciliDonemUpper.includes(dUp);
         }).forEach(k => {
             const key = `${k.kurumKonsolide}___${k.brans}`;
             if (!donemKapasiteMap[key]) donemKapasiteMap[key] = { ilk: 0, devam: 0, toplam: 0 };
@@ -4588,21 +4601,18 @@ function getBakanlikKatsayisi(bransAdi) {
             donemKapasiteMap[key].toplam += k.kapasite;
         });
 
-        let seciliDonemUpper = seciliDonem.toUpperCase().trim();
-
-        // KESİN ÇÖZÜM: Katı '===' yerine hem tam eşitlik hem de 'includes' (içerme) kontrolü eklendi.
-        // Böylece Google Sheets'teki tarih/dönem formatı ne olursa olsun (Örn: "EKİM 2026", "01.10.2026" vb.) veriler başarıyla yakalanır.
+        // 2. Oda verilerini filtrele (Dönem uyuşmazlığı riskini ortadan kaldıran esnek arama)
         let filteredOda = aksiyonOdaRawData.filter(d => {
-            if (!d.donem) return false;
-            const dUpper = d.donem.toUpperCase().trim();
-            return dUpper === seciliDonemUpper || dUpper.includes(seciliDonemUpper) || seciliDonemUpper.includes(dUpper);
+            if (!d.donem) return true; // Eğer dönem boşsa tüm aylara ortak kabul et
+            const dUp = d.donem.toUpperCase().trim();
+            return dUp === seciliDonemUpper || dUp.includes(seciliDonemUpper) || seciliDonemUpper.includes(dUp);
         });
 
         if (seciliKurum !== 'ALL') {
             filteredOda = filteredOda.filter(d => d.kurumKonsolide === seciliKurum);
         }
 
-        // Şişmeyi önleyen tekil atama ( = ) mekanizması korunuyor
+        // Tekil atama ile şişmeyi önleyen yapı
         const odaGrupMap = {};
         filteredOda.forEach(r => {
             const key = `${r.kurumKonsolide}___${r.brans}`;
