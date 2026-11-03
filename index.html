@@ -4601,20 +4601,31 @@ function getBakanlikKatsayisi(bransAdi) {
             donemKapasiteMap[key].toplam += k.kapasite;
         });
 
-        // 2. ODA VERİLERİNİ AKILLI FİLTRELEME (Eğer seçilen ayda oda verisi yoksa en son verisi olan ayı baz al)
+        // 2. ODA VERİLERİNİ AKILLI FİLTRELEME
         let filteredOda = aksiyonOdaRawData.filter(d => {
             if (!d.donem) return false;
             const dUp = d.donem.toUpperCase().trim();
             return dUp === seciliDonemUpper || dUp.includes(seciliDonemUpper) || seciliDonemUpper.includes(dUp);
         });
 
-        // EĞER SEÇİLEN AYDA (Örn: KASIM) ODA VERİSİ HİÇ YOKSA: Tablodaki en son/en güncel ayı otomatik baz al!
+        // EĞER SEÇİLEN AYDA ODA VERİSİ HİÇ YOKSA: En güncel (kronolojik olarak en son) ayı akıllıca bul ve baz al!
         if (filteredOda.length === 0 && aksiyonOdaRawData.length > 0) {
-            // Tabloda mevcut olan tüm benzersiz dönemleri al
             const mevcutOdaDonemleri = [...new Set(aksiyonOdaRawData.map(d => d.donem).filter(Boolean))];
+            
             if (mevcutOdaDonemleri.length > 0) {
-                // En son dönemi seç (Listenin son elemanı veya alfabetik/kronolojik sonuncusu)
-                const enSonOdaDonemi = mevcutOdaDonemleri[mevcutOdaDonemleri.length - 1].toUpperCase().trim();
+                // Türkiye Türkçesi ay sıralaması takvimi (kronolojik doğru sıra)
+                const aySiralamasi = ["OCAK", "ŞUBAT", "SUBAT", "MART", "NİSAN", "NISAN", "MAYIS", "HAZİRAN", "HAZIRAN", "TEMMUZ", "AĞUSTOS", "AGUSTOS", "EYLÜL", "EYLUL", "EKİM", "EKIM", "KASIM", "ARALIK"];
+                
+                // Mevcut dönemleri takvim sırasına göre en güncelden eskiye doğru sırala
+                mevcutOdaDonemleri.sort((a, b) => {
+                    const aUp = a.toUpperCase().trim();
+                    const bUp = b.toUpperCase().trim();
+                    const idxA = aySiralamasi.findIndex(ay => aUp.includes(ay));
+                    const idxB = aySiralamasi.findIndex(ay => bUp.includes(ay));
+                    return idxB - idxA; // En büyük index (en son ay) en başa gelsin
+                });
+
+                const enSonOdaDonemi = mevcutOdaDonemleri[0].toUpperCase().trim();
                 
                 if (altBaslik) {
                     altBaslik.innerHTML = `Seçili Kapasite Dönemi: <b>${seciliDonem}</b> <span class="text-warning small">(Not: ${seciliDonem} için oda verisi bulunamadığından en son veri olan <b>${enSonOdaDonemi}</b> ayının oda sayıları baz alınmıştır)</span>`;
