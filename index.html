@@ -4585,7 +4585,7 @@ function getBakanlikKatsayisi(bransAdi) {
 
         let seciliDonemUpper = seciliDonem.toUpperCase().trim();
 
-        // 1. Kapasite verilerini filtrele
+        // 1. Kapasite verilerini seçilen döneme göre filtrele
         const donemKapasiteMap = {};
         aksiyonKapasiteRawData.filter(d => {
             const dUp = (d.donem || '').toUpperCase().trim();
@@ -4601,12 +4601,32 @@ function getBakanlikKatsayisi(bransAdi) {
             donemKapasiteMap[key].toplam += k.kapasite;
         });
 
-        // 2. Oda verilerini filtrele (Dönem uyuşmazlığı riskini ortadan kaldıran esnek arama)
+        // 2. ODA VERİLERİNİ AKILLI FİLTRELEME (Eğer seçilen ayda oda verisi yoksa en son verisi olan ayı baz al)
         let filteredOda = aksiyonOdaRawData.filter(d => {
-            if (!d.donem) return true; // Eğer dönem boşsa tüm aylara ortak kabul et
+            if (!d.donem) return false;
             const dUp = d.donem.toUpperCase().trim();
             return dUp === seciliDonemUpper || dUp.includes(seciliDonemUpper) || seciliDonemUpper.includes(dUp);
         });
+
+        // EĞER SEÇİLEN AYDA (Örn: KASIM) ODA VERİSİ HİÇ YOKSA: Tablodaki en son/en güncel ayı otomatik baz al!
+        if (filteredOda.length === 0 && aksiyonOdaRawData.length > 0) {
+            // Tabloda mevcut olan tüm benzersiz dönemleri al
+            const mevcutOdaDonemleri = [...new Set(aksiyonOdaRawData.map(d => d.donem).filter(Boolean))];
+            if (mevcutOdaDonemleri.length > 0) {
+                // En son dönemi seç (Listenin son elemanı veya alfabetik/kronolojik sonuncusu)
+                const enSonOdaDonemi = mevcutOdaDonemleri[mevcutOdaDonemleri.length - 1].toUpperCase().trim();
+                
+                if (altBaslik) {
+                    altBaslik.innerHTML = `Seçili Kapasite Dönemi: <b>${seciliDonem}</b> <span class="text-warning small">(Not: ${seciliDonem} için oda verisi bulunamadığından en son veri olan <b>${enSonOdaDonemi}</b> ayının oda sayıları baz alınmıştır)</span>`;
+                }
+
+                filteredOda = aksiyonOdaRawData.filter(d => {
+                    if (!d.donem) return false;
+                    const dUp = d.donem.toUpperCase().trim();
+                    return dUp === enSonOdaDonemi || dUp.includes(enSonOdaDonemi) || enSonOdaDonemi.includes(dUp);
+                });
+            }
+        }
 
         if (seciliKurum !== 'ALL') {
             filteredOda = filteredOda.filter(d => d.kurumKonsolide === seciliKurum);
