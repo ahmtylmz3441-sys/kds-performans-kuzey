@@ -1527,16 +1527,33 @@
     };
     let personelHamVeri = [];
 
-    window.initPersonelAnalizDashboard = async function() {
+        window.initPersonelAnalizDashboard = async function() {
         showLoading('personelTableBody', 'Personel verileri veritabanından çekiliyor...');
         try {
-            const { data, error } = await _supabase
-                .from('kurum_personel')
-                .select('*')
-                .limit(5000); // Tüm kayıtları güvenli çekmek için
+            let allData = [];
+            let from = 0;
+            const step = 1000; // Her seferinde 1000 veri çek
+            let hasMore = true;
 
-            if (error) throw error;
-            personelHamVeri = data || [];
+            // Sayfalama (Pagination) döngüsü ile TÜM veriyi eksiksiz çekiyoruz
+            while (hasMore) {
+                const { data, error } = await _supabase
+                    .from('kurum_personel')
+                    .select('*')
+                    .range(from, from + step - 1); 
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    allData = allData.concat(data);
+                    from += step;
+                    if (data.length < step) hasMore = false; // Son sayfaya geldiysek dur
+                } else {
+                    hasMore = false;
+                }
+            }
+
+            personelHamVeri = allData;
 
             window.populatePersonelFilters();
             window.filtrelePersonelData();
@@ -1570,17 +1587,24 @@
         fillSelect('p-f-brans', branslar);
     };
 
-    window.filtrelePersonelData = function() {
+        window.filtrelePersonelData = function() {
         const selKurum = document.getElementById('p-f-kurum')?.value || '';
         const selSinif = document.getElementById('p-f-sinif')?.value || '';
         const selUnvan = document.getElementById('p-f-unvan')?.value || '';
         const selBrans = document.getElementById('p-f-brans')?.value || '';
 
+        // Metinleri temizleyen ve büyük harfe çeviren yardımcı fonksiyon
+        const normalize = (val) => {
+            if (!val) return '';
+            return val.toString().trim().toLocaleUpperCase('tr-TR');
+        };
+
+        // Filtreleme işlemi (Büyük/küçük harf ve boşluk duyarsız)
         const filtered = personelHamVeri.filter(d => {
-            if (selKurum && d["Birim Adı"] !== selKurum) return false;
-            if (selSinif && d["Sınıf Tanım"] !== selSinif) return false;
-            if (selUnvan && d["Unvan Adı"] !== selUnvan) return false;
-            if (selBrans && d["Branş Adı"] !== selBrans) return false;
+            if (selKurum && normalize(d["Birim Adı"]) !== normalize(selKurum)) return false;
+            if (selSinif && normalize(d["Sınıf Tanım"]) !== normalize(selSinif)) return false;
+            if (selUnvan && normalize(d["Unvan Adı"]) !== normalize(selUnvan)) return false;
+            if (selBrans && normalize(d["Branş Adı"]) !== normalize(selBrans)) return false;
             return true;
         });
 
@@ -1606,7 +1630,8 @@
                 return;
             }
 
-            tbody.innerHTML = filtered.slice(0, 500).map(d => `
+            // slice(0, 500) KALDIRILDI. Tüm veriler tabloya basılacak.
+            tbody.innerHTML = filtered.map(d => `
                 <tr>
                     <td><small>${d["İlçe Adı"] || '-'}</small></td>
                     <td><b>${d["Birim Adı"] || '-'}</b></td>
