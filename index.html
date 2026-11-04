@@ -1605,7 +1605,7 @@
         fillSelect('p-f-brans', branslar);
     };
 
-            window.filtrelePersonelData = function() {
+                window.filtrelePersonelData = function() {
         const selKurum = document.getElementById('p-f-kurum')?.value || '';
         const selSinif = document.getElementById('p-f-sinif')?.value || '';
         const selUnvan = document.getElementById('p-f-unvan')?.value || '';
@@ -1661,75 +1661,121 @@
         }
 
         // =========================================================
-        // YENİ EKLENEN GRAFİK ÇİZİM ALGORİTMASI
+        // GRAFİK ÇİZİM ALGORİTMASI (DİKEY, TÜM KURUMLAR, DEĞER GÖSTERİMLİ)
         // =========================================================
-        
-        // 1. Verileri Kurum Adına göre grupla ve Aktif Çalışanları topla
+
+        // 1. Tüm veritabanındaki tekil kurumları bul (Filtre ne olursa olsun 20 kurumun hepsi gelsin diye)
+        const tumKurumlar = [...new Set(personelHamVeri.map(d => d["Birim Adı"]).filter(Boolean))].sort();
+
+        // 2. Kurumları 0 ile başlat
         const grafikDataMap = {};
+        tumKurumlar.forEach(k => { grafikDataMap[k] = 0; });
+
+        // 3. Filtrelenmiş verideki aktif çalışanları bu haritaya ekle
         filtered.forEach(d => {
             const kurum = d["Birim Adı"] || 'Bilinmeyen Kurum';
             const aktif = parseFloat(d["Aktif Çalışan"] || 0);
-            if (!grafikDataMap[kurum]) grafikDataMap[kurum] = 0;
-            grafikDataMap[kurum] += aktif;
+            if (grafikDataMap[kurum] !== undefined) {
+                grafikDataMap[kurum] += aktif;
+            }
         });
 
-        // 2. Objeyi diziye çevir, çalışan sayısına göre büyükten küçüğe sırala ve ilk 15'ini al (çok kalabalık olmasın diye)
-        const sortedData = Object.entries(grafikDataMap)
-            .map(([kurum, aktif]) => ({ kurum, aktif }))
-            .sort((a, b) => b.aktif - a.aktif)
-            .slice(0, 15);
+        // 4. Kurum isimlerini kısaltan akıllı fonksiyon (Dikey grafikte sığması için)
+        const kisaKurumAdi = (ad) => {
+            let temiz = ad.toString()
+                .replace(/T\.C\. SAĞLIK BAKANLIĞI/gi, '')
+                .replace(/İSTANBUL/gi, '')
+                .replace(/EĞİTİM VE ARAŞTIRMA HASTANESİ/gi, 'EAH')
+                .replace(/EĞİTİM ARAŞTIRMA HASTANESİ/gi, 'EAH')
+                .replace(/DEVLET HASTANESİ/gi, 'DH')
+                .replace(/ŞEHİR HASTANESİ/gi, 'ŞH')
+                .replace(/AĞIZ VE DİŞ SAĞLIĞI MERKEZİ/gi, 'ADSM')
+                .replace(/PROF\. DR\./gi, '')
+                .replace(/DR\./gi, '')
+                .replace(/OP\. DR\./gi, '')
+                .trim();
+            // Eğer hala çok uzunsa ilk 20 karakteri al
+            return temiz.length > 22 ? temiz.substring(0, 20) + '...' : temiz;
+        };
 
-        // 3. Etiketleri (Kurum isimleri) ve Verileri (Çalışan sayıları) ayır
-        const chartLabels = sortedData.map(d => d.kurum.length > 30 ? d.kurum.substring(0, 28) + '...' : d.kurum);
-        const chartValues = sortedData.map(d => d.aktif);
+        // 5. Grafik Verilerini Hazırla
+        const chartLabels = tumKurumlar.map(k => kisaKurumAdi(k));
+        const chartValues = tumKurumlar.map(k => grafikDataMap[k]);
 
-        // 4. Grafiği Çiz
+        // 6. Grafiği Çiz (Dikey)
         const ctx = document.getElementById('personelAnalizChart')?.getContext('2d');
         if (ctx) {
-            // Eğer önceden çizilmiş bir grafik varsa üst üste binmemesi için temizle
             if (window.personelAnalizChartObj) window.personelAnalizChartObj.destroy();
             
             window.personelAnalizChartObj = new Chart(ctx, {
-                type: 'bar',
+                type: 'bar', // Dikey bar
                 data: {
                     labels: chartLabels,
                     datasets: [{
                         label: 'Aktif Çalışan',
                         data: chartValues,
-                        backgroundColor: 'rgba(79, 70, 229, 0.85)', // Kurumsal indigo rengi
-                        borderColor: '#4f46e5',
+                        backgroundColor: chartValues.map(v => v > 0 ? 'rgba(79, 70, 229, 0.85)' : 'rgba(200, 200, 200, 0.2)'), // 0 olanlar soluk gri
+                        borderColor: chartValues.map(v => v > 0 ? '#4f46e5' : '#cbd5e1'),
                         borderWidth: 1,
-                        borderRadius: 6
+                        borderRadius: 4
                     }]
                 },
                 options: {
-                    indexAxis: 'y', // Yatay çubuk grafiği olması için (Kurum isimleri okunsun diye)
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 25 } }, // Üstteki değer yazıları için boşluk
                     plugins: {
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 title: function(context) {
-                                    // Tam kurum adını tooltip'te göster
-                                    return sortedData[context[0].dataIndex].kurum;
+                                    return tumKurumlar[context[0].dataIndex]; // Tooltip'te tam adı göster
                                 }
                             }
                         }
                     },
                     scales: {
                         x: {
-                            grid: { color: 'rgba(0, 0, 0, 0.05)' },
-                            beginAtZero: true
-                        },
-                        y: {
                             grid: { display: false },
                             ticks: {
-                                font: { size: 10.5, weight: 'bold' }
+                                maxRotation: 90, // Yazıları dikey yap
+                                minRotation: 90,
+                                autoSkip: false, // 20 kurumun isminin de görünmesini zorla
+                                font: { size: 9, weight: 'bold' }
                             }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
                         }
                     }
-                }
+                },
+                // ÇUBUKLARIN ÜZERİNE DEĞER YAZAN ÖZEL EKLENTİ (Plugin)
+                plugins: [{
+                    id: 'valueLabels',
+                    afterDatasetsDraw(chart) {
+                        const { ctx } = chart;
+                        ctx.save();
+                        chart.data.datasets.forEach((dataset, datasetIndex) => {
+                            const meta = chart.getDatasetMeta(datasetIndex);
+                            meta.data.forEach((bar, index) => {
+                                const val = dataset.data[index];
+                                // Değer 0 olsa bile isminin üstünde 0 yazsın
+                                if (val !== undefined && val !== null) {
+                                    ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
+                                    ctx.fillStyle = val > 0 ? '#1e293b' : '#94a3b8'; // 0 ise gri yaz
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'bottom';
+                                    
+                                    // Eğer değer 0 ise X ekseninin hemen üstüne yaz, değilse çubuğun üstüne yaz
+                                    const yPos = val === 0 ? bar.y - 5 : bar.y - 4;
+                                    ctx.fillText(val.toString(), bar.x, yPos);
+                                }
+                            });
+                        });
+                        ctx.restore();
+                    }
+                }]
             });
         }
     };
