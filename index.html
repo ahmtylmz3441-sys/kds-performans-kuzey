@@ -5055,31 +5055,29 @@ function getBakanlikKatsayisi(bransAdi) {
             filteredKapasite = filteredKapasite.filter(d => d.klinik === seciliBrans);
         }
 
-        // 1. Seçilen tarihten/dönemden ay adını çıkaran akıllı fonksiyon
-        const getAyAdiFromTarih = (tarihStr) => {
-            if (!tarihStr) return '';
+        // 1. Seçilen tarihten/dönemden ay adını ve ay numarasını çıkaran fonksiyon
+        const getAyBilgisiFromTarih = (tarihStr) => {
+            if (!tarihStr) return { isim: '', numara: 0 };
             const tUpper = tarihStr.toString().toUpperCase().trim();
             const trAylar = ["OCAK", "ŞUBAT", "SUBAT", "MART", "NİSAN", "NISAN", "MAYIS", "HAZİRAN", "HAZIRAN", "TEMMUZ", "AĞUSTOS", "AGUSTOS", "EYLÜL", "EYLUL", "EKİM", "EKIM", "KASIM", "ARALIK"];
             
-            for (let ay of trAylar) {
-                if (tUpper.includes(ay)) return ay;
+            for (let i = 0; i < trAylar.length; i++) {
+                if (tUpper.includes(trAylar[i])) {
+                    return { isim: trAylar[i], numara: i + 1 };
+                }
             }
             
             if (tUpper.includes('.')) {
                 const parts = tUpper.split('.');
                 if (parts.length === 3) {
                     const ayNum = parseInt(parts[1], 10);
-                    return trAylar[ayNum - 1] || '';
+                    return { isim: trAylar[ayNum - 1] || '', numara: ayNum };
                 }
             }
-            return tUpper;
+            return { isim: tUpper, numara: 0 };
         };
 
-        const hedefAyAdi = getAyAdiFromTarih(seciliDonem); // Örn: "KASIM"
-
-        // 2. ODA HARİTASINI OLUŞTUR (Önce hedef ayı ara, bulamazsan kronolojik olarak EN GÜNCEL/EN SON ayı baz al!)
-        let odaMap = {};
-        let kullanilanOdaDonemi = hedefAyAdi;
+        const hedefAy = getAyBilgisiFromTarih(seciliDonem); // Örn: 02.11.2026 -> { isim: 'KASIM', numara: 11 }
 
         const aySiralamasi = ["OCAK", "ŞUBAT", "SUBAT", "MART", "NİSAN", "NISAN", "MAYIS", "HAZİRAN", "HAZIRAN", "TEMMUZ", "AĞUSTOS", "AGUSTOS", "EYLÜL", "EYLUL", "EKİM", "EKIM", "KASIM", "ARALIK"];
 
@@ -5093,28 +5091,44 @@ function getBakanlikKatsayisi(bransAdi) {
             }
         });
 
-        // Hedef ay için doğrudan eşleşme var mı?
+        // 2. KESİN VE AKILLI EŞLEŞTİRME: 
+        // Önce birebir ay adı tutuyor mu bak. Tutmuyorsa; kullanıcının seçtiği aydan ÖNCEKİ EN YAKIN AYI (Örn: Kasım seçildiyse ve yoksa Ekim'i) seç!
         let eslesenOdaSatirlari = [];
+        let kullanilanOdaDonemi = '';
+
+        // A. Doğrudan Eşleşme
         Object.keys(odaDonemleriMap).forEach(dKey => {
-            if (dKey === hedefAyAdi || dKey.includes(hedefAyAdi) || hedefAyAdi.includes(dKey)) {
-                eslesenOdaSatirlari = eslesenOdaSatirlari.concat(odaDonemleriMap[dKey]);
+            if (dKey === hedefAy.isim || dKey.includes(hedefAy.isim) || hedefAy.isim.includes(dKey)) {
+                eslesenOdaSatirlari = odaDonemleriMap[dKey];
+                kullanilanOdaDonemi = dKey;
             }
         });
 
-        // EĞER SEÇİLEN TARİHİN AYINA AİT ODA VERİSİ HİÇ YOKSA: Takvime göre EN GÜNCEL (en son) ayı otomatik seç!
+        // B. Doğrudan eşleşme yoksa -> Kullanıcının seçtiği aydan önceki en yakın geçmiş ayı bul (Örn: Kasım yoksa Ekim'i al, Ekim de yoksa Ağustos'u al)
         if (eslesenOdaSatirlari.length === 0 && Object.keys(odaDonemleriMap).length > 0) {
-            const mevcutDonemler = Object.keys(odaDonemleriMap);
-            mevcutDonemler.sort((a, b) => {
-                const idxA = aySiralamasi.findIndex(ay => a.includes(ay));
-                const idxB = aySiralamasi.findIndex(ay => b.includes(ay));
-                return idxB - idxA; // En son ay en başa gelsin
+            const mevcutDonemler = Object.keys(odaDonemleriMap).map(d => {
+                const b = getAyBilgisiFromTarih(d);
+                return { isim: d, numara: b.numara };
             });
 
-            kullanilanOdaDonemi = mevcutDonemler[0];
+            // Seçilen ay numarasından küçük veya eşit olan en büyük ay numarasını bul (En yakın geçmiş)
+            let uygunDonemler = mevcutDonemler.filter(d => d.numara <= hedefAy.numara && d.numara > 0);
+            
+            if (uygunDonemler.length > 0) {
+                // Kendi içinde aya göre büyükten küçüğe sırala (En yakın geçmiş en üstte olsun)
+                uygunDonemler.sort((a, b) => b.numara - a.numara);
+                kullanilanOdaDonemi = uygunDonemler[0].isim;
+            } else {
+                // Eğer seçilen ay, tablodaki tüm aylardan daha eskiyse (örn: Ocak seçildi, tabloda Ağustos ve Ekim var), tablodaki en eski ayı (Ağustos) al
+                mevcutDonemler.sort((a, b) => a.numara - b.numara);
+                kullanilanOdaDonemi = mevcutDonemler[0].isim;
+            }
+
             eslesenOdaSatirlari = odaDonemleriMap[kullanilanOdaDonemi] || [];
         }
 
-        // Bulunan oda satırlarını haritaya işle (Şişmeyi önlemek için doğrudan atama =)
+        // Bulunan oda satırlarını haritaya işle
+        let odaMap = {};
         eslesenOdaSatirlari.forEach(o => {
             const kName = (kapsam === 'DAHIL') ? o.kurumKonsolide : o.kurumTekil;
             const cleanBrans = (o.brans || '').toString().trim();
