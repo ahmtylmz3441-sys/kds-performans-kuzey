@@ -714,6 +714,7 @@
             <div class="nav-item" data-page="derin-analiz"><i class="bi bi-cpu-fill text-danger"></i> Gelişmiş Analitik</div>
             <div class="nav-item" data-page="itirazlar"><i class="bi bi-chat-dots"></i> İtirazlar</div>
             <div class="nav-item" data-page="mhrs"><i class="bi bi-calendar2-week text-warning"></i> MHRS Analiz</div>
+            <div class="nav-item" data-page="personel-analiz"><i class="bi bi-person-badge-fill text-primary"></i> Personel & Kadro Analizi</div>
             <div class="nav-item" data-page="e-tablo"><i class="bi bi-file-earmark-spreadsheet text-success"></i> Kriz Koordinasyon</div>
             <div class="nav-item" data-page="hastane-kunye"><i class="bi bi-buildings-fill text-danger"></i> Hastane Künye</div>            
             <div class="nav-item" data-page="kullanici-yonetimi"><i class="bi bi-people-fill text-info"></i> Kullanıcı Yönetimi</div>
@@ -924,7 +925,98 @@
                     </div>
                 </div>
             </section>
-           
+           <!-- PERSONEL & KADRO ANALİZİ SAYFASI -->
+    <section id="personel-analiz" class="page">
+        <div class="kds-card" style="border-top: 4px solid var(--primary);">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 border-bottom pb-3 mb-4">
+                <div>
+                    <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-person-badge-fill"></i> Personel & Kadro Norm Analizi</h5>
+                    <p class="text-muted small mb-0">Kurum, Sınıf, Unvan ve Branş bazlı STD, PDC ve Aktif Çalışan takibi</p>
+                </div>
+                <button class="btn btn-sm btn-outline-primary px-3 py-2" style="border-radius:10px;" onclick="initPersonelAnalizDashboard()">
+                    <i class="bi bi-arrow-clockwise"></i> Verileri Yenile
+                </button>
+            </div>
+
+            <!-- Filtre Paneli -->
+            <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-secondary">Kurum (Birim Adı)</label>
+                    <select id="p-f-kurum" class="form-select form-select-sm shadow-sm" onchange="window.filtrelePersonelData()">
+                        <option value="">Tüm Kurumlar</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-secondary">Sınıf Tanım</label>
+                    <select id="p-f-sinif" class="form-select form-select-sm shadow-sm" onchange="window.filtrelePersonelData()">
+                        <option value="">Tüm Sınıflar</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-secondary">Unvan Adı</label>
+                    <select id="p-f-unvan" class="form-select form-select-sm shadow-sm" onchange="window.filtrelePersonelData()">
+                        <option value="">Tüm Unvanlar</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-secondary">Branş Adı</label>
+                    <select id="p-f-brans" class="form-select form-select-sm shadow-sm" onchange="window.filtrelePersonelData()">
+                        <option value="">Tüm Branşlar</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Özet KPI Kartları -->
+            <div class="row g-3 mb-4 row-cols-1 row-cols-md-4">
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">TOPLAM STD (STANDART)</div>
+                        <div class="fs-3 fw-bold text-dark" id="p-kpi-std">0</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">TOPLAM PDC</div>
+                        <div class="fs-3 fw-bold text-primary" id="p-kpi-pdc">0</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">TOPLAM PDC BOŞ</div>
+                        <div class="fs-3 fw-bold text-warning" id="p-kpi-bos">0</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
+                        <div class="text-secondary small fw-bold">TOPLAM AKTİF ÇALIŞAN</div>
+                        <div class="fs-3 fw-bold text-success" id="p-kpi-aktif">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Veri Tablosu -->
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-sm table-striped table-hover align-middle table-bordered" style="font-size: 11.5px;" id="personelAnalizTablo">
+                    <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
+                        <tr>
+                            <th>İlçe</th>
+                            <th>Kurum (Birim Adı)</th>
+                            <th>Sınıf</th>
+                            <th>Unvan Adı</th>
+                            <th>Branş Adı</th>
+                            <th class="text-center">STD</th>
+                            <th class="text-center">PDC</th>
+                            <th class="text-center">PDC Boş</th>
+                            <th class="text-center">Aktif Çalışan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="personelTableBody">
+                        <tr><td colspan="9" class="text-center text-muted py-4">Veriler yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
             <section id="e-tablo" class="page">
                 <div class="kds-card" style="border-top-color: #10b981;">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom pb-3 mb-3">
@@ -1431,6 +1523,102 @@
                 console.error("Kullanıcı silme hatası:", err);
                 alert("Kullanıcı silinirken bir hata oluştu.");
             }
+        }
+    };
+    let personelHamVeri = [];
+
+    window.initPersonelAnalizDashboard = async function() {
+        showLoading('personelTableBody', 'Personel verileri veritabanından çekiliyor...');
+        try {
+            const { data, error } = await _supabase
+                .from('kurum_personel')
+                .select('*')
+                .limit(5000); // Tüm kayıtları güvenli çekmek için
+
+            if (error) throw error;
+            personelHamVeri = data || [];
+
+            window.populatePersonelFilters();
+            window.filtrelePersonelData();
+
+        } catch (err) {
+            console.error("Personel verileri yüklenemedi:", err);
+            document.getElementById('personelTableBody').innerHTML = '<tr><td colspan="9" class="text-center text-danger py-4">Veriler yüklenirken bir hata oluştu.</td></tr>';
+        }
+    };
+
+    window.populatePersonelFilters = function() {
+        const data = personelHamVeri;
+        if (!data.length) return;
+
+        const kurumlar = [...new Set(data.map(d => d["Birim Adı"]).filter(Boolean))].sort();
+        const siniflar = [...new Set(data.map(d => d["Sınıf Tanım"]).filter(Boolean))].sort();
+        const unvanlar = [...new Set(data.map(d => d["Unvan Adı"]).filter(Boolean))].sort();
+        const branslar = [...new Set(data.map(d => d["Branş Adı"]).filter(Boolean))].sort();
+
+        const fillSelect = (id, list) => {
+            const el = document.getElementById(id);
+            if (el) {
+                const defText = el.options[0].text;
+                el.innerHTML = `<option value="">${defText}</option>` + list.map(item => `<option value="${item}">${item}</option>`).join('');
+            }
+        };
+
+        fillSelect('p-f-kurum', kurumlar);
+        fillSelect('p-f-sinif', siniflar);
+        fillSelect('p-f-unvan', unvanlar);
+        fillSelect('p-f-brans', branslar);
+    };
+
+    window.filtrelePersonelData = function() {
+        const selKurum = document.getElementById('p-f-kurum')?.value || '';
+        const selSinif = document.getElementById('p-f-sinif')?.value || '';
+        const selUnvan = document.getElementById('p-f-unvan')?.value || '';
+        const selBrans = document.getElementById('p-f-brans')?.value || '';
+
+        const filtered = personelHamVeri.filter(d => {
+            if (selKurum && d["Birim Adı"] !== selKurum) return false;
+            if (selSinif && d["Sınıf Tanım"] !== selSinif) return false;
+            if (selUnvan && d["Unvan Adı"] !== selUnvan) return false;
+            if (selBrans && d["Branş Adı"] !== selBrans) return false;
+            return true;
+        });
+
+        // KPI Hesaplama
+        let toplamStd = 0, toplamPdc = 0, toplamBos = 0, toplamAktif = 0;
+        filtered.forEach(d => {
+            toplamStd += parseFloat(d["STD"] || 0);
+            toplamPdc += parseFloat(d["PDC"] || 0);
+            toplamBos += parseFloat(d["PDC Boş"] || 0);
+            toplamAktif += parseFloat(d["Aktif Çalışan"] || 0);
+        });
+
+        document.getElementById('p-kpi-std').innerText = toplamStd.toLocaleString('tr-TR');
+        document.getElementById('p-kpi-pdc').innerText = toplamPdc.toLocaleString('tr-TR');
+        document.getElementById('p-kpi-bos').innerText = toplamBos.toLocaleString('tr-TR');
+        document.getElementById('p-kpi-aktif').innerText = toplamAktif.toLocaleString('tr-TR');
+
+        // Tablo Doldurma
+        const tbody = document.getElementById('personelTableBody');
+        if (tbody) {
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Seçilen filtrelere uygun personel kaydı bulunamadı.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.slice(0, 500).map(d => `
+                <tr>
+                    <td><small>${d["İlçe Adı"] || '-'}</small></td>
+                    <td><b>${d["Birim Adı"] || '-'}</b></td>
+                    <td><span class="badge bg-secondary">${d["Sınıf Tanım"] || '-'}</span></td>
+                    <td><b>${d["Unvan Adı"] || '-'}</b></td>
+                    <td>${d["Branş Adı"] || '-'}</td>
+                    <td class="text-center">${d["STD"] || 0}</td>
+                    <td class="text-center text-primary fw-bold">${d["PDC"] || 0}</td>
+                    <td class="text-center text-warning fw-bold">${d["PDC Boş"] || 0}</td>
+                    <td class="text-center text-success fw-bold">${d["Aktif Çalışan"] || 0}</td>
+                </tr>
+            `).join('');
         }
     };
 
@@ -7404,7 +7592,7 @@ if (currentMhrsSubTab === 'H') {
             if(sayfa === 'tum-bolge') {
                 const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`).join('');
                 const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
-
+if (sayfa === 'personel-analiz') await initPersonelAnalizDashboard();
                 document.getElementById('tum-bolge').innerHTML = `
                     <div class="kds-card">
                         <h6>🌍 Tüm Kurumlar Bölge Sıralaması</h6>
