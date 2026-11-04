@@ -7592,7 +7592,7 @@ if (currentMhrsSubTab === 'H') {
             if(sayfa === 'tum-bolge') {
                 const yilOptions = mevcutYillarDonemler.yillar.map(y => `<option value="${y}">${y}</option>`).join('');
                 const donemOptions = mevcutYillarDonemler.donemler.map(d => `<option value="${d}">${formatDonemAdi(d)}</option>`).join('');
-if (sayfa === 'personel-analiz') await initPersonelAnalizDashboard();
+
                 document.getElementById('tum-bolge').innerHTML = `
                     <div class="kds-card">
                         <h6>🌍 Tüm Kurumlar Bölge Sıralaması</h6>
@@ -7629,6 +7629,7 @@ if (sayfa === 'personel-analiz') await initPersonelAnalizDashboard();
                 document.getElementById('bolgeFiltreTip').onchange = () => window.bolgeListesi();
                 await window.bolgeListesi();
             }
+            if(sayfa === 'personel-analiz') await initPersonelAnalizDashboard();
             if(sayfa === 'raporlar') await raporlar();
             if(sayfa === 'derin-analiz') {
                 try {
