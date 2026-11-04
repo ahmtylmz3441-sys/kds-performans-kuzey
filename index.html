@@ -4285,9 +4285,16 @@ window.switchMhrsSubTab = function(tabName) {
                 const aktifOda = parseFloat((r[2] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
                 const mhrsOda = parseFloat((r[3] || '0').toString().replace(/\./g, '').replace(',', '.')) || 0;
                 
-                // Oda sayılarındaki E sütununu (Dönem bilgisi) yakala
-                let odaDonem = (r[4] || '').toString().trim().toUpperCase();
-                if (!odaDonem && r.length > 4) odaDonem = (r[r.length - 1] || '').toString().trim().toUpperCase();
+                // KESİN ÇÖZÜM: E sütununu (indeks 4) veya dolu olan son sütunu dönem olarak oku
+                let odaDonem = "";
+                for (let c = 4; c < r.length; c++) {
+                    if (r[c] && r[c].toString().trim()) {
+                        odaDonem = r[c].toString().trim().toUpperCase();
+                        break;
+                    }
+                }
+                if (!odaDonem && r.length > 4) odaDonem = (r[4] || '').toString().trim().toUpperCase();
+                if (!odaDonem) odaDonem = "EKİM"; // Eğer boşsa varsayılan EKİM yap
 
                 if (hamK && brans && !hamK.toUpperCase().includes("KURUM_ADI")) {
                     const meta = aksiyonKurumlarMap[hamK] || aksiyonKurumlarMap[temizleAksiyonKurumAdi(hamK)] || {
@@ -4301,7 +4308,7 @@ window.switchMhrsSubTab = function(tabName) {
                         brans: brans,
                         aktifOda: aktifOda,
                         mhrsOda: mhrsOda,
-                        donem: odaDonem || "EKİM" // Eğer boşsa varsayılan EKİM ata
+                        donem: odaDonem
                     });
                 }
             }
@@ -5055,29 +5062,7 @@ function getBakanlikKatsayisi(bransAdi) {
             filteredKapasite = filteredKapasite.filter(d => d.klinik === seciliBrans);
         }
 
-        // 1. Ay adından kronolojik takvim sıra numarasını veren kesin fonksiyon (Ocak:1 ... Aralık:12)
-        const getAyNumarasi = (str) => {
-            if (!str) return 0;
-            const tUpper = str.toString().toUpperCase().trim();
-            const trAylar = ["OCAK", "ŞUBAT", "SUBAT", "MART", "NİSAN", "NISAN", "MAYIS", "HAZİRAN", "HAZIRAN", "TEMMUZ", "AĞUSTOS", "AGUSTOS", "EYLÜL", "EYLUL", "EKİM", "EKIM", "KASIM", "ARALIK"];
-            
-            for (let i = 0; i < trAylar.length; i++) {
-                if (tUpper === trAylar[i] || tUpper.includes(trAylar[i])) {
-                    return i + 1;
-                }
-            }
-            
-            if (tUpper.includes('.')) {
-                const parts = tUpper.split('.');
-                if (parts.length >= 2) {
-                    const ayNum = parseInt(parts[1], 10);
-                    if (!isNaN(ayNum) && ayNum >= 1 && ayNum <= 12) return ayNum;
-                }
-            }
-            return 0;
-        };
-
-        const hedefAyNum = getAyNumarasi(seciliDonem); // Örn: 02.11.2026 -> 11 (Kasım)
+        const seciliUpper = seciliDonem.toUpperCase().trim();
 
         // Tüm oda verilerini dönemlerine göre grupla
         const odaDonemleriGruplari = {};
@@ -5089,45 +5074,26 @@ function getBakanlikKatsayisi(bransAdi) {
             }
         });
 
-        const mevcutDonemler = Object.keys(odaDonemleriGruplari);
+        const mevcutDonemler = Object.keys(odaDonemleriGruplari).sort();
+        console.log("--> Hafızadaki Oda Dönemleri:", mevcutDonemler);
+        console.log("--> Arayüzden Seçilen Dönem:", seciliUpper);
+
         let secilenOdaSatirlari = [];
-        let kullanilanDonemAdi = '';
 
-        // 2. ADIM: Önce birebir eşleşme arayalım (Örn: Tabloda EKİM varsa ve seçilen de EKİM ise)
-        const birebirEslesme = mevcutDonemler.find(dKey => {
-            const dNum = getAyNumarasi(dKey);
-            return (hedefAyNum > 0 && dNum === hedefAyNum) || seciliDonem.toUpperCase().includes(dKey) || dKey.includes(seciliDonem.toUpperCase());
-        });
+        // 1. Önce tam eşleşme arayalım (Örn: Seçilen 'EKİM' tablodaki 'EKİM' ile uyuşuyor mu?)
+        const tamEslesme = mevcutDonemler.find(dKey => seciliUpper === dKey || seciliUpper.includes(dKey) || dKey.includes(seciliUpper));
 
-        if (birebirEslesme) {
-            secilenOdaSatirlari = odaDonemleriGruplari[birebirEslesme];
-            kullanilanDonemAdi = birebirEslesme;
+        if (tamEslesme) {
+            secilenOdaSatirlari = odaDonemleriGruplari[tamEslesme];
+            console.log("--> Tam eşleşen oda dönemi kullanılıyor:", tamEslesme);
         } 
         
-        // 3. ADIM: Birebir eşleşme yoksa -> Seçilen aydan KÜÇÜK VE EN YAKIN GEÇMİŞ AYI SEÇ (Örn: Kasım (11) seçildi, tablolarda Ağustos (8) ve Ekim (10) var -> En yakın geçmiş Ekim'dir (10), dolayısıyla EKİM seçilir!)
+        // 2. Tam eşleşme yoksa -> Alfabetik / Kronolojik olarak EN SON dönemi (Örn: AĞUSTOS ve EKİM varsa EKİM'i) baz al!
         if (secilenOdaSatirlari.length === 0 && mevcutDonemler.length > 0) {
-            const donemAnalizListesi = mevcutDonemler.map(dKey => ({
-                isim: dKey,
-                numara: getAyNumarasi(dKey)
-            })).filter(d => d.numara > 0);
-
-            // Seçilen aydan küçük veya eşit olanları al (Geçmiş aylar)
-            let gecmisAylar = donemAnalizListesi.filter(d => d.numara <= hedefAyNum);
-
-            if (gecmisAylar.length > 0) {
-                // En büyük numaraya göre sırala (Örn: 10, 8'den büyüktür, dolayısıyla 10 yani Ekim en başa gelir)
-                gecmisAylar.sort((a, b) => b.numara - a.numara);
-                kullanilanDonemAdi = gecmisAylar[0].isim;
-            } else {
-                // Eğer seçilen ay tablodaki tüm aylardan daha eskiyse (örn: Ocak seçildi), tablodaki en eski ayı al
-                donemAnalizListesi.sort((a, b) => a.numara - b.numara);
-                kullanilanDonemAdi = donemAnalizListesi[0].isim;
-            }
-
-            secilenOdaSatirlari = odaDonemleriGruplari[kullanilanDonemAdi] || [];
+            const enSonDonem = mevcutDonemler[mevcutDonemler.length - 1]; // "EKİM"
+            secilenOdaSatirlari = odaDonemleriGruplari[enSonDonem];
+            console.log("--> Eşleşme bulunamadığı için en son dönem (EKİM) baz alındı:", enSonDonem);
         }
-
-        console.log(`--> Seçilen Dönem: ${seciliDonem} | Baz Alınan Oda Dönemi: ${kullanilanDonemAdi}`);
 
         // Bulunan satırları haritaya işle
         let odaMap = {};
