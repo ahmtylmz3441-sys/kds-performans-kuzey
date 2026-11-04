@@ -925,7 +925,7 @@
                     </div>
                 </div>
             </section>
-           <!-- PERSONEL & KADRO ANALİZİ SAYFASI -->
+               <!-- PERSONEL & KADRO ANALİZİ SAYFASI -->
     <section id="personel-analiz" class="page">
         <div class="kds-card" style="border-top: 4px solid var(--primary);">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 border-bottom pb-3 mb-4">
@@ -933,12 +933,19 @@
                     <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-person-badge-fill"></i> Personel</h5>
                     <p class="text-muted small mb-0"></p>
                 </div>
-                <button class="btn btn-sm btn-outline-primary px-3 py-2" style="border-radius:10px;" onclick="initPersonelAnalizDashboard()">
-                    <i class="bi bi-arrow-clockwise"></i> Verileri Yenile
-                </button>
+                <div class="d-flex gap-2"> <!-- Butonları yan yana almak için div eklendi -->
+                    <!-- YENİ EKLENEN EXCEL BUTONU -->
+                    <button class="btn btn-sm btn-outline-success px-3 py-2" style="border-radius:10px;" onclick="window.exportTableToExcel('personelAnalizTablo', 'Personel_Kadro_Analizi')">
+                        <i class="bi bi-file-earmark-excel"></i> Excel'e Aktar
+                    </button>
+                    <!-- MEVCUT YENİLE BUTONU -->
+                    <button class="btn btn-sm btn-outline-primary px-3 py-2" style="border-radius:10px;" onclick="initPersonelAnalizDashboard()">
+                        <i class="bi bi-arrow-clockwise"></i> Verileri Yenile
+                    </button>
+                </div>
             </div>
 
-            <!-- Filtre Paneli -->
+            <!-- Filtre Paneli (Aynı kalacak) -->
             <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label small fw-bold text-secondary">Kurum (Birim Adı)</label>
@@ -966,7 +973,7 @@
                 </div>
             </div>
 
-            <!-- Özet KPI Kartları -->
+            <!-- Özet KPI Kartları (Aynı kalacak) -->
             <div class="row g-3 mb-4 row-cols-1 row-cols-md-4">
                 <div class="col">
                     <div class="p-3 border rounded bg-white shadow-sm text-center" style="border-radius:12px;">
@@ -994,7 +1001,7 @@
                 </div>
             </div>
 
-            <!-- Veri Tablosu -->
+            <!-- Veri Tablosu (Aynı kalacak) -->
             <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                 <table class="table table-sm table-striped table-hover align-middle table-bordered" style="font-size: 11.5px;" id="personelAnalizTablo">
                     <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
@@ -1015,6 +1022,17 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- YENİ EKLENEN GRAFİK ALANI -->
+            <div class="mt-5 border-top pt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-bar-chart-fill text-primary me-2"></i> Kurum Bazlı Aktif Çalışan Dağılımı (Top 15)</h6>
+                </div>
+                <div style="height: 350px; position: relative;">
+                    <canvas id="personelAnalizChart"></canvas>
+                </div>
+            </div>
+
         </div>
     </section>
             <section id="e-tablo" class="page">
@@ -1587,19 +1605,17 @@
         fillSelect('p-f-brans', branslar);
     };
 
-        window.filtrelePersonelData = function() {
+            window.filtrelePersonelData = function() {
         const selKurum = document.getElementById('p-f-kurum')?.value || '';
         const selSinif = document.getElementById('p-f-sinif')?.value || '';
         const selUnvan = document.getElementById('p-f-unvan')?.value || '';
         const selBrans = document.getElementById('p-f-brans')?.value || '';
 
-        // Metinleri temizleyen ve büyük harfe çeviren yardımcı fonksiyon
         const normalize = (val) => {
             if (!val) return '';
             return val.toString().trim().toLocaleUpperCase('tr-TR');
         };
 
-        // Filtreleme işlemi (Büyük/küçük harf ve boşluk duyarsız)
         const filtered = personelHamVeri.filter(d => {
             if (selKurum && normalize(d["Birim Adı"]) !== normalize(selKurum)) return false;
             if (selSinif && normalize(d["Sınıf Tanım"]) !== normalize(selSinif)) return false;
@@ -1627,23 +1643,94 @@
         if (tbody) {
             if (filtered.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Seçilen filtrelere uygun personel kaydı bulunamadı.</td></tr>';
-                return;
+            } else {
+                tbody.innerHTML = filtered.map(d => `
+                    <tr>
+                        <td><small>${d["İlçe Adı"] || '-'}</small></td>
+                        <td><b>${d["Birim Adı"] || '-'}</b></td>
+                        <td><span class="badge bg-secondary">${d["Sınıf Tanım"] || '-'}</span></td>
+                        <td><b>${d["Unvan Adı"] || '-'}</b></td>
+                        <td>${d["Branş Adı"] || '-'}</td>
+                        <td class="text-center">${d["STD"] || 0}</td>
+                        <td class="text-center text-primary fw-bold">${d["PDC"] || 0}</td>
+                        <td class="text-center text-warning fw-bold">${d["PDC Boş"] || 0}</td>
+                        <td class="text-center text-success fw-bold">${d["Aktif Çalışan"] || 0}</td>
+                    </tr>
+                `).join('');
             }
+        }
 
-            // slice(0, 500) KALDIRILDI. Tüm veriler tabloya basılacak.
-            tbody.innerHTML = filtered.map(d => `
-                <tr>
-                    <td><small>${d["İlçe Adı"] || '-'}</small></td>
-                    <td><b>${d["Birim Adı"] || '-'}</b></td>
-                    <td><span class="badge bg-secondary">${d["Sınıf Tanım"] || '-'}</span></td>
-                    <td><b>${d["Unvan Adı"] || '-'}</b></td>
-                    <td>${d["Branş Adı"] || '-'}</td>
-                    <td class="text-center">${d["STD"] || 0}</td>
-                    <td class="text-center text-primary fw-bold">${d["PDC"] || 0}</td>
-                    <td class="text-center text-warning fw-bold">${d["PDC Boş"] || 0}</td>
-                    <td class="text-center text-success fw-bold">${d["Aktif Çalışan"] || 0}</td>
-                </tr>
-            `).join('');
+        // =========================================================
+        // YENİ EKLENEN GRAFİK ÇİZİM ALGORİTMASI
+        // =========================================================
+        
+        // 1. Verileri Kurum Adına göre grupla ve Aktif Çalışanları topla
+        const grafikDataMap = {};
+        filtered.forEach(d => {
+            const kurum = d["Birim Adı"] || 'Bilinmeyen Kurum';
+            const aktif = parseFloat(d["Aktif Çalışan"] || 0);
+            if (!grafikDataMap[kurum]) grafikDataMap[kurum] = 0;
+            grafikDataMap[kurum] += aktif;
+        });
+
+        // 2. Objeyi diziye çevir, çalışan sayısına göre büyükten küçüğe sırala ve ilk 15'ini al (çok kalabalık olmasın diye)
+        const sortedData = Object.entries(grafikDataMap)
+            .map(([kurum, aktif]) => ({ kurum, aktif }))
+            .sort((a, b) => b.aktif - a.aktif)
+            .slice(0, 15);
+
+        // 3. Etiketleri (Kurum isimleri) ve Verileri (Çalışan sayıları) ayır
+        const chartLabels = sortedData.map(d => d.kurum.length > 30 ? d.kurum.substring(0, 28) + '...' : d.kurum);
+        const chartValues = sortedData.map(d => d.aktif);
+
+        // 4. Grafiği Çiz
+        const ctx = document.getElementById('personelAnalizChart')?.getContext('2d');
+        if (ctx) {
+            // Eğer önceden çizilmiş bir grafik varsa üst üste binmemesi için temizle
+            if (window.personelAnalizChartObj) window.personelAnalizChartObj.destroy();
+            
+            window.personelAnalizChartObj = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Aktif Çalışan',
+                        data: chartValues,
+                        backgroundColor: 'rgba(79, 70, 229, 0.85)', // Kurumsal indigo rengi
+                        borderColor: '#4f46e5',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Yatay çubuk grafiği olması için (Kurum isimleri okunsun diye)
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    // Tam kurum adını tooltip'te göster
+                                    return sortedData[context[0].dataIndex].kurum;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                            beginAtZero: true
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { size: 10.5, weight: 'bold' }
+                            }
+                        }
+                    }
+                }
+            });
         }
     };
 
