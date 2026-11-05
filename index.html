@@ -1593,9 +1593,9 @@
         }
     };
 
-            // YENİ EKLENEN FONKSİYON: Başkanlık değiştiğinde diğer filtreleri günceller
+               // Başkanlık değiştiğinde diğer filtreleri sıfırlayıp yeniden dolduran fonksiyon
     window.baskanlikDegisti = function() {
-        // Başkanlık değişince diğer filtrelerin seçimini sıfırla
+        // Sadece diğer filtrelerin seçimini sıfırla
         const kurumEl = document.getElementById('p-f-kurum');
         const sinifEl = document.getElementById('p-f-sinif');
         const unvanEl = document.getElementById('p-f-unvan');
@@ -1613,21 +1613,29 @@
         window.filtrelePersonelData();
     };
 
-    // GÜNCELLENMİŞ FONKSİYON: Filtre listelerini doldurur
+    // Filtre listelerini dolduran fonksiyon (Seçim kaybını önleyecek şekilde güncellendi)
     window.populatePersonelFilters = function() {
         const data = personelHamVeri;
         if (!data.length) return;
 
-        // 1. Başkanlık listesini doldur (Bu her zaman tüm veriden gelmeli)
+        // 1. Başkanlık listesini doldur
         const baskanliklar = [...new Set(data.map(d => d["Başkanlık"]).filter(Boolean))].sort();
         const baskanlikSelect = document.getElementById('p-f-baskanlik');
+        
         if (baskanlikSelect) {
-            const defText = baskanlikSelect.options[0].text;
+            // SEÇİMİN KAYBOLMASINI ENGELLEMEK İÇİN MEVCUT SEÇİLİ DEĞERİ HAFIZAYA AL
+            const seciliDeger = baskanlikSelect.value; 
+            const defText = baskanlikSelect.options.length > 0 ? baskanlikSelect.options[0].text : 'Tüm Başkanlıklar';
+            
+            // Listeyi yeniden yaz
             baskanlikSelect.innerHTML = `<option value="">${defText}</option>` + baskanliklar.map(item => `<option value="${item}">${item}</option>`).join('');
+            
+            // HAFIZADAKİ SEÇİLİ DEĞERİ GERİ YÜKLE
+            baskanlikSelect.value = seciliDeger; 
         }
 
         // 2. Seçili Başkanlığı kontrol et
-        const seciliBaskanlik = document.getElementById('p-f-baskanlik')?.value || '';
+        const seciliBaskanlik = baskanlikSelect ? baskanlikSelect.value : '';
 
         // Eğer bir başkanlık seçildiyse, sadece o başkanlığın verilerini kullan
         let bazVeri = data;
@@ -1644,7 +1652,7 @@
         const fillSelect = (id, list) => {
             const el = document.getElementById(id);
             if (el) {
-                const defText = el.options[0].text;
+                const defText = el.options.length > 0 ? el.options[0].text : 'Tümü';
                 el.innerHTML = `<option value="">${defText}</option>` + list.map(item => `<option value="${item}">${item}</option>`).join('');
             }
         };
