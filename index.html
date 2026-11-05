@@ -947,10 +947,11 @@
 
                         <!-- Filtre Paneli -->
             <div class="row g-3 mb-4 p-3 bg-light rounded border mx-0 align-items-end">
-                <!-- YENİ EKLENEN BAŞKANLIK FİLTRESİ -->
+                                <!-- YENİ EKLENEN BAŞKANLIK FİLTRESİ -->
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-secondary">Başkanlık</label>
-                    <select id="p-f-baskanlik" class="form-select form-select-sm shadow-sm" onchange="window.filtrelePersonelData()">
+                    <!-- BURAYI GÜNCELLEDİK: onchange="window.baskanlikDegisti()" -->
+                    <select id="p-f-baskanlik" class="form-select form-select-sm shadow-sm" onchange="window.baskanlikDegisti()">
                         <option value="">Tüm Başkanlıklar</option>
                     </select>
                 </div>
@@ -1592,16 +1593,53 @@
         }
     };
 
-        window.populatePersonelFilters = function() {
+            // YENİ EKLENEN FONKSİYON: Başkanlık değiştiğinde diğer filtreleri günceller
+    window.baskanlikDegisti = function() {
+        // Başkanlık değişince diğer filtrelerin seçimini sıfırla
+        const kurumEl = document.getElementById('p-f-kurum');
+        const sinifEl = document.getElementById('p-f-sinif');
+        const unvanEl = document.getElementById('p-f-unvan');
+        const bransEl = document.getElementById('p-f-brans');
+
+        if(kurumEl) kurumEl.value = '';
+        if(sinifEl) sinifEl.value = '';
+        if(unvanEl) unvanEl.value = '';
+        if(bransEl) bransEl.value = '';
+
+        // Açılır listeleri yeni başkanlığa göre doldur
+        window.populatePersonelFilters();
+        
+        // Tabloyu ve grafiği güncelle
+        window.filtrelePersonelData();
+    };
+
+    // GÜNCELLENMİŞ FONKSİYON: Filtre listelerini doldurur
+    window.populatePersonelFilters = function() {
         const data = personelHamVeri;
         if (!data.length) return;
 
-        // Yeni Başkanlık listesini çıkar
+        // 1. Başkanlık listesini doldur (Bu her zaman tüm veriden gelmeli)
         const baskanliklar = [...new Set(data.map(d => d["Başkanlık"]).filter(Boolean))].sort();
-        const kurumlar = [...new Set(data.map(d => d["Birim Adı"]).filter(Boolean))].sort();
-        const siniflar = [...new Set(data.map(d => d["Sınıf Tanım"]).filter(Boolean))].sort();
-        const unvanlar = [...new Set(data.map(d => d["Unvan Adı"]).filter(Boolean))].sort();
-        const branslar = [...new Set(data.map(d => d["Branş Adı"]).filter(Boolean))].sort();
+        const baskanlikSelect = document.getElementById('p-f-baskanlik');
+        if (baskanlikSelect) {
+            const defText = baskanlikSelect.options[0].text;
+            baskanlikSelect.innerHTML = `<option value="">${defText}</option>` + baskanliklar.map(item => `<option value="${item}">${item}</option>`).join('');
+        }
+
+        // 2. Seçili Başkanlığı kontrol et
+        const seciliBaskanlik = document.getElementById('p-f-baskanlik')?.value || '';
+
+        // Eğer bir başkanlık seçildiyse, sadece o başkanlığın verilerini kullan
+        let bazVeri = data;
+        if (seciliBaskanlik) {
+            bazVeri = data.filter(d => d["Başkanlık"] === seciliBaskanlik);
+        }
+
+        // 3. Diğer listeleri (Kurum, Sınıf, Unvan, Branş) bazVeri'ye göre doldur
+        const kurumlar = [...new Set(bazVeri.map(d => d["Birim Adı"]).filter(Boolean))].sort();
+        const siniflar = [...new Set(bazVeri.map(d => d["Sınıf Tanım"]).filter(Boolean))].sort();
+        const unvanlar = [...new Set(bazVeri.map(d => d["Unvan Adı"]).filter(Boolean))].sort();
+        const branslar = [...new Set(bazVeri.map(d => d["Branş Adı"]).filter(Boolean))].sort();
 
         const fillSelect = (id, list) => {
             const el = document.getElementById(id);
@@ -1611,14 +1649,11 @@
             }
         };
 
-        // Yeni filtre kutusunu doldur
-        fillSelect('p-f-baskanlik', baskanliklar);
         fillSelect('p-f-kurum', kurumlar);
         fillSelect('p-f-sinif', siniflar);
         fillSelect('p-f-unvan', unvanlar);
         fillSelect('p-f-brans', branslar);
     };
-
                        window.filtrelePersonelData = function() {
         // Yeni filtre elemanını oku
         const selBaskanlik = document.getElementById('p-f-baskanlik')?.value || '';
