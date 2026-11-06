@@ -1094,7 +1094,7 @@
                     
                     <!-- YENİ: PDF İNDİR BUTONU -->
                     <div class="d-flex justify-content-end mb-3">
-                        <button class="btn btn-sm btn-danger px-3 py-2 fw-bold" style="border-radius:10px;" onclick="window.karsilastirmaPdfIndir()">
+                       <button class="btn btn-sm btn-danger px-3 py-2 fw-bold" style="border-radius:10px;" onclick="window.karsilastirmaPdfIndir()" id="btnPdfIndir">
                             <i class="bi bi-file-earmark-pdf"></i> Raporu PDF Olarak İndir
                         </button>
                     </div>
@@ -2111,7 +2111,7 @@
             });
         }
     };
-       // --- GÜNCELLENMİŞ: KARŞILAŞTIRMA EKRANINI KUSURSUZ PDF OLARAK İNDİRME ---
+           // --- KUSURSUZ PDF İNDİRME FONKSİYONU (Canvas'ı Resme Çevirir) ---
     window.karsilastirmaPdfIndir = function() {
         const element = document.getElementById('karsilastirmaSonucAlani');
         const btn = document.getElementById('btnPdfIndir');
@@ -2121,25 +2121,24 @@
             return;
         }
 
-        // 1. Butonu tamamen gizle (PDF'te görünmesin)
+        // 1. Butonu gizle
         btn.style.display = 'none';
 
-        // 2. Chart.js Canvas'ını yüksek çözünürlüklü bir resme çevir
+        // 2. Chart.js Canvas'ını resme çevir (Grafik bozuk çıkmasın diye)
         const canvas = document.getElementById('karsilastirmaChart');
         let img = null;
         if (canvas) {
             img = document.createElement('img');
-            img.src = canvas.toDataURL('image/png', 1.0); // Kaliteli resim
+            img.src = canvas.toDataURL('image/png', 1.0);
             img.style.width = '100%';
             img.style.maxHeight = '300px';
             img.style.objectFit = 'contain';
             
-            // Canvas'ı gizle, yerine resmi koy
             canvas.parentNode.style.display = 'none'; 
             canvas.parentNode.appendChild(img); 
         }
 
-        // 3. Bozuk çıkan ikonları (İ= sorunu) geçici olarak gizle
+        // 3. İkonları geçici olarak gizle (Kare kutular çıkmasın diye)
         const icons = element.querySelectorAll('i');
         icons.forEach(icon => icon.style.display = 'none');
 
@@ -2154,15 +2153,14 @@
 
         // PDF'i oluştur ve indir
         html2pdf().set(opt).from(element).save().then(() => {
-            // İşlem başarılı olursa her şeyi eski haline getir
+            // İşlem bitince her şeyi eski haline getir
             btn.style.display = 'inline-block';
             icons.forEach(icon => icon.style.display = 'inline-block');
             if (img) {
-                img.remove(); // Eklediğimiz resmi sil
-                canvas.parentNode.style.display = 'block'; // Canvas'ı geri getir
+                img.remove();
+                canvas.parentNode.style.display = 'block';
             }
         }).catch(err => {
-            // Hata olursa da ekranı eski haline getir
             console.error("PDF oluşturma hatası:", err);
             alert("PDF oluşturulurken bir hata oluştu.");
             btn.style.display = 'inline-block';
