@@ -2111,7 +2111,7 @@
             });
         }
     };
-           // --- KUSURSUZ PDF İNDİRME FONKSİYONU (Canvas'ı Resme Çevirir) ---
+               // --- KUSURSUZ PDF İNDİRME FONKSİYONU (Grafiği Resme Çevirip PDF'e Basar) ---
     window.karsilastirmaPdfIndir = function() {
         const element = document.getElementById('karsilastirmaSonucAlani');
         const btn = document.getElementById('btnPdfIndir');
@@ -2121,24 +2121,27 @@
             return;
         }
 
-        // 1. Butonu gizle
+        // 1. Butonu geçici olarak gizle
         btn.style.display = 'none';
 
-        // 2. Chart.js Canvas'ını resme çevir (Grafik bozuk çıkmasın diye)
+        // 2. Grafiği (Canvas) resme çevir
         const canvas = document.getElementById('karsilastirmaChart');
         let img = null;
         if (canvas) {
+            // Grafiğin o anki halini yüksek kaliteli bir resme dönüştür
             img = document.createElement('img');
             img.src = canvas.toDataURL('image/png', 1.0);
             img.style.width = '100%';
             img.style.maxHeight = '300px';
             img.style.objectFit = 'contain';
+            img.style.backgroundColor = '#ffffff';
             
-            canvas.parentNode.style.display = 'none'; 
+            // Canvas'ı gizle, yerine resmi koy
+            canvas.style.display = 'none'; 
             canvas.parentNode.appendChild(img); 
         }
 
-        // 3. İkonları geçici olarak gizle (Kare kutular çıkmasın diye)
+        // 3. İkonları geçici olarak gizle (PDF'te "İ=" gibi bozuk çıkmasın diye)
         const icons = element.querySelectorAll('i');
         icons.forEach(icon => icon.style.display = 'none');
 
@@ -2147,27 +2150,28 @@
             margin:       [10, 10, 10, 10],
             filename:     'Kurum_Karsilastirma_Raporu.pdf',
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true }, 
+            html2canvas:  { scale: 2, useCORS: true, scrollY: 0 }, 
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
         };
 
         // PDF'i oluştur ve indir
         html2pdf().set(opt).from(element).save().then(() => {
-            // İşlem bitince her şeyi eski haline getir
+            // İşlem başarılıysa her şeyi eski haline getir
             btn.style.display = 'inline-block';
             icons.forEach(icon => icon.style.display = 'inline-block');
             if (img) {
-                img.remove();
-                canvas.parentNode.style.display = 'block';
+                img.remove(); // Eklediğimiz resmi sil
+                canvas.style.display = 'block'; // Canvas'ı geri getir
             }
         }).catch(err => {
+            // Hata olursa da ekranı eski haline getir
             console.error("PDF oluşturma hatası:", err);
             alert("PDF oluşturulurken bir hata oluştu.");
             btn.style.display = 'inline-block';
             icons.forEach(icon => icon.style.display = 'inline-block');
             if (img) {
                 img.remove();
-                canvas.parentNode.style.display = 'block';
+                canvas.style.display = 'block';
             }
         });
     };
